@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+@source '../../node_modules/fumadocs-ui/dist/**/*.js';
+
+:root {
+  --ocean-bg: oklch(0.98 0.015 85);
+  --ocean-ink: oklch(0.28 0.03 250);
+  --ocean-card: oklch(1 0.005 90);
+  --ocean-primary: oklch(0.66 0.16 45);
+  --ocean-blue: oklch(0.58 0.11 235);
+  --ocean-blue-soft: oklch(0.93 0.035 235);
+  --ocean-glass: oklch(0.92 0.04 175);
+  --ocean-muted: oklch(0.54 0.025 245);
+  --ocean-border: oklch(0.9 0.02 85);
+  --color-fd-primary: oklch(0.66 0.16 45);
+}
+
+.dark {
+  --ocean-bg: oklch(0.22 0.035 250);
+  --ocean-ink: oklch(0.92 0.012 240);
+  --ocean-card: oklch(0.26 0.035 250);
+  --ocean-primary: oklch(0.72 0.15 48);
+  --ocean-blue: oklch(0.68 0.1 230);
+  --ocean-blue-soft: oklch(0.33 0.05 235);
+  --ocean-glass: oklch(0.34 0.045 200);
+  --ocean-muted: oklch(0.72 0.03 235);
+  --ocean-border: oklch(0.35 0.03 250);
+  --color-fd-primary: oklch(0.72 0.15 48);
+}
+
+@theme inline {
+  --color-ocean-bg: var(--ocean-bg);
+  --color-ocean-ink: var(--ocean-ink);
+  --color-ocean-card: var(--ocean-card);
+  --color-ocean-primary: var(--ocean-primary);
+  --color-ocean-blue: var(--ocean-blue);
+  --color-ocean-blue-soft: var(--ocean-blue-soft);
+  --color-ocean-glass: var(--ocean-glass);
+  --color-ocean-muted: var(--ocean-muted);
+  --color-ocean-border: var(--ocean-border);
+  --font-display: var(--font-baloo), ui-rounded, sans-serif;
+}
+
+@keyframes fish-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(3deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-fish-bob {
+    animation: fish-bob 3.2s ease-in-out infinite;
+  }
+}

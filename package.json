@@ -6,6 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "concurrently -n server,web -c blue,magenta \"pnpm --filter @nemomemo/server dev\" \"pnpm --filter @nemomemo/web dev\"",
+    "dev:site": "pnpm --filter @nemomemo/site dev",
     "build": "pnpm --filter @nemomemo/web build && pnpm --filter @nemomemo/server build",
     "test": "pnpm -r --no-bail test",
     "typecheck": "pnpm -r typecheck",

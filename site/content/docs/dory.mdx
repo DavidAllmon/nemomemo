@@ -1,0 +1,35 @@
+---
+title: Dory memos
+description: Notes that forget themselves in 24 hours — on purpose.
+---
+
+Some notes only need to live a day: the parking spot, the confirmation code, the errand.
+Dory memos let you say so up front, and then never think about them again.
+
+## How it works
+
+1. Toggle the **Dory** button (the little blue tang 🐟) in the editor — at creation, or
+   later from a memo's action menu.
+2. The memo shows a countdown badge: **"forgets in 23h"**.
+3. Over its final six hours, the card gently fades.
+4. At the 24-hour mark, the server deletes it — truly deletes it, along with its comments,
+   attachments, and share links.
+
+The timer runs server-side, so forgetting happens even when nobody has the app open.
+Toggling Dory on an existing memo starts a fresh 24 hours; toggling it off cancels the
+countdown.
+
+## The rules
+
+- **Pinned memos can't be Dory memos.** Pinned means "keep forever"; the two are mutually
+  exclusive, and the app will refuse the combination with a friendly error.
+- **Archiving rescues.** Archive a Dory memo and its countdown is cancelled permanently —
+  archive means "keep."
+- **Comments sink with the ship.** Commenting on a Dory memo is fine, but when Dory forgets
+  the memo, the conversation goes too. The comment box warns you.
+- **No recovery after zero.** Forgotten is forgotten. That's the feature.
+
+## Changing the window
+
+Admins can shorten or lengthen Dory's memory instance-wide with the `DORY_TTL_SECONDS`
+environment variable (default `86400`). Setting it to `60` is a fun way to watch her work.

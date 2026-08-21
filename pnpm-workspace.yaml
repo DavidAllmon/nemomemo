@@ -2,6 +2,7 @@ packages:
   - shared
   - server
   - web
+  - site
 allowBuilds:
   better-sqlite3: true
   esbuild: true

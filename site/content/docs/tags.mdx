@@ -1,0 +1,29 @@
+---
+title: Tags
+description: Inline hashtags, nested hierarchies, and renaming.
+---
+
+Tags are extracted from your writing — there's no tag manager, and nothing to file.
+Type `#reading` anywhere in a memo and the tag exists.
+
+## Nesting
+
+Use `/` to build hierarchies: `#dev/docker` counts for both `dev` and `dev/docker`, so
+filtering by the parent finds every child. The sidebar shows tags as a flat list or a
+collapsible tree — toggle with the icons next to the TAGS header.
+
+## Filtering
+
+Click any tag — in a memo or in the sidebar — to filter your timeline to it. The filter
+lives in the URL, so the view is bookmarkable.
+
+## Renaming
+
+**Settings → Preferences → Rename a tag** rewrites a tag across every memo you own,
+including descendants (`old` → `new` also rewrites `old/idea`). Code blocks are left
+untouched.
+
+## What counts as a tag
+
+Letters, numbers, and underscores, with `-` allowed inside segments. Tags inside links
+and code are ignored.

@@ -1,0 +1,19 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "getting-started",
+    "deploy",
+    "---Using NemoMemo---",
+    "memos",
+    "tags",
+    "filters",
+    "dory",
+    "sharing",
+    "attachments",
+    "social",
+    "---Running a reef---",
+    "admin",
+    "api"
+  ]
+}

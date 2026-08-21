@@ -1,0 +1,62 @@
+---
+title: Deploy
+description: Docker in one command, Docker Compose, or build from source.
+---
+
+## Docker
+
+```bash
+docker run -d --name nemomemo \
+  -p 5230:5230 \
+  -v nemomemo-data:/app/data \
+  nemomemo
+```
+
+Everything lives in the `/app/data` volume: `nemomemo.db` (SQLite) and `uploads/`.
+
+## Docker Compose
+
+```yaml
+services:
+  nemomemo:
+    image: nemomemo
+    ports:
+      - "5230:5230"
+    volumes:
+      - nemomemo-data:/app/data
+    restart: unless-stopped
+volumes:
+  nemomemo-data:
+```
+
+## Build from source
+
+Requires Node 22+ and pnpm.
+
+```bash
+pnpm install
+pnpm build
+NEMOMEMO_WEB_DIST=web/dist node server/dist/index.js
+```
+
+For development, `pnpm dev` runs the API on `:5230` and the web app on `:5173`.
+
+## Configuration
+
+| Env var | Default | Purpose |
+| --- | --- | --- |
+| `NEMOMEMO_PORT` | `5230` | HTTP port |
+| `NEMOMEMO_DATA` | `./data` | Data directory |
+| `DORY_TTL_SECONDS` | `86400` | How long Dory remembers |
+| `NEMOMEMO_WEB_DIST` | — | Path to the built SPA |
+
+## Backups
+
+Back up two things: the SQLite database and the uploads directory.
+
+```bash
+sqlite3 /app/data/nemomemo.db ".backup /backups/nemomemo-$(date +%F).db"
+cp -r /app/data/uploads /backups/uploads-$(date +%F)
+```
+
+Backups only matter if restore is realistic — test yours once before you depend on it.

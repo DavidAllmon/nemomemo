@@ -1,0 +1,36 @@
+---
+title: Getting started
+description: From zero to your first memo in about two minutes.
+---
+
+## 1. Run NemoMemo
+
+The fastest path is Docker:
+
+```bash
+docker run -d -p 5230:5230 -v nemomemo-data:/app/data nemomemo
+```
+
+Then open `http://localhost:5230`. (Other options: [Deploy](/docs/deploy).)
+
+## 2. Create the reef keeper
+
+The **first account you create becomes the admin** — NemoMemo calls this the reef keeper.
+Pick a username and password on the "Set up your reef" screen. There are no email
+confirmations or third-party sign-ins to configure.
+
+## 3. Write your first memo
+
+The editor sits at the top of your Home timeline. Type Markdown, add a `#tag`, pick a
+visibility, and press **Save** (or ⌘+Enter). That's the whole loop.
+
+## 4. Learn the three visibilities
+
+- **Private** — only you.
+- **Protected** — anyone signed in on your instance.
+- **Public** — anyone at all, when the instance is in public mode.
+
+## 5. Meet Dory
+
+See that little fish button next to Save? That's a [Dory memo](/docs/dory) — the memo will
+be forgotten automatically in 24 hours. Try it with something disposable.

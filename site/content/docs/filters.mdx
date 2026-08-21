@@ -1,0 +1,39 @@
+---
+title: Filters & views
+description: One expression language for search, saved views, and the API.
+---
+
+NemoMemo has a single filter language used everywhere: the search chips above your
+timeline, the saved views in your sidebar, and the `filter` parameter of the API.
+
+## The fields
+
+| Expression | Matches memos that… |
+| --- | --- |
+| `content.contains("x")` | contain the text (also `startsWith`, `endsWith`) |
+| `"work" in tags` | carry the tag (ancestors count) |
+| `tag in ["a", "b"]` | carry any of the tags |
+| `visibility == "PUBLIC"` | have that visibility (also `!=`, `in [...]`) |
+| `pinned` | are pinned |
+| `has_link` / `has_code` | contain a link / code |
+| `has_task_list` / `has_incomplete_tasks` | contain tasks / open tasks |
+| `created_ts >= now - duration("24h")` | were written in the window (also `updated_ts`) |
+
+Combine with `&&`, `||`, `!`, and parentheses:
+
+```text
+tag in ["work"] && has_incomplete_tasks && !pinned
+created_ts >= now - duration("7d") && content.contains("standup")
+```
+
+## Search chips
+
+**⌘K** opens search. Each word becomes a chip, chips AND together, and the whole set is
+encoded in the URL — share the link and you share the view. Clicking a calendar day or a
+tag adds a chip the same way.
+
+## Saved views
+
+**Views** in the sidebar are named filters. Create them on the [Views page](/docs/filters),
+where a **Validate** button checks your expression and a gallery of examples gets you
+started. The built-in **Open tasks** view is `has_task_list && has_incomplete_tasks`.

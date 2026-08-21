@@ -56,6 +56,19 @@ Open http://localhost:5230. All data (SQLite database + uploads) lives in the
 Instance-level settings (public mode, sign-ups, reaction set, reef name) live in
 **Settings → Reef** once you're signed in as admin.
 
+## Marketing site + docs
+
+The `site/` package is the usememos.com-style marketing site and documentation, built
+with the same stack they use (Next.js + Fumadocs):
+
+```bash
+pnpm dev:site     # http://localhost:4321
+```
+
+Pages: landing, `/features`, `/use-cases`, `/compare`, `/pricing`, `/blog`, and `/docs`
+(12 pages incl. the API reference). "Try the demo" buttons point at the app —
+set `NEXT_PUBLIC_DEMO_URL` to your deployed instance.
+
 ## Development
 
 ```bash

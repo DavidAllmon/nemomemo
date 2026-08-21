@@ -1,0 +1,75 @@
+---
+title: API reference
+description: The REST API behind everything the app does.
+---
+
+Everything the web app does goes through a JSON API at `/api/v1`. Authentication is a
+session cookie obtained from `/auth/signin`. Errors come back as
+`{ "error": { "code", "message" } }` with a matching HTTP status.
+
+## Auth
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/auth/signup` | First user becomes admin |
+| POST | `/auth/signin` | Sets the session cookie |
+| POST | `/auth/signout` | |
+| GET | `/auth/me` | The signed-in viewer |
+
+## Memos
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/memos` | `scope=home\|explore\|profile`, `state`, `creator`, `filter`, `orderBy`, `dir`, `pageSize`, `pageToken` |
+| POST | `/memos` | `{ content, visibility?, dory?, attachmentUids? }` |
+| GET | `/memos/:uid` | |
+| PATCH | `/memos/:uid` | Any of `content`, `visibility`, `pinned`, `rowStatus`, `dory`, `attachmentUids` |
+| DELETE | `/memos/:uid` | Deletes comments too |
+| GET / POST | `/memos/:uid/comments` | Comments are memos with a parent |
+| POST | `/memos/:uid/reactions` | `{ emoji }` — must be in the instance set |
+| DELETE | `/memos/:uid/reactions/:emoji` | Your own reaction |
+| POST / GET | `/memos/:uid/shares` | `{ expiresIn: "1d"\|"7d"\|"30d"\|"never" }` |
+| GET | `/shares/:token` | Public — resolves a share link |
+| DELETE | `/shares/:token` | Revoke |
+
+The `filter` parameter accepts the same [expression language](/docs/filters) as the UI.
+Lists paginate with `pageSize` (default 20, max 200) and an opaque `nextPageToken`.
+
+## Users
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/users/:username` | Public profile |
+| GET | `/users/:username/stats` | Heatmap timestamps, tag counts |
+| GET | `/users/-/tags` | Your tag → count map |
+| POST | `/users/-/tags/rename` | `{ from, to }` |
+| GET / PATCH | `/users/-/settings` | Preferences + saved views |
+| PATCH | `/users/-/account` | Nickname, email, avatar, password |
+| GET / POST | `/users` | Admin: list / create members |
+| PATCH / DELETE | `/users/:username/admin` | Admin: role, archive, delete |
+
+## Inbox, attachments, instance
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/inbox?status=UNREAD\|ARCHIVED` | Includes `unreadCount` |
+| PATCH / DELETE | `/inbox/:id` | Archive or delete one |
+| POST | `/inbox/read-all` | |
+| POST | `/attachments` | Multipart `file` field, 32 MiB max |
+| GET | `/attachments` | `type=media\|audio\|document`, `unlinked=true` |
+| DELETE | `/attachments/unused` | Bulk-delete unlinked uploads |
+| GET | `/file/attachments/:uid/:filename` | Range requests; `?thumbnail=1`; `?share=token` |
+| GET | `/instance/profile` | Public: name, mode, `needsSetup` |
+| GET / PATCH | `/instance/settings` | Admin |
+
+## Example
+
+```bash
+curl -s -c jar -X POST http://localhost:5230/api/v1/auth/signin \
+  -H 'content-type: application/json' \
+  -d '{"username":"david","password":"..."}'
+
+curl -s -b jar -X POST http://localhost:5230/api/v1/memos \
+  -H 'content-type: application/json' \
+  -d '{"content":"Hello from the API! #dev","visibility":"PUBLIC","dory":true}'
+```

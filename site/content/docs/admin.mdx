@@ -1,0 +1,34 @@
+---
+title: Administration
+description: Members, instance settings, and keeping the reef healthy.
+---
+
+The first account created on an instance is the **reef keeper** — the admin. Admin-only
+sections appear in Settings once you're signed in as one.
+
+## Members
+
+**Settings → Members** lets you add accounts (username + password), archive members
+(disables sign-in, keeps their memos), restore them, or promote another admin. Archived
+members can't sign in until restored.
+
+## Reef settings
+
+**Settings → Reef** holds the instance-wide switches:
+
+- **Reef name** — shown in the instance profile.
+- **Public mode** — whether anonymous visitors can browse public memos and Explore.
+- **Allow sign-ups** — open or close registration. (Admins can always add members
+  manually.)
+- **Reactions** — the emoji set members can react with.
+
+## Preferences vs. reef settings
+
+Personal things — theme, default memo visibility, tag renames — live under
+**Preferences** and affect only you. Reef settings affect everyone.
+
+## Housekeeping
+
+- Back up `nemomemo.db` and `uploads/` (see [Deploy](/docs/deploy#backups)).
+- The Dory sweeper runs automatically every minute; nothing to configure.
+- **Attachments → Delete unused** reclaims disk from orphaned uploads.
