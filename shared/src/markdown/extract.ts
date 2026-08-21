@@ -142,6 +142,19 @@ export function listTaskItems(content: string): TaskItem[] {
   return items;
 }
 
+/**
+ * Toggle the checkbox whose `[x]`/`[ ]` marker starts at (or just after) the
+ * given source offset. Used by renderers that know the marker's position from
+ * the AST — immune to render-order counting bugs.
+ */
+export function toggleTaskAt(content: string, offset: number, checked: boolean): string {
+  const window = content.slice(offset, offset + 8);
+  const bracket = window.search(/\[[ xX]\]/);
+  if (bracket === -1) return content;
+  const at = offset + bracket;
+  return content.slice(0, at) + `[${checked ? 'x' : ' '}]` + content.slice(at + 3);
+}
+
 /** Toggle one task (by document-order index) and return the new content. */
 export function toggleTask(content: string, taskIndex: number, checked: boolean): string {
   const items = listTaskItems(content);

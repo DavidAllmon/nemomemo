@@ -1,0 +1,278 @@
+@import '@fontsource-variable/baloo-2';
+@import '@fontsource-variable/nunito';
+@import 'tailwindcss';
+
+/* ---------- NemoMemo tokens: "Shallows" (light) ---------- */
+:root {
+  --background: oklch(0.98 0.015 85); /* warm sand */
+  --foreground: oklch(0.28 0.03 250); /* deep-sea ink */
+  --card: oklch(1 0.005 90); /* white shell */
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.66 0.16 45); /* clownfish orange */
+  --primary-foreground: oklch(0.99 0.01 85);
+  --secondary: oklch(0.92 0.04 175); /* sea glass */
+  --secondary-foreground: oklch(0.35 0.05 200);
+  --muted: oklch(0.95 0.012 85);
+  --muted-foreground: oklch(0.54 0.025 245);
+  --accent: oklch(0.93 0.025 230); /* shallow-water hover wash */
+  --accent-foreground: var(--foreground);
+  --ocean: oklch(0.58 0.11 235); /* reef blue: tags, links, heatmap */
+  --ocean-soft: oklch(0.93 0.035 235);
+  --dory: oklch(0.55 0.15 255); /* blue tang */
+  --dory-soft: oklch(0.93 0.04 255);
+  --dory-tail: oklch(0.82 0.15 90); /* her yellow tail */
+  --destructive: oklch(0.55 0.16 25);
+  --destructive-foreground: oklch(0.99 0.01 85);
+  --border: oklch(0.9 0.02 85);
+  --input: var(--border);
+  --ring: oklch(0.66 0.16 45);
+  --sidebar: oklch(0.965 0.018 85);
+  --radius: 0.875rem;
+}
+
+/* ---------- "Deep Sea" (dark) ---------- */
+:root[data-theme='deep-sea'] {
+  --background: oklch(0.22 0.035 250);
+  --foreground: oklch(0.92 0.012 240);
+  --card: oklch(0.26 0.035 250);
+  --popover: oklch(0.26 0.035 250);
+  --primary: oklch(0.72 0.15 48);
+  --primary-foreground: oklch(0.2 0.03 250);
+  --secondary: oklch(0.34 0.045 200);
+  --secondary-foreground: oklch(0.88 0.03 190);
+  --muted: oklch(0.3 0.03 250);
+  --muted-foreground: oklch(0.7 0.02 245);
+  --accent: oklch(0.32 0.04 245);
+  --accent-foreground: var(--foreground);
+  --ocean: oklch(0.68 0.1 230);
+  --ocean-soft: oklch(0.33 0.05 235);
+  --dory: oklch(0.68 0.13 255);
+  --dory-soft: oklch(0.33 0.06 255);
+  --dory-tail: oklch(0.8 0.14 90);
+  --destructive: oklch(0.62 0.17 25);
+  --border: oklch(0.35 0.03 250);
+  --input: var(--border);
+  --sidebar: oklch(0.2 0.032 250);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='shallows']):not([data-theme='deep-sea']) {
+    --background: oklch(0.22 0.035 250);
+    --foreground: oklch(0.92 0.012 240);
+    --card: oklch(0.26 0.035 250);
+    --popover: oklch(0.26 0.035 250);
+    --primary: oklch(0.72 0.15 48);
+    --primary-foreground: oklch(0.2 0.03 250);
+    --secondary: oklch(0.34 0.045 200);
+    --secondary-foreground: oklch(0.88 0.03 190);
+    --muted: oklch(0.3 0.03 250);
+    --muted-foreground: oklch(0.7 0.02 245);
+    --accent: oklch(0.32 0.04 245);
+    --accent-foreground: var(--foreground);
+    --ocean: oklch(0.68 0.1 230);
+    --ocean-soft: oklch(0.33 0.05 235);
+    --dory: oklch(0.68 0.13 255);
+    --dory-soft: oklch(0.33 0.06 255);
+    --dory-tail: oklch(0.8 0.14 90);
+    --destructive: oklch(0.62 0.17 25);
+    --border: oklch(0.35 0.03 250);
+    --input: var(--border);
+    --sidebar: oklch(0.2 0.032 250);
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-ocean: var(--ocean);
+  --color-ocean-soft: var(--ocean-soft);
+  --color-dory: var(--dory);
+  --color-dory-soft: var(--dory-soft);
+  --color-dory-tail: var(--dory-tail);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --font-display: 'Baloo 2 Variable', ui-rounded, 'Nunito Variable', system-ui, sans-serif;
+  --font-sans: 'Nunito Variable', ui-rounded, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Signature moments ---------- */
+
+@keyframes bubble-rise {
+  0% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-72px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes fish-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(3deg);
+  }
+}
+
+@keyframes dory-shimmer {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-fish-bob {
+    animation: fish-bob 3.2s ease-in-out infinite;
+  }
+  .animate-dory-shimmer {
+    animation: dory-shimmer 2.4s ease-in-out infinite;
+  }
+  .bubble {
+    animation: bubble-rise 1.4s ease-out forwards;
+  }
+}
+
+/* Markdown content */
+.memo-content {
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.memo-content > * + * {
+  margin-top: 0.5rem;
+}
+.memo-content h1 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+.memo-content h2 {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+.memo-content h3,
+.memo-content h4 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.memo-content a {
+  color: var(--ocean);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.memo-content ul {
+  list-style: disc;
+  padding-inline-start: 1.4rem;
+}
+.memo-content ol {
+  list-style: decimal;
+  padding-inline-start: 1.4rem;
+}
+.memo-content ul.contains-task-list {
+  list-style: none;
+  padding-inline-start: 0.2rem;
+}
+.memo-content blockquote {
+  border-inline-start: 3px solid var(--ocean);
+  padding-inline-start: 0.75rem;
+  color: var(--muted-foreground);
+}
+.memo-content pre {
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.8rem;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+}
+.memo-content code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+.memo-content :not(pre) > code {
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0.05rem 0.3rem;
+}
+.memo-content table {
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.memo-content th,
+.memo-content td {
+  border: 1px solid var(--border);
+  padding: 0.3rem 0.6rem;
+}
+.memo-content th {
+  background: var(--muted);
+  font-weight: 700;
+}
+.memo-content img {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+.memo-content hr {
+  border-color: var(--border);
+}
+
+/* CodeMirror editor chrome */
+.cm-editor {
+  outline: none !important;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+}
+.cm-editor .cm-content {
+  padding: 0;
+  caret-color: var(--primary);
+  line-height: 1.6;
+}
+.cm-editor .cm-line {
+  padding: 0;
+}
+.cm-editor .cm-placeholder {
+  color: var(--muted-foreground);
+}
