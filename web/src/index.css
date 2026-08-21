@@ -259,6 +259,50 @@ body {
   border-color: var(--border);
 }
 
+/* highlight.js dark overrides (the light github theme ships in the bundle) */
+:root[data-theme='deep-sea'] .memo-content .hljs {
+  color: oklch(0.9 0.01 250);
+}
+:root[data-theme='deep-sea'] .memo-content .hljs-keyword,
+:root[data-theme='deep-sea'] .memo-content .hljs-doctag,
+:root[data-theme='deep-sea'] .memo-content .hljs-meta {
+  color: oklch(0.78 0.12 20);
+}
+:root[data-theme='deep-sea'] .memo-content .hljs-string,
+:root[data-theme='deep-sea'] .memo-content .hljs-attr {
+  color: oklch(0.8 0.1 230);
+}
+:root[data-theme='deep-sea'] .memo-content .hljs-title,
+:root[data-theme='deep-sea'] .memo-content .hljs-name,
+:root[data-theme='deep-sea'] .memo-content .hljs-built_in {
+  color: oklch(0.8 0.11 300);
+}
+:root[data-theme='deep-sea'] .memo-content .hljs-comment {
+  color: oklch(0.65 0.02 250);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='shallows']) .memo-content .hljs {
+    color: oklch(0.9 0.01 250);
+  }
+  :root:not([data-theme='shallows']) .memo-content .hljs-keyword,
+  :root:not([data-theme='shallows']) .memo-content .hljs-doctag,
+  :root:not([data-theme='shallows']) .memo-content .hljs-meta {
+    color: oklch(0.78 0.12 20);
+  }
+  :root:not([data-theme='shallows']) .memo-content .hljs-string,
+  :root:not([data-theme='shallows']) .memo-content .hljs-attr {
+    color: oklch(0.8 0.1 230);
+  }
+  :root:not([data-theme='shallows']) .memo-content .hljs-title,
+  :root:not([data-theme='shallows']) .memo-content .hljs-name,
+  :root:not([data-theme='shallows']) .memo-content .hljs-built_in {
+    color: oklch(0.8 0.11 300);
+  }
+  :root:not([data-theme='shallows']) .memo-content .hljs-comment {
+    color: oklch(0.65 0.02 250);
+  }
+}
+
 /* CodeMirror editor chrome */
 .cm-editor {
   outline: none !important;
