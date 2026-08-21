@@ -2,6 +2,10 @@
 
 **Write it down. Tag it. Share it. Or let Dory forget it.**
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Free forever](https://img.shields.io/badge/price-%240%20forever-orange.svg)](site/content/docs)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
 NemoMemo is a cute, self-hosted memo timeline — a playful, ocean-themed recreation of the
 excellent open-source [Memos](https://usememos.com) project, with one new trick:
 **Dory memos** forget themselves 24 hours after you write them.
@@ -102,9 +106,18 @@ The monorepo has three packages: `shared/` (zod schemas, the filter parser, mark
 extraction — used by both sides), `server/` (Hono + Drizzle + better-sqlite3), and
 `web/` (React 19 + Vite + Tailwind v4 + CodeMirror).
 
-## Credits
+## Contributing
+
+NemoMemo is **free and open source, forever** — MIT licensed, no paid tiers, no strings.
+Bug reports, docs fixes, features, and forks are all welcome: see
+[CONTRIBUTING.md](CONTRIBUTING.md) to get set up. If you'd rather take the code in your
+own direction, fork away — that's what the license is for.
+
+## License & credits
+
+[MIT](LICENSE) © David Allmon and NemoMemo contributors.
 
 Lovingly modeled on [usememos/memos](https://github.com/usememos/memos) (MIT) — go star it.
-NemoMemo is an independent hobby recreation with a fish obsession, not an official fork.
+NemoMemo is an independent recreation with a fish obsession, not an official fork.
 
 *Just keep swimming.* 🫧
