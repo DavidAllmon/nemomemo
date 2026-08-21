@@ -27,7 +27,7 @@ export function AppShell() {
   }, []);
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh md:flex md:h-dvh md:overflow-hidden">
       {/* Mobile header */}
       <header className="sticky top-0 z-40 flex h-12 items-center gap-2 border-b border-border bg-background/90 px-3 backdrop-blur-md md:hidden">
         <Button
@@ -58,17 +58,18 @@ export function AppShell() {
         </div>
       ) : null}
 
-      <div className="flex w-full">
-        {/* Desktop sidebar: flush left, full viewport height */}
-        <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 overflow-y-auto border-r border-border bg-sidebar md:block">
-          <Sidebar onSearch={() => setSearchOpen(true)} />
-        </aside>
-        <main className="min-w-0 flex-1 px-3 py-4 md:px-6">
-          <div className="mx-auto w-full max-w-2xl">
-            <Outlet />
-          </div>
-        </main>
-      </div>
+      {/* Desktop sidebar: flush left, always touching top and bottom, never scrolls
+          itself — only its tags section scrolls internally. */}
+      <aside className="hidden w-64 shrink-0 border-r border-border bg-sidebar md:block md:h-dvh">
+        <Sidebar onSearch={() => setSearchOpen(true)} />
+      </aside>
+      {/* Main area spans to the window's right edge so the page scrollbar sits
+          flush right; content centers within it. */}
+      <main className="min-w-0 flex-1 px-3 py-4 md:h-dvh md:overflow-y-auto md:px-6">
+        <div className="mx-auto w-full max-w-2xl">
+          <Outlet />
+        </div>
+      </main>
 
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </div>

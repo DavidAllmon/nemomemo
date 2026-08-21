@@ -87,7 +87,7 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
   };
 
   return (
-    <div className="flex h-full min-h-dvh flex-col gap-4 p-4">
+    <div className="flex h-full flex-col gap-4 overflow-hidden p-4">
       <div className="flex items-center justify-between">
         <Link to={viewer ? '/' : '/explore'} className="flex items-center gap-1.5">
           <NemoLogo className="size-7" />
@@ -121,11 +121,14 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
         <>
           <CalendarHeatmap username={viewer.username} />
           <ViewsList />
-          <TagTree />
+          {/* Only the tags section scrolls when it overflows. */}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <TagTree />
+          </div>
         </>
       ) : null}
 
-      <div className="mt-auto pt-2">
+      <div className="mt-auto shrink-0 pt-2">
         {viewer ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
