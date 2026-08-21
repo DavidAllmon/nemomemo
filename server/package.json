@@ -1,0 +1,32 @@
+{
+  "name": "@nemomemo/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup src/index.ts --format esm --target node22 --out-dir dist --clean",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.8",
+    "@hono/zod-validator": "^0.4.2",
+    "@nemomemo/shared": "workspace:*",
+    "bcryptjs": "^3.0.2",
+    "better-sqlite3": "^12.4.1",
+    "drizzle-orm": "^0.44.2",
+    "hono": "^4.7.2",
+    "nanoid": "^5.0.9",
+    "sharp": "^0.34.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.13.0",
+    "tsup": "^8.3.6",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}

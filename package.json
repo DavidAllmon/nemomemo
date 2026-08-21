@@ -1,0 +1,19 @@
+{
+  "name": "nemomemo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "NemoMemo — a cute, self-hosted memo timeline. Just keep swimming.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,magenta \"pnpm --filter @nemomemo/server dev\" \"pnpm --filter @nemomemo/web dev\"",
+    "build": "pnpm --filter @nemomemo/web build && pnpm --filter @nemomemo/server build",
+    "test": "pnpm -r --no-bail test",
+    "typecheck": "pnpm -r typecheck",
+    "start": "node server/dist/index.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  },
+  "packageManager": "pnpm@11.12.0"
+}
