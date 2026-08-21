@@ -3,13 +3,19 @@ FROM node:22-slim AS build
 RUN corepack enable
 WORKDIR /app
 
+# The image contains ONLY the app (shared/server/web). The marketing site
+# (site/) is a separate, optional deployment — its package.json is copied just
+# so the workspace lockfile validates, but its dependencies are never installed.
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
 COPY shared/package.json shared/
 COPY server/package.json server/
 COPY web/package.json web/
-RUN pnpm install --frozen-lockfile
+COPY site/package.json site/
+RUN pnpm install --frozen-lockfile --filter '!@nemomemo/site'
 
-COPY . .
+COPY shared/ shared/
+COPY server/ server/
+COPY web/ web/
 RUN pnpm --filter @nemomemo/web build && pnpm --filter @nemomemo/server build
 RUN pnpm --filter @nemomemo/server deploy --prod --legacy /deploy
 

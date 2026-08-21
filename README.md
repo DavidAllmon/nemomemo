@@ -25,24 +25,40 @@ excellent open-source [Memos](https://usememos.com) project, with one new trick:
 - 📆 **Calendar heatmap**, pin/archive, ⌘K search, list/grid layouts, and two hand-mixed
   themes: **Shallows** (light) and **Deep Sea** (dark).
 
-## Quick start (local)
+## Install NemoMemo (the app)
 
-```bash
-pnpm install
-pnpm dev          # API on :5230, web on :5173
-```
-
-Open http://localhost:5173 — the first account you create becomes the reef keeper (admin).
-
-## Run with Docker
+This is all you need to self-host. The Docker image contains **only the app** — no
+marketing site, no docs site.
 
 ```bash
 docker build -t nemomemo .
 docker run -d -p 5230:5230 -v nemomemo-data:/app/data nemomemo
 ```
 
-Open http://localhost:5230. All data (SQLite database + uploads) lives in the
+Open **http://localhost:5230**, create your account (the first one becomes the admin),
+and start writing. All data — one SQLite database plus your uploads — lives in the
 `/app/data` volume.
+
+<details>
+<summary>Prefer to run from source?</summary>
+
+```bash
+pnpm install --filter '!@nemomemo/site'   # app only, skips the website
+pnpm build
+NEMOMEMO_WEB_DIST=web/dist node server/dist/index.js
+```
+
+Then open http://localhost:5230.
+</details>
+
+## Develop locally
+
+```bash
+pnpm install
+pnpm dev          # API on :5230, web app with hot reload on :5173
+```
+
+Open http://localhost:5173 — same first-account-becomes-admin flow.
 
 ## Configuration
 
@@ -56,18 +72,23 @@ Open http://localhost:5230. All data (SQLite database + uploads) lives in the
 Instance-level settings (public mode, sign-ups, reaction set, reef name) live in
 **Settings → Reef** once you're signed in as admin.
 
-## Marketing site + docs
+## Marketing site + docs (separate — you don't install this)
 
-The `site/` package is the usememos.com-style marketing site and documentation, built
-with the same stack they use (Next.js + Fumadocs):
+The `site/` directory is nemomemo's own website: the landing page, features/use-cases/
+compare/pricing pages, blog, and documentation — the equivalent of usememos.com, built on
+the same stack (Next.js + Fumadocs). It is **not part of the app**: self-hosters never
+install or run it, the Docker image excludes it, and the documentation source is plain
+markdown you can read right here on GitHub at [`site/content/docs/`](site/content/docs/).
+
+To work on the website itself (or host your own copy of it somewhere like Vercel or
+Cloudflare):
 
 ```bash
 pnpm dev:site     # http://localhost:4321
 ```
 
-Pages: landing, `/features`, `/use-cases`, `/compare`, `/pricing`, `/blog`, and `/docs`
-(12 pages incl. the API reference). "Try the demo" buttons point at the app —
-set `NEXT_PUBLIC_DEMO_URL` to your deployed instance.
+"Try the demo" buttons point at a running app — set `NEXT_PUBLIC_DEMO_URL` to your
+public instance when deploying the site.
 
 ## Development
 
