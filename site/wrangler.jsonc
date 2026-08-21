@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "nemomemo-site",
+  "compatibility_date": "2026-08-01",
+  // Static-assets-only Worker: no script, just the exported Next.js site.
+  "assets": {
+    "directory": "./out",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash"
+  },
+  // The domain lives in this Cloudflare account, so deploying provisions
+  // DNS + certificates for both hostnames automatically.
+  "routes": [
+    { "pattern": "trynemomemo.com", "custom_domain": true },
+    { "pattern": "www.trynemomemo.com", "custom_domain": true }
+  ]
+}

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { NemoMark } from '@/components/nemo-mark';
-import { DEMO_URL } from '@/lib/demo-url';
+import { DEMO_LABEL, DEMO_URL } from '@/lib/demo-url';
 
 const PRODUCT_CARDS = [
   {
@@ -93,7 +93,7 @@ export default function HomePage() {
             href={DEMO_URL}
             className="rounded-xl border border-ocean-border bg-ocean-card px-5 py-2.5 font-bold transition-colors hover:border-ocean-primary"
           >
-            Try the live demo
+            {DEMO_LABEL}
           </a>
         </div>
       </section>
@@ -214,7 +214,7 @@ export default function HomePage() {
             href={DEMO_URL}
             className="rounded-xl border border-ocean-border bg-ocean-bg px-5 py-2.5 font-bold transition-colors hover:border-ocean-primary"
           >
-            Try the live demo
+            {DEMO_LABEL}
           </a>
         </div>
       </section>

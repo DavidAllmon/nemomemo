@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { NemoMark } from '@/components/nemo-mark';
-import { DEMO_URL } from '@/lib/demo-url';
+import { DEMO_LABEL, DEMO_URL } from '@/lib/demo-url';
 
 const NAV = [
   { label: 'Features', href: '/features' },
@@ -36,9 +36,7 @@ export function SiteHeader() {
           <a
             href={DEMO_URL}
             className="rounded-xl bg-ocean-primary px-3.5 py-1.5 text-sm font-bold text-white transition-opacity hover:opacity-90"
-          >
-            Try the demo
-          </a>
+          >{DEMO_LABEL}</a>
         </div>
       </div>
     </header>

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { NemoMark } from '@/components/nemo-mark';
-import { DEMO_URL, MEMOS_URL } from '@/lib/demo-url';
+import { DEMO_LABEL, DEMO_URL, MEMOS_URL, REPO_URL } from '@/lib/demo-url';
 
 const GROUPS: { title: string; links: { label: string; href: string; external?: boolean }[] }[] = [
   {
@@ -15,7 +15,7 @@ const GROUPS: { title: string; links: { label: string; href: string; external?: 
   },
   {
     title: 'Tools',
-    links: [{ label: 'Live demo', href: DEMO_URL, external: true }],
+    links: [{ label: DEMO_LABEL, href: DEMO_URL, external: true }],
   },
   {
     title: 'Features',
@@ -32,6 +32,7 @@ const GROUPS: { title: string; links: { label: string; href: string; external?: 
     links: [
       { label: 'Blog', href: '/blog' },
       { label: 'API reference', href: '/docs/api' },
+      { label: 'GitHub', href: REPO_URL, external: true },
       { label: 'Inspired by Memos', href: MEMOS_URL, external: true },
     ],
   },

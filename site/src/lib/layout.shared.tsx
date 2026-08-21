@@ -1,6 +1,6 @@
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
 import { NemoMark } from '@/components/nemo-mark';
-import { DEMO_URL } from '@/lib/demo-url';
+import { DEMO_LABEL, DEMO_URL } from '@/lib/demo-url';
 
 export function baseOptions(): BaseLayoutProps {
   return {
@@ -16,7 +16,7 @@ export function baseOptions(): BaseLayoutProps {
       { text: 'Features', url: '/features' },
       { text: 'Use cases', url: '/use-cases' },
       { text: 'Compare', url: '/compare' },
-      { text: 'Live demo', url: DEMO_URL, external: true },
+      { text: DEMO_LABEL, url: DEMO_URL, external: true },
     ],
   };
 }
