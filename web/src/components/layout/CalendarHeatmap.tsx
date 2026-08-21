@@ -64,9 +64,18 @@ export function CalendarHeatmap({ username }: { username: string }) {
             {day}
           </span>
         ))}
-        {Array.from({ length: leadingBlanks }, (_, i) => (
-          <span key={`blank-${i}`} />
-        ))}
+        {Array.from({ length: leadingBlanks }, (_, i) => {
+          const day = new Date(monthStart.getFullYear(), monthStart.getMonth(), i - leadingBlanks + 1);
+          return (
+            <span
+              key={`lead-${i}`}
+              aria-hidden
+              className="flex aspect-square items-center justify-center text-[11px] tabular-nums text-muted-foreground/40"
+            >
+              {day.getDate()}
+            </span>
+          );
+        })}
         {Array.from({ length: daysInMonth }, (_, i) => {
           const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), i + 1);
           const key = dayKey(date);
@@ -100,6 +109,15 @@ export function CalendarHeatmap({ username }: { username: string }) {
             </button>
           );
         })}
+        {Array.from({ length: (7 - ((leadingBlanks + daysInMonth) % 7)) % 7 }, (_, i) => (
+          <span
+            key={`trail-${i}`}
+            aria-hidden
+            className="flex aspect-square items-center justify-center text-[11px] tabular-nums text-muted-foreground/40"
+          >
+            {i + 1}
+          </span>
+        ))}
       </div>
     </section>
   );

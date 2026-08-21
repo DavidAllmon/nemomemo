@@ -58,8 +58,8 @@ export function AppShell() {
         </div>
       ) : null}
 
-      <div className="mx-auto flex w-full max-w-6xl">
-        {/* Desktop sidebar */}
+      <div className="flex w-full">
+        {/* Desktop sidebar: flush left, full viewport height */}
         <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 overflow-y-auto border-r border-border bg-sidebar md:block">
           <Sidebar onSearch={() => setSearchOpen(true)} />
         </aside>
