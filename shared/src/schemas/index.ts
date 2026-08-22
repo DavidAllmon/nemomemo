@@ -208,7 +208,7 @@ export interface InboxDto {
   id: number;
   createdTs: number;
   status: 'UNREAD' | 'ARCHIVED';
-  type: 'MEMO_COMMENT' | 'MEMO_MENTION';
+  type: 'MEMO_COMMENT' | 'MEMO_MENTION' | 'MEMO_THREAD';
   sender: UserDto | null;
   memoUid: string | null;
   memoSnippet: string | null;

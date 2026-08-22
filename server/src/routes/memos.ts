@@ -27,7 +27,7 @@ import { nextPageToken, parsePageParams } from '../lib/pagination.js';
 import { nowSeconds } from '../lib/time.js';
 import { requireViewer, type AppEnv } from '../middleware/auth.js';
 import { checkMemoRead } from '../services/acl.js';
-import { notifyComment, notifyMentions } from '../services/inbox-service.js';
+import { notifyComment, notifyMentions, notifyThreadParticipants } from '../services/inbox-service.js';
 import {
   assertDoryRules,
   buildMemoDtos,
@@ -265,6 +265,7 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
       .run();
     notifyComment(db, viewer, parent, created);
     notifyMentions(db, viewer, created, mentions);
+    notifyThreadParticipants(db, viewer, parent, created, mentions);
     return c.json({ memo: buildMemoDtos(db, [created], viewer)[0] }, 201);
   });
 

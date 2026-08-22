@@ -110,7 +110,7 @@ export const inboxes = sqliteTable('inbox', {
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   status: text('status', { enum: ['UNREAD', 'ARCHIVED'] }).notNull().default('UNREAD'),
-  type: text('type', { enum: ['MEMO_COMMENT', 'MEMO_MENTION'] }).notNull(),
+  type: text('type', { enum: ['MEMO_COMMENT', 'MEMO_MENTION', 'MEMO_THREAD'] }).notNull(),
   memoId: integer('memo_id').references(() => memos.id, { onDelete: 'cascade' }),
 });
 

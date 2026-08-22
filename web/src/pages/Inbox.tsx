@@ -58,16 +58,20 @@ export function InboxPage() {
         <div className="flex flex-col gap-2">
           {data!.items.map((item) => (
             <div key={item.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5">
-              {item.type === 'MEMO_COMMENT' ? (
-                <MessageCircle className="size-4 shrink-0 text-ocean" />
-              ) : (
+              {item.type === 'MEMO_MENTION' ? (
                 <AtSign className="size-4 shrink-0 text-primary" />
+              ) : (
+                <MessageCircle className="size-4 shrink-0 text-ocean" />
               )}
               {item.sender ? <Avatar name={item.sender.nickname} avatarUrl={item.sender.avatarUrl} className="size-7" /> : null}
               <div className="min-w-0 flex-1">
                 <p className="text-sm">
                   <span className="font-bold">{item.sender?.nickname ?? 'Someone'}</span>{' '}
-                  {item.type === 'MEMO_COMMENT' ? 'commented on your memo' : 'mentioned you'}
+                  {item.type === 'MEMO_COMMENT'
+                    ? 'commented on your memo'
+                    : item.type === 'MEMO_THREAD'
+                      ? 'replied in a conversation you joined'
+                      : 'mentioned you'}
                 </p>
                 {item.memoUid ? (
                   <Link to={`/memos/${item.memoUid}`} className="block truncate text-xs text-muted-foreground hover:underline">

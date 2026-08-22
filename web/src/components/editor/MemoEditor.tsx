@@ -1,9 +1,4 @@
-import {
-  autocompletion,
-  completionKeymap,
-  type CompletionContext,
-  type CompletionResult,
-} from '@codemirror/autocomplete';
+import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { EditorState } from '@codemirror/state';
@@ -39,10 +34,9 @@ import {
   Tip,
 } from '@/components/ui/overlays.js';
 import { Spinner } from '@/components/ui/misc.js';
+import { useMemberTagCompletions } from '@/components/editor/completions.js';
 import {
   useCreateMemo,
-  useMentionable,
-  useTags,
   useUpdateMemo,
   useUploadAttachment,
   useUserSettings,
@@ -73,19 +67,7 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
 
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const { data: mentionable } = useMentionable(!!viewer);
-  const { data: tagCounts } = useTags(!!viewer);
-  // The editor is built once; completions read the latest data through a ref.
-  const completionDataRef = useRef<{ users: { username: string; nickname: string }[]; tags: string[] }>({
-    users: [],
-    tags: [],
-  });
-  useEffect(() => {
-    completionDataRef.current = {
-      users: mentionable ?? [],
-      tags: Object.keys(tagCounts ?? {}),
-    };
-  }, [mentionable, tagCounts]);
+  const completions = useMemberTagCompletions();
   const [hasContent, setHasContent] = useState(!!memo?.content);
   const [visibility, setVisibility] = useState<Visibility | null>(memo?.visibility ?? null);
   const [dory, setDory] = useState(memo ? memo.forgetAt != null : false);
@@ -109,26 +91,6 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
         // ignore
       }
     }
-    // `@` completes members, `#` completes existing tags.
-    const completions = (context: CompletionContext): CompletionResult | null => {
-      const mention = context.matchBefore(/@[a-zA-Z0-9-]*/);
-      if (mention) {
-        const options = completionDataRef.current.users.map((member) => ({
-          label: member.username,
-          detail: member.nickname !== member.username ? member.nickname : undefined,
-        }));
-        if (options.length === 0) return null;
-        return { from: mention.from + 1, options, validFor: /^[a-zA-Z0-9-]*$/ };
-      }
-      const tag = context.matchBefore(/#[\p{L}\p{N}_/-]*/u);
-      if (tag) {
-        const options = completionDataRef.current.tags.map((name) => ({ label: name }));
-        if (options.length === 0) return null;
-        return { from: tag.from + 1, options, validFor: /^[\p{L}\p{N}_/-]*$/u };
-      }
-      return null;
-    };
-
     const view = new EditorView({
       parent: containerRef.current,
       state: EditorState.create({
