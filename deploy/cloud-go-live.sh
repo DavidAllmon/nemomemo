@@ -32,9 +32,9 @@ if [[ $FORCE != "--force-no-backups" ]]; then
   fi
 fi
 
-api() { # api METHOD PATH [curl -d args...]
+api() { # api METHOD PATH [curl -d args...]   (-g: Stripe URLs contain literal [])
   local method=$1 path=$2; shift 2
-  curl -sS -X "$method" "https://api.stripe.com/v1/$path" -u "$LIVE_KEY:" "$@"
+  curl -sSg -X "$method" "https://api.stripe.com/v1/$path" -u "$LIVE_KEY:" "$@"
 }
 jget() { python3 -c "import json,sys;d=json.load(sys.stdin);print(eval(sys.argv[1]))" "$1"; }
 
@@ -42,7 +42,7 @@ jget() { python3 -c "import json,sys;d=json.load(sys.stdin);print(eval(sys.argv[
 MONTH_ID=$(api GET "prices?lookup_keys[]=nemomemo_cloud_monthly&limit=1" | jget "d['data'][0]['id'] if d['data'] else ''")
 YEAR_ID=$(api GET "prices?lookup_keys[]=nemomemo_cloud_yearly&limit=1" | jget "d['data'][0]['id'] if d['data'] else ''")
 if [[ -z $MONTH_ID || -z $YEAR_ID ]]; then
-  PRODUCT_ID=$(api GET "products/search?query=metadata['app']:'nemomemo-cloud'&limit=1" | jget "d['data'][0]['id'] if d['data'] else ''")
+  PRODUCT_ID=$(api GET "products/search" -G --data-urlencode "query=metadata['app']:'nemomemo-cloud'" --data-urlencode "limit=1" | jget "d['data'][0]['id'] if d['data'] else ''")
   if [[ -z $PRODUCT_ID ]]; then
     PRODUCT_ID=$(api POST products \
       -d "name=NemoMemo Cloud" \
