@@ -59,6 +59,7 @@ import type { Config } from '../config.js';
 import type { Db } from '../db/index.js';
 import { users } from '../db/schema.js';
 import { apiError } from '../lib/errors.js';
+import type { Mailer } from '../services/email.js';
 import { requireAdmin, type AppEnv } from '../middleware/auth.js';
 import {
   getInstanceGeneral,
@@ -67,7 +68,7 @@ import {
   setInstanceMemoSetting,
 } from '../services/settings.js';
 
-export function instanceRoutes(db: Db, config: Config): Hono<AppEnv> {
+export function instanceRoutes(db: Db, config: Config, mailer: Mailer | null): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
 
   app.get('/profile', (c) => {
@@ -80,6 +81,7 @@ export function instanceRoutes(db: Db, config: Config): Hono<AppEnv> {
       publicMode: general.publicMode,
       allowRegistration: general.allowRegistration,
       needsSetup: userCount === 0,
+      emailEnabled: mailer != null,
     };
     return c.json(profile);
   });

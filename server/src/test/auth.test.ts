@@ -5,7 +5,7 @@ describe('auth', () => {
   it('first signup becomes admin and gets a session', async () => {
     const { app } = makeTestApp();
     const response = await jsonRequest(app, 'POST', '/api/v1/auth/signup', {
-      username: 'marlin',
+      username: 'marlin', email: 'marlin@test.reef',
       password: 'password123',
     });
     expect(response.status).toBe(200);
@@ -18,7 +18,7 @@ describe('auth', () => {
     const { app } = makeTestApp();
     await signup(app, 'marlin');
     const response = await jsonRequest(app, 'POST', '/api/v1/auth/signup', {
-      username: 'dory',
+      username: 'dory', email: 'dory@test.reef',
       password: 'password123',
     });
     const json = (await response.json()) as { user: { role: string } };
@@ -63,7 +63,7 @@ describe('auth', () => {
     const admin = await signup(app, 'marlin');
     await jsonRequest(app, 'PATCH', '/api/v1/instance/settings', { general: { allowRegistration: false } }, admin);
     const blocked = await jsonRequest(app, 'POST', '/api/v1/auth/signup', {
-      username: 'nemo',
+      username: 'nemo', email: 'nemo@test.reef',
       password: 'password123',
     });
     expect(blocked.status).toBe(403);
@@ -85,7 +85,7 @@ describe('auth', () => {
     const { app } = makeTestApp();
     await signup(app, 'marlin');
     const dupe = await jsonRequest(app, 'POST', '/api/v1/auth/signup', {
-      username: 'marlin',
+      username: 'marlin', email: 'marlin@test.reef',
       password: 'password123',
     });
     expect(dupe.status).toBe(409);

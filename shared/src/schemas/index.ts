@@ -27,10 +27,17 @@ export const avatarUrlSchema = z
     'Avatar must be an image data URI or a web URL',
   );
 
+export const emailSchema = z.string().trim().toLowerCase().email().max(254);
+
 export const signupRequestSchema = z.object({
   username: z.string().regex(USERNAME_REGEX, 'Username must be 1-32 letters, numbers, or hyphens'),
   password: passwordSchema,
+  email: emailSchema,
   nickname: z.string().max(64).optional(),
+});
+
+export const verifyEmailRequestSchema = z.object({
+  token: z.string().min(1).max(128),
 });
 
 export const signinRequestSchema = z.object({
@@ -70,7 +77,8 @@ export const createShareRequestSchema = z.object({
 
 export const updateAccountRequestSchema = z.object({
   nickname: z.string().max(64).optional(),
-  email: z.string().email().or(z.literal('')).optional(),
+  // '' passes validation for legacy accounts; the route forbids clearing a set email.
+  email: emailSchema.or(z.literal('')).optional(),
   avatarUrl: avatarUrlSchema.optional(),
   description: z.string().max(512).optional(),
   password: passwordSchema.optional(),
@@ -143,6 +151,7 @@ export interface UserDto {
   rowStatus: (typeof ROW_STATUSES)[number];
   createdTs: number;
   email?: string; // only present for the viewer / admin
+  emailVerified?: boolean; // only present alongside email
 }
 
 export interface MemoPropertyDto {
@@ -232,6 +241,7 @@ export interface InstanceProfileDto {
   publicMode: boolean;
   allowRegistration: boolean;
   needsSetup: boolean;
+  emailEnabled: boolean;
 }
 
 export type SigninResponse = { user: UserDto };

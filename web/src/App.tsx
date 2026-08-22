@@ -15,6 +15,7 @@ import { NotFoundPage } from '@/pages/NotFound.js';
 import { ProfilePage } from '@/pages/Profile.js';
 import { SettingsPage } from '@/pages/Settings.js';
 import { SharePage } from '@/pages/Share.js';
+import { VerifyEmailPage } from '@/pages/VerifyEmail.js';
 import { ViewsPage } from '@/pages/Views.js';
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -35,6 +36,7 @@ export function App() {
       <Route path="/auth" element={<AuthPage mode="signin" />} />
       <Route path="/auth/signup" element={<AuthPage mode="signup" />} />
       <Route path="/memos/shares/:token" element={<SharePage />} />
+      <Route path="/auth/verify" element={<VerifyEmailPage />} />
       <Route element={<AppShell />}>
         <Route
           path="/"

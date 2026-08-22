@@ -14,6 +14,8 @@ import { Hono } from 'hono';
 import type { Db } from '../db/index.js';
 import { memos, users, userSessions } from '../db/schema.js';
 import { apiError } from '../lib/errors.js';
+import { sendVerificationEmail } from './auth.js';
+import type { Mailer } from '../services/email.js';
 import { nowSeconds } from '../lib/time.js';
 import { requireAdmin, requireViewer, type AppEnv } from '../middleware/auth.js';
 import {
@@ -32,7 +34,7 @@ import {
 
 const STATS_MEMO_CAP = 10_000;
 
-export function userRoutes(db: Db): Hono<AppEnv> {
+export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
 
   // ---------- Viewer's own resources (the `-` segment, like memos) ----------
@@ -117,11 +119,25 @@ export function userRoutes(db: Db): Hono<AppEnv> {
     const body = c.req.valid('json');
     const patch: Record<string, unknown> = { updatedTs: nowSeconds() };
     if (body.nickname != null) patch.nickname = body.nickname;
-    if (body.email != null) patch.email = body.email;
+    const emailChanged = body.email != null && body.email !== viewer.email;
+    if (emailChanged) {
+      if (!body.email && viewer.email) {
+        throw apiError('INVALID_ARGUMENT', "Your email keeps your account rescuable — change it, don't remove it");
+      }
+      if (body.email) {
+        const taken = db.select().from(users).where(eq(users.email, body.email)).get();
+        if (taken && taken.id !== viewer.id) {
+          throw apiError('ALREADY_EXISTS', 'That email already belongs to a reef account');
+        }
+      }
+      patch.email = body.email;
+      patch.emailVerifiedTs = null;
+    }
     if (body.avatarUrl != null) patch.avatarUrl = body.avatarUrl;
     if (body.description != null) patch.description = body.description;
     if (body.password) patch.passwordHash = await bcrypt.hash(body.password, 12);
     const updated = db.update(users).set(patch).where(eq(users.id, viewer.id)).returning().get();
+    if (emailChanged && updated.email) sendVerificationEmail(db, mailer, c, updated);
     return c.json({ user: userToDto(updated, { includeEmail: true }) });
   });
 

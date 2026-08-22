@@ -78,7 +78,7 @@ describe('rate limiting', () => {
       expect(response.status).toBe(400);
     }
     const limited = await jsonRequest(app, 'POST', '/api/v1/auth/signup', {
-      username: 'legit',
+      username: 'legit', email: 'legit@test.reef',
       password: 'password123',
     });
     expect(limited.status).toBe(429);
@@ -134,7 +134,7 @@ describe('secure session cookie (F4)', () => {
     const response = await app.request('/api/v1/auth/signup', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-forwarded-proto': 'https' },
-      body: JSON.stringify({ username: 'keeper', password: 'password123' }),
+      body: JSON.stringify({ username: 'keeper', email: 'keeper@test.reef', password: 'password123' }),
     });
     expect(response.status).toBe(200);
     expect(response.headers.get('set-cookie')).toMatch(/;\s*Secure/i);
@@ -143,7 +143,7 @@ describe('secure session cookie (F4)', () => {
   it('leaves the cookie non-Secure on plain http so LAN self-hosts keep working', async () => {
     const { app } = makeTestApp();
     const response = await jsonRequest(app, 'POST', '/api/v1/auth/signup', {
-      username: 'keeper',
+      username: 'keeper', email: 'keeper@test.reef',
       password: 'password123',
     });
     expect(response.status).toBe(200);
@@ -194,7 +194,7 @@ describe('password minimum length is 8 (F8)', () => {
   it('rejects a 7-character password on signup', async () => {
     const { app } = makeTestApp();
     const response = await jsonRequest(app, 'POST', '/api/v1/auth/signup', {
-      username: 'keeper',
+      username: 'keeper', email: 'keeper@test.reef',
       password: 'seven77',
     });
     expect(response.status).toBe(400);
@@ -203,7 +203,7 @@ describe('password minimum length is 8 (F8)', () => {
   it('accepts an 8-character password', async () => {
     const { app } = makeTestApp();
     const response = await jsonRequest(app, 'POST', '/api/v1/auth/signup', {
-      username: 'keeper',
+      username: 'keeper', email: 'keeper@test.reef',
       password: 'eight888',
     });
     expect(response.status).toBe(200);

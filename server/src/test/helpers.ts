@@ -6,25 +6,41 @@ import { makeApp } from '../app.js';
 import { loadConfig, type Config } from '../config.js';
 import { createDb, type Db } from '../db/index.js';
 import type { AppEnv } from '../middleware/auth.js';
+import type { MailMessage } from '../services/email.js';
 
 export interface TestContext {
   app: Hono<AppEnv>;
   db: Db;
   config: Config;
+  /** Everything the app tried to email (recording fake; empty when email off). */
+  sentMail: MailMessage[];
 }
 
-export function makeTestApp(overrides: Partial<Config> = {}): TestContext {
+export function makeTestApp(
+  overrides: Partial<Config> = {},
+  options: { email?: boolean } = {},
+): TestContext {
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'nemomemo-test-'));
   const config = loadConfig({
     dataDir: scratch,
     dbPath: ':memory:',
     uploadsDir: path.join(scratch, 'uploads'),
+    smtp: null,
     ...overrides,
   });
   fs.mkdirSync(config.uploadsDir, { recursive: true });
   const db = createDb(config.dbPath);
-  const app = makeApp(db, config);
-  return { app, db, config };
+  const sentMail: MailMessage[] = [];
+  const mailer =
+    options.email === false
+      ? null
+      : {
+          send: async (message: MailMessage) => {
+            sentMail.push(message);
+          },
+        };
+  const app = makeApp(db, config, { mailer });
+  return { app, db, config, sentMail };
 }
 
 export async function jsonRequest(
@@ -46,7 +62,11 @@ export async function jsonRequest(
 
 /** Sign up a user and return their session cookie. */
 export async function signup(app: Hono<AppEnv>, username: string, password = 'password123'): Promise<string> {
-  const response = await jsonRequest(app, 'POST', '/api/v1/auth/signup', { username, password });
+  const response = await jsonRequest(app, 'POST', '/api/v1/auth/signup', {
+    username,
+    password,
+    email: `${username}@test.reef`,
+  });
   if (response.status !== 200) {
     throw new Error(`signup failed: ${response.status} ${await response.text()}`);
   }

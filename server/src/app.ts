@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { Config } from './config.js';
 import type { Db } from './db/index.js';
+import { makeSmtpMailer, type Mailer } from './services/email.js';
 import { viewerMiddleware, type AppEnv } from './middleware/auth.js';
 import { attachmentRoutes } from './routes/attachments.js';
 import { authRoutes } from './routes/auth.js';
@@ -24,7 +25,13 @@ function applySecurityHeaders(headers: Headers): void {
   }
 }
 
-export function makeApp(db: Db, config: Config): Hono<AppEnv> {
+export interface AppDeps {
+  /** Outbound mail; defaults from config.smtp. Explicit null disables email. */
+  mailer?: Mailer | null;
+}
+
+export function makeApp(db: Db, config: Config, deps: AppDeps = {}): Hono<AppEnv> {
+  const mailer = 'mailer' in deps ? (deps.mailer ?? null) : config.smtp ? makeSmtpMailer(config.smtp) : null;
   const app = new Hono<AppEnv>();
 
   app.onError((error, c) => {
@@ -47,11 +54,11 @@ export function makeApp(db: Db, config: Config): Hono<AppEnv> {
   app.get('/healthz', (c) => c.json({ ok: true }));
 
   const api = new Hono<AppEnv>();
-  api.route('/auth', authRoutes(db, config));
-  api.route('/instance', instanceRoutes(db, config));
+  api.route('/auth', authRoutes(db, config, mailer));
+  api.route('/instance', instanceRoutes(db, config, mailer));
   api.route('/memos', memoRoutes(db, config));
   api.route('/shares', shareRoutes(db));
-  api.route('/users', userRoutes(db));
+  api.route('/users', userRoutes(db, mailer));
   api.route('/inbox', inboxRoutes(db));
   api.route('/attachments', attachmentRoutes(db, config));
 

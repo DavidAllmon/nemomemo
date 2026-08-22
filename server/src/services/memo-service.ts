@@ -36,7 +36,7 @@ export function userToDto(user: UserRow, opts: { includeEmail?: boolean } = {}):
     description: user.description,
     rowStatus: user.rowStatus,
     createdTs: user.createdTs,
-    ...(opts.includeEmail ? { email: user.email } : {}),
+    ...(opts.includeEmail ? { email: user.email, emailVerified: user.emailVerifiedTs != null } : {}),
   };
 }
 
@@ -211,6 +211,7 @@ function placeholderUser(): UserRow {
     username: 'unknown',
     role: 'USER',
     email: '',
+    emailVerifiedTs: null,
     nickname: 'Unknown',
     passwordHash: '',
     avatarUrl: '',

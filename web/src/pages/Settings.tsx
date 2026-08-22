@@ -9,6 +9,7 @@ import { useTheme, type Theme } from '@/context/theme.js';
 import {
   keys,
   useCloudBilling,
+  useInstanceProfile,
   useInstanceSettings,
   useMembers,
   useUpdateUserSettings,
@@ -41,6 +42,7 @@ function useStatus() {
 
 function AccountSection() {
   const { data: viewer } = useViewer();
+  const { data: profile } = useInstanceProfile();
   const queryClient = useQueryClient();
   const { status, flash } = useStatus();
   const [nickname, setNickname] = useState(viewer?.nickname ?? '');
@@ -103,8 +105,27 @@ function AccountSection() {
         </div>
         <label className="text-xs font-semibold text-muted-foreground">Nickname</label>
         <Input value={nickname} onChange={(e) => setNickname(e.target.value)} />
-        <label className="text-xs font-semibold text-muted-foreground">Email (optional)</label>
-        <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+        <label className="text-xs font-semibold text-muted-foreground">Email</label>
+        <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        {viewer?.email && email === viewer.email ? (
+          viewer.emailVerified ? (
+            <p className="text-xs font-semibold text-ocean">Verified ✓</p>
+          ) : profile?.emailEnabled ? (
+            <p className="text-xs text-muted-foreground">
+              Not verified yet —{' '}
+              <button
+                className="font-semibold text-ocean hover:underline"
+                onClick={() =>
+                  void api('POST', '/api/v1/auth/verify/resend', {})
+                    .then(() => flash('Verification email sent!'))
+                    .catch((e) => flash(e instanceof ApiError ? e.message : 'Could not send'))
+                }
+              >
+                resend the link
+              </button>
+            </p>
+          ) : null
+        ) : null}
         <label className="text-xs font-semibold text-muted-foreground">About you</label>
         <Input value={description} onChange={(e) => setDescription(e.target.value)} />
         <label className="text-xs font-semibold text-muted-foreground">New password (leave blank to keep, 8+ characters)</label>

@@ -19,6 +19,7 @@ export interface StripeGateway {
   }>;
   updateCustomerMetadata(customerId: string, metadata: Record<string, string>): Promise<void>;
   getCustomerMetadata(customerId: string): Promise<Record<string, string>>;
+  getCustomerEmail(customerId: string): Promise<string | null>;
   createBillingPortalSession(customerId: string, returnUrl: string): Promise<{ url: string }>;
   /** Throws on a bad signature. */
   verifyWebhook(payload: string, signatureHeader: string): StripeWebhookEvent;
@@ -64,6 +65,11 @@ export function makeStripeGateway(secretKey: string, webhookSecret: string): Str
       const customer = await stripe.customers.retrieve(customerId);
       if (customer.deleted) return {};
       return (customer.metadata ?? {}) as Record<string, string>;
+    },
+    async getCustomerEmail(customerId) {
+      const customer = await stripe.customers.retrieve(customerId);
+      if (customer.deleted) return null;
+      return customer.email ?? null;
     },
     async createBillingPortalSession(customerId, returnUrl) {
       const session = await stripe.billingPortal.sessions.create({

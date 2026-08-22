@@ -36,7 +36,7 @@ async function user(username, password, profile) {
   try {
     cookie = (await call(null, 'POST', '/auth/signin', { username, password })).cookie;
   } catch {
-    cookie = (await call(null, 'POST', '/auth/signup', { username, password })).cookie;
+    cookie = (await call(null, 'POST', '/auth/signup', { username, password, email: `${username}@demo.reef` })).cookie;
   }
   if (profile) await call(cookie, 'PATCH', '/users/-/account', profile);
   return cookie;

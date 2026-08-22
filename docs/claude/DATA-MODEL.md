@@ -19,6 +19,7 @@ see GOTCHAS.md). `db/index.ts` sets `journal_mode=WAL`, `foreign_keys=ON`,
 | `reaction` | creator_id, memo_id, emoji; unique(creator, memo, emoji) |
 | `memo_share` | uid = 22-char share token; memo_id, creator_id; expires_ts nullable (null = never) |
 | `inbox` | sender_id (no FK), receiver_id → user; status `UNREAD\|ARCHIVED`; type `MEMO_COMMENT\|MEMO_MENTION`; memo_id nullable |
+| `auth_token` | user_id → user (cascade); purpose `EMAIL_VERIFY\|PASSWORD_RESET`; **token_hash** (sha256, never raw); expires_ts; used_ts (single-use). Verify TTL 7d, reset 1h |
 | `user_setting` | user_id + key (unique pair), value JSON. Keys: `GENERAL`, `MEMO_VIEWS` |
 | `instance_setting` | name (unique), value JSON. Names: `GENERAL`, `MEMO` |
 
@@ -42,7 +43,7 @@ backfilled. Filter compilation over it lives in `services/filter-sql.ts` (tags v
 
 | File | Contents |
 | --- | --- |
-| `0001_init.sql` | Full tenant schema, CHECK constraints, indexes: `idx_memo_creator_status`, `idx_memo_visibility`, partial `idx_memo_forget_at`, `idx_memo_relation_related`, `idx_attachment_memo_id`, `idx_reaction_memo_id`, `idx_memo_share_memo_id`, `idx_inbox_receiver` |
+| `0001_init.sql` (then 0002/0003 inbox rebuilds, 0004 email identity) | Full tenant schema, CHECK constraints, indexes: `idx_memo_creator_status`, `idx_memo_visibility`, partial `idx_memo_forget_at`, `idx_memo_relation_related`, `idx_attachment_memo_id`, `idx_reaction_memo_id`, `idx_memo_share_memo_id`, `idx_inbox_receiver` |
 
 Adding one: next number, `.sql` only, plus the matching `schema.ts` edit. The build
 copies `src/db/migrations` → `dist/migrations`.

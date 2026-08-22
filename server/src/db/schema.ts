@@ -10,6 +10,7 @@ export const users = sqliteTable('user', {
   username: text('username').notNull().unique(),
   role: text('role', { enum: ['ADMIN', 'USER'] }).notNull().default('USER'),
   email: text('email').notNull().default(''),
+  emailVerifiedTs: integer('email_verified_ts'),
   nickname: text('nickname').notNull().default(''),
   passwordHash: text('password_hash').notNull(),
   avatarUrl: text('avatar_url').notNull().default(''),
@@ -130,6 +131,18 @@ export const userSettings = sqliteTable(
 export const instanceSettings = sqliteTable('instance_setting', {
   name: text('name').notNull().unique(),
   value: text('value').notNull(),
+});
+
+export const authTokens = sqliteTable('auth_token', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  purpose: text('purpose', { enum: ['EMAIL_VERIFY', 'PASSWORD_RESET'] }).notNull(),
+  tokenHash: text('token_hash').notNull().unique(),
+  createdTs: integer('created_ts').notNull().$defaultFn(now),
+  expiresTs: integer('expires_ts').notNull(),
+  usedTs: integer('used_ts'),
 });
 
 export type UserRow = typeof users.$inferSelect;

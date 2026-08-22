@@ -28,6 +28,16 @@ written down.
   automatically. Never edit an already-shipped migration. The build copies migrations
   into `dist/`; forget that and production boots against a missing file.
 
+## Email identity (since v1.8.0)
+
+- Signup REQUIRES email everywhere; email uniqueness is enforced in the routes
+  (app layer, case-insensitive), not by a DB index. Sign-in accepts username or
+  a uniquely-matching email. Legacy accounts may have '' — never force-clear.
+- All outbound mail goes through the injected `Mailer` (`services/email.ts`);
+  request paths use `trySend` (fire-and-forget) so SMTP trouble never breaks a
+  request. `NEMOMEMO_SMTP_*` env unset ⇒ mailer null ⇒ every email feature
+  degrades silently (this is the self-host-without-mail mode; keep it working).
+
 ## Access control
 
 - **All memo exposure routes through `server/src/services/acl.ts`** — two pure

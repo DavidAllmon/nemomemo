@@ -10,6 +10,7 @@ import { api, ApiError } from '@/lib/api.js';
 export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
   const { data: profile } = useInstanceProfile();
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -28,6 +29,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
       const { user } = await api<{ user: unknown }>('POST', `/api/v1/auth/${effectiveMode}`, {
         username,
         password,
+        ...(effectiveMode === 'signup' ? { email } : {}),
       });
       queryClient.setQueryData(keys.viewer, user);
       await queryClient.invalidateQueries({ queryKey: keys.instance });
@@ -58,7 +60,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
         </div>
         <form className="flex flex-col gap-3" onSubmit={(event) => void submit(event)}>
           <label className="text-sm font-semibold" htmlFor="username">
-            Username
+            {effectiveMode === 'signup' ? 'Username' : 'Username or email'}
           </label>
           <Input
             id="username"
@@ -67,6 +69,21 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
             value={username}
             onChange={(event) => setUsername(event.target.value)}
           />
+          {effectiveMode === 'signup' ? (
+            <>
+              <label className="text-sm font-semibold" htmlFor="email">
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </>
+          ) : null}
           <label className="text-sm font-semibold" htmlFor="password">
             Password
           </label>
@@ -79,7 +96,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
             onChange={(event) => setPassword(event.target.value)}
           />
           {error ? <p className="text-sm font-semibold text-destructive">{error}</p> : null}
-          <Button type="submit" disabled={pending || !username || !password}>
+          <Button type="submit" disabled={pending || !username || !password || (effectiveMode === 'signup' && !email)}>
             {pending
               ? 'Diving in…'
               : needsSetup

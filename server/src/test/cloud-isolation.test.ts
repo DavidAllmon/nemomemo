@@ -49,6 +49,7 @@ async function reefRequest(
 async function reefSignup(app: Hono, host: string, username: string): Promise<string> {
   const response = await reefRequest(app, 'POST', host, '/api/v1/auth/signup', {
     username,
+    email: `${username}@${host}`,
     password: 'password123',
   });
   expect(response.status).toBe(200);
@@ -113,6 +114,7 @@ describe('cloud cross-tenant isolation', () => {
 
     const response = await reefRequest(ctx.app, 'POST', shell, '/api/v1/auth/signin', {
       username: 'nemo',
+      email: 'nemo-two@reef.test',
       password: 'password123',
     });
     expect(response.status).toBe(401);

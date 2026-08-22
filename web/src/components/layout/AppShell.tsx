@@ -5,7 +5,7 @@ import { NemoLogo, Wordmark } from '@/components/NemoLogo.js';
 import { SearchDialog } from '@/components/filters/SearchDialog.js';
 import { Sidebar } from '@/components/layout/Sidebar.js';
 import { Button } from '@/components/ui/button.js';
-import { useCloudBilling, useViewer } from '@/hooks/queries.js';
+import { useCloudBilling, useInstanceProfile, useViewer } from '@/hooks/queries.js';
 
 /** Hosted reefs only: reefkeepers see when a payment needs attention. */
 function PastDueBanner() {
@@ -20,6 +20,59 @@ function PastDueBanner() {
         Settings → Billing
       </Link>{' '}
       to keep your reef swimming.
+    </div>
+  );
+}
+
+/** When email is set up on this instance, nudge accounts that aren't rescuable yet. */
+function EmailNudgeBanner() {
+  const { data: viewer } = useViewer();
+  const { data: profile } = useInstanceProfile();
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return sessionStorage.getItem('nemo-email-nudge') === '1';
+    } catch {
+      return false;
+    }
+  });
+  if (dismissed || !viewer || !profile?.emailEnabled) return null;
+  const missing = !viewer.email;
+  const unverified = !!viewer.email && viewer.emailVerified === false;
+  if (!missing && !unverified) return null;
+  const dismiss = () => {
+    setDismissed(true);
+    try {
+      sessionStorage.setItem('nemo-email-nudge', '1');
+    } catch {
+      // ignore
+    }
+  };
+  return (
+    <div className="mb-4 flex items-center gap-2 rounded-2xl border border-ocean/30 bg-ocean/10 px-4 py-3 text-sm">
+      <span className="min-w-0 flex-1">
+        {missing ? (
+          <>
+            <span className="font-semibold">Add your email</span> so your account can always be
+            rescued — set it in{' '}
+            <Link to="/settings" className="font-semibold underline">
+              Settings
+            </Link>
+            . 🛟
+          </>
+        ) : (
+          <>
+            <span className="font-semibold">Check your inbox</span> — we sent a link to verify{' '}
+            {viewer.email}. Lost it? Resend from{' '}
+            <Link to="/settings" className="font-semibold underline">
+              Settings
+            </Link>
+            .
+          </>
+        )}
+      </span>
+      <button onClick={dismiss} aria-label="Dismiss" className="shrink-0 font-bold text-muted-foreground hover:text-foreground">
+        ✕
+      </button>
     </div>
   );
 }
@@ -86,6 +139,7 @@ export function AppShell() {
       <main className="min-w-0 flex-1 px-3 py-4 md:h-dvh md:overflow-y-auto md:px-6">
         <div className="mx-auto w-full max-w-2xl">
           <PastDueBanner />
+          <EmailNudgeBanner />
           <Outlet />
         </div>
       </main>

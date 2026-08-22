@@ -110,7 +110,7 @@ function alreadyClaimedPage(deps: BillingDeps, slug: string): string {
   );
 }
 
-function claimFormHtml(deps: BillingDeps, token: string, opts: { claimUrl?: string; error?: string } = {}): string {
+function claimFormHtml(deps: BillingDeps, token: string, opts: { claimUrl?: string; error?: string; email?: string } = {}): string {
   return page(
     'Claim your reef',
     `<div style="font-size:2.5rem">🐠</div><h1>Your reef is paid for — time to claim it!</h1>
@@ -120,6 +120,8 @@ ${opts.error ? `<p class="err">${escapeHtml(opts.error)}</p>` : ''}
   <input type="hidden" name="token" value="${escapeHtml(token)}">
   <label for="slug">Pick your reef's address</label>
   <div class="slug"><input id="slug" name="slug" required pattern="[a-z0-9][a-z0-9-]*" placeholder="coral" autocapitalize="none"><span>.${escapeHtml(deps.baseDomain)}</span></div>
+  <label for="email">Your email (for account recovery)</label>
+  <input id="email" name="email" type="email" required value="${escapeHtml(opts.email ?? '')}">
   <label for="username">Reefkeeper username</label>
   <input id="username" name="username" required autocapitalize="none">
   <label for="password">Password</label>
@@ -314,7 +316,8 @@ export function billingRoutes(deps: BillingDeps): Hono {
         );
       }
       const token = new URL(claimUrl).searchParams.get('token') ?? '';
-      return c.html(claimFormHtml(deps, token, { claimUrl }));
+      const email = (await deps.gateway.getCustomerEmail(session.customerId).catch(() => null)) ?? '';
+      return c.html(claimFormHtml(deps, token, { claimUrl, email }));
     }
 
     if (rawToken) {
@@ -333,7 +336,11 @@ export function billingRoutes(deps: BillingDeps): Hono {
           404,
         );
       }
-      return c.html(claimFormHtml(deps, rawToken));
+      const tokenReef = deps.registry.getReefById(claim.reefId);
+      const email = tokenReef?.stripeCustomerId
+        ? ((await deps.gateway.getCustomerEmail(tokenReef.stripeCustomerId).catch(() => null)) ?? '')
+        : '';
+      return c.html(claimFormHtml(deps, rawToken, { email }));
     }
 
     return c.html(page('Not found', `<h1>Nothing to claim here 🐙</h1><p>Follow the link from your checkout receipt.</p>`), 404);
@@ -345,6 +352,7 @@ export function billingRoutes(deps: BillingDeps): Hono {
     const slug = typeof body.slug === 'string' ? body.slug.toLowerCase().trim() : '';
     const username = typeof body.username === 'string' ? body.username.trim() : '';
     const password = typeof body.password === 'string' ? body.password : '';
+    const email = typeof body.email === 'string' ? body.email.trim() : '';
 
     const claim = deps.registry.getClaimToken(hashToken(rawToken));
     // Double-submit / refresh after a successful claim: point at the live reef.
@@ -369,9 +377,9 @@ export function billingRoutes(deps: BillingDeps): Hono {
     }
     if (RESERVED_SLUGS.has(slug)) return fail('That address is reserved — pick another and keep swimming.');
     if (deps.registry.getReefBySlug(slug)) return fail('That reef address is already taken — try another.', 409);
-    const credentials = signupRequestSchema.safeParse({ username, password });
+    const credentials = signupRequestSchema.safeParse({ username, password, email });
     if (!credentials.success) {
-      return fail('Username must be 1–32 letters, numbers, or hyphens; password at least 8 characters.');
+      return fail('Check your details: a real email, a username of 1–32 letters/numbers/hyphens, and a password of at least 8 characters.');
     }
 
     // Claim: rename the placeholder, activate, burn the token, then create the

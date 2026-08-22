@@ -1,6 +1,14 @@
 import path from 'node:path';
 import { DORY_TTL_SECONDS, NEMOMEMO_VERSION } from '@nemomemo/shared';
 
+export interface SmtpConfig {
+  host: string;
+  port: number;
+  user: string;
+  pass: string;
+  from: string;
+}
+
 export interface Config {
   port: number;
   dataDir: string;
@@ -18,6 +26,17 @@ export interface Config {
    * and cloud mode (a cloud reef restore must never kill the shared process).
    */
   requestRestart: (() => void) | null;
+  /** Outbound mail; null (all NEMOMEMO_SMTP_* unset) disables email features. */
+  smtp: SmtpConfig | null;
+}
+
+function smtpFromEnv(): SmtpConfig | null {
+  const host = process.env.NEMOMEMO_SMTP_HOST;
+  const user = process.env.NEMOMEMO_SMTP_USER;
+  const pass = process.env.NEMOMEMO_SMTP_PASS;
+  const from = process.env.NEMOMEMO_SMTP_FROM;
+  if (!host || !user || !pass || !from) return null;
+  return { host, port: Number(process.env.NEMOMEMO_SMTP_PORT ?? 587), user, pass, from };
 }
 
 export function loadConfig(overrides: Partial<Config> = {}): Config {
@@ -35,5 +54,6 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
     webDistDir: overrides.webDistDir ?? process.env.NEMOMEMO_WEB_DIST ?? null,
     cloudLimits: overrides.cloudLimits ?? null,
     requestRestart: overrides.requestRestart ?? null,
+    smtp: 'smtp' in overrides ? (overrides.smtp ?? null) : smtpFromEnv(),
   };
 }

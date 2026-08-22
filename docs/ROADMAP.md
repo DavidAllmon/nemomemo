@@ -26,11 +26,11 @@ Priority: **P0** do before anything else · **P1** next milestone · **P2** feat
 
 | Item | Why | Effort |
 | --- | --- | --- |
-| **SMTP email service** | The keystone: env-configured (self-host optional), one small service. Everything below depends on it. | M |
+| ~~**SMTP email service**~~ ✅ v1.8.0 (`NEMOMEMO_SMTP_*` env, Mailer service; Brevo creds pending on VM) | The keystone: env-configured (self-host optional), one small service. Everything below depends on it. | — |
 | → **Password reset** (audit F2) | The #1 support fire waiting to happen: today a reefkeeper who forgets their password loses their reef until manual VM surgery. | M |
 | → **Claim link + receipt emails** | Claim links currently live on-screen + Stripe metadata only. | S |
 | → **Dunning emails** | "Your payment didn't make it through" before a reef suspends — saves real revenue. | S |
-| → **Optional email verification** | Anchor accounts for recovery; keep optional to stay low-friction. | M |
+| ~~→ **Email verification**~~ ✅ v1.8.0 (required-at-signup identity per spec; verification when SMTP on) | Anchor accounts for recovery. | — |
 | **Suspended-reef self-rescue** | The "taking a nap" page currently dead-ends. Add "resubscribe / fix billing" path (Stripe-emailed portal link) so churned reefs can wake themselves. | M |
 | **90-day deletion job** | ToS promises suspended-reef deletion after 90 days; today it's manual. Registry sweep + `rm -rf` after grace, with a log. | S–M |
 | ~~**Self-serve reef export**~~ ✅ v1.1.0 (zip) + restore-by-upload for self-host in v1.2.0; Markdown-format export still open | Settings → Backups. | M |

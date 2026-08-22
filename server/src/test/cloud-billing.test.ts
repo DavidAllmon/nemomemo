@@ -57,6 +57,10 @@ class FakeStripe implements StripeGateway {
     return this.customerMetadata.get(customerId) ?? {};
   }
 
+  async getCustomerEmail(customerId: string) {
+    return customerId ? `${customerId}@customer.test` : null;
+  }
+
   async createBillingPortalSession() {
     return { url: 'https://portal.stripe.test/session' };
   }
@@ -220,7 +224,7 @@ describe('cloud billing + claim flow', () => {
     const claimed = await postClaim(ctx, {
       token,
       slug: 'lagoon',
-      username: 'nemo',
+      email: 'keeper@claim.test', username: 'nemo',
       password: 'password123',
     });
     expect(claimed.status).toBe(200);
@@ -243,7 +247,7 @@ describe('cloud billing + claim flow', () => {
 
     // Re-submitting the burned token (double-click, refresh) is friendly, not
     // scary: it points at the already-live reef instead of erroring.
-    const reuse = await postClaim(ctx, { token, slug: 'other', username: 'x', password: 'password123' });
+    const reuse = await postClaim(ctx, { token, slug: 'other', email: 'keeper@claim.test', username: 'x', password: 'password123' });
     expect(reuse.status).toBe(200);
     expect(await reuse.text()).toContain('already claimed');
     expect(ctx.registry.getReefBySlug('other')).toBeNull();
@@ -258,23 +262,23 @@ describe('cloud billing + claim flow', () => {
     ctx.registry.createReef('coral', { status: 'active' });
     const token = await payAndProvision(ctx);
 
-    const taken = await postClaim(ctx, { token, slug: 'coral', username: 'nemo', password: 'password123' });
+    const taken = await postClaim(ctx, { token, slug: 'coral', email: 'keeper@claim.test', username: 'nemo', password: 'password123' });
     expect(taken.status).toBe(409);
-    const reserved = await postClaim(ctx, { token, slug: 'app', username: 'nemo', password: 'password123' });
+    const reserved = await postClaim(ctx, { token, slug: 'app', email: 'keeper@claim.test', username: 'nemo', password: 'password123' });
     expect(reserved.status).toBe(400);
-    const malformed = await postClaim(ctx, { token, slug: 'Not A Slug', username: 'nemo', password: 'password123' });
+    const malformed = await postClaim(ctx, { token, slug: 'Not A Slug', email: 'keeper@claim.test', username: 'nemo', password: 'password123' });
     expect(malformed.status).toBe(400);
-    const shortPassword = await postClaim(ctx, { token, slug: 'lagoon', username: 'nemo', password: 'shrt' });
+    const shortPassword = await postClaim(ctx, { token, slug: 'lagoon', email: 'keeper@claim.test', username: 'nemo', password: 'shrt' });
     expect(shortPassword.status).toBe(400);
 
     // Still claimable after all those mistakes.
-    const ok = await postClaim(ctx, { token, slug: 'lagoon', username: 'nemo', password: 'password123' });
+    const ok = await postClaim(ctx, { token, slug: 'lagoon', email: 'keeper@claim.test', username: 'nemo', password: 'password123' });
     expect(ok.status).toBe(200);
   });
 
   it('subscription lifecycle: payment failure, recovery, and cancellation', async () => {
     const token = await payAndProvision(ctx);
-    await postClaim(ctx, { token, slug: 'lagoon', username: 'nemo', password: 'password123' });
+    await postClaim(ctx, { token, slug: 'lagoon', email: 'keeper@claim.test', username: 'nemo', password: 'password123' });
     const host = `lagoon.${BASE_DOMAIN}`;
 
     await postWebhook(ctx, { type: 'invoice.payment_failed', data: { object: { customer: 'cus_1' } } });
@@ -297,7 +301,7 @@ describe('cloud billing + claim flow', () => {
 
   it("other products' events on the shared Stripe account never touch reefs", async () => {
     const token = await payAndProvision(ctx);
-    await postClaim(ctx, { token, slug: 'lagoon', username: 'nemo', password: 'password123' });
+    await postClaim(ctx, { token, slug: 'lagoon', email: 'keeper@claim.test', username: 'nemo', password: 'password123' });
 
     // A different product's checkout (no app tag) must not provision a reef.
     await postWebhook(ctx, {
@@ -353,7 +357,7 @@ describe('cloud billing + claim flow', () => {
 
   it('reef-host billing API: admin sees status + portal, others are refused', async () => {
     const token = await payAndProvision(ctx);
-    await postClaim(ctx, { token, slug: 'lagoon', username: 'nemo', password: 'password123' });
+    await postClaim(ctx, { token, slug: 'lagoon', email: 'keeper@claim.test', username: 'nemo', password: 'password123' });
     const host = `lagoon.${BASE_DOMAIN}`;
 
     const signin = await ctx.app.request(`http://${host}/api/v1/auth/signin`, {
@@ -385,7 +389,7 @@ describe('cloud billing + claim flow', () => {
     const memberSignup = await ctx.app.request(`http://${host}/api/v1/auth/signup`, {
       method: 'POST',
       headers: { host, 'content-type': 'application/json' },
-      body: JSON.stringify({ username: 'guppy', password: 'password123' }),
+      body: JSON.stringify({ username: 'guppy', email: 'guppy@test.reef', password: 'password123' }),
     });
     expect(memberSignup.status).toBe(200);
     const memberCookie = memberSignup.headers.get('set-cookie')!.split(';')[0]!;
@@ -397,13 +401,13 @@ describe('cloud billing + claim flow', () => {
 
   it('fair-use brakes: member cap and storage cap bind on cloud reefs only', async () => {
     const token = await payAndProvision(ctx);
-    await postClaim(ctx, { token, slug: 'lagoon', username: 'nemo', password: 'password123' });
+    await postClaim(ctx, { token, slug: 'lagoon', email: 'keeper@claim.test', username: 'nemo', password: 'password123' });
     const host = `lagoon.${BASE_DOMAIN}`;
     const signupOn = (username: string) =>
       ctx.app.request(`http://${host}/api/v1/auth/signup`, {
         method: 'POST',
         headers: { host, 'content-type': 'application/json' },
-        body: JSON.stringify({ username, password: 'password123' }),
+        body: JSON.stringify({ username, email: `${username}@test.reef`, password: 'password123' }),
       });
 
     // maxMembers = 2: the admin + one more, then the reef is full.

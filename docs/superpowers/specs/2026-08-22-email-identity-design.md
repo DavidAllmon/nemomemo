@@ -112,5 +112,5 @@ warning before a reef suspends.
 ## Out of scope
 
 Phone/SMS anything; email-change re-verification flows beyond re-sending;
-weekly digests and email-in capture (separate roadmap items, post-SMTP); TOTP
-2FA (own item); marketing email of any kind.
+weekly digests and email-in capture (separate roadmap items, post-SMTP);
+marketing email of any kind.
