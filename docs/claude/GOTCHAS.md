@@ -59,6 +59,13 @@ Adding a filter field touches all three, or the feature is inconsistent:
 
 ## Web
 
+- **Editors are WYSIWYG views over markdown** (TipTap v3 + `@tiptap/markdown`).
+  All parse/serialize goes through `web/src/lib/markdown-bridge.ts`; its test suite
+  is the fidelity contract (byte-stable round trips, extraction equivalence). Never
+  serialize through any other path, and run the bridge tests after ANY TipTap
+  upgrade. Editors send markdown to the API exactly as before — the server never
+  knows WYSIWYG exists. No-op saves skip the content field (no phantom "edited").
+
 - **Interactive checkboxes splice the raw markdown source** — never re-serialize the
   AST. The rehype plugin in `web/src/components/memo/MemoContent.tsx` stamps each
   checkbox with its parent `li`'s source offset (the checkbox hast node has no

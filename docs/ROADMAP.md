@@ -123,7 +123,7 @@ Priority: **P0** do before anything else · **P1** next milestone · **P2** feat
 6. **S** Delete dead `toggleTask`.
 7. **S** Logo SVG canonical-copy note.
 8. ~~**NEW S** `avatarUrl` validation + size cap (audit F6).~~ ✅ v1.3.0
-9. **NEW M** Post-deploy smoke test in `update.sh` (curl healthz + one API call; auto-rollback is L, alert first).
+9. **NEW M** Post-deploy smoke test in `update.sh` (curl healthz + one API call; auto-rollback is L, alert first). *Partial 2026-08-22: update.sh now retries failed deploys (deployed.rev), logs FAILED lines, and GCs build cache after the disk-full wedge — smoke test + alerting still open.*
 10. **NEW M** Error tracking (self-hosted-friendly Sentry or log-based) — right now production errors vanish into `docker logs`.
 
 ## Business & legal

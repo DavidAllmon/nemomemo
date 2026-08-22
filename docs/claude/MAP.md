@@ -2,7 +2,7 @@
 
 Where everything lives. Monorepo: pnpm workspace, four packages — `shared/` (keystone),
 `server/`, `web/`, `site/` (separate product, never in the app Docker image).
-Verified against v1.2.1 (2026-08-22).
+Verified against v1.6.0 (2026-08-22).
 
 ## shared/ — `@nemomemo/shared`
 
@@ -48,7 +48,7 @@ storage caps, member caps, and restore.
 | `memo-service.ts` | DTO assembly + list queries: `buildMemoDtos` (batched, no N+1), `listMemoRows` (hand-built parameterized SQL, `limit+1` hasMore), `buildPayload`, `getMemoByUid`, `getParentMemo`, `linkAttachments`, `setReferenceRelations`, `assertDoryRules`, `newUid` |
 | `filter-sql.ts` | Filter AST → parameterized WHERE (`compileFilter`; tags via `json_each`, properties via `json_extract`, frozen now) |
 | `settings.ts` | Zod-validated JSON settings (instance GENERAL/MEMO, user GENERAL/MEMO_VIEWS) with safe fallbacks |
-| `inbox-service.ts` | `notifyMentions` (skips self/unknown/archived/PRIVATE), `notifyComment` |
+| `inbox-service.ts` | `notifyMentions` (skips self/unknown/archived/PRIVATE), `notifyComment` (owner), `notifyThreadParticipants` (earlier commenters → MEMO_THREAD, mention-deduped) |
 | `dory-sweeper.ts` | `sweepDoryMemos` + `startDorySweeper` (60s): deletes expired memos + orphaned comments + attachment files, transactional |
 
 ### Middleware (`src/middleware/`)
@@ -57,7 +57,8 @@ storage caps, member caps, and restore.
   sha256 at rest. `createSession`, `destroySession`, `resolveSessionViewer` (reused by
   cloud), `viewerMiddleware`, `requireViewer`, `requireAdmin`, `AppEnv`.
 - `rate-limit.ts` — fixed-window in-memory limiter (`makeRateLimiter`, `clientIp` —
-  cf-connecting-ip aware). **Currently unwired** (security PR in flight, 2026-08-22).
+  cf-connecting-ip aware). Wired to signin (10/min/IP), signup (30/hr/IP), and cloud
+  checkout (10/min/IP) since v1.3.0.
 
 ### lib/ + db/
 
@@ -108,7 +109,12 @@ ViewSetting → Tooltip → BrowserRouter → App. No Redux/Zustand.
 - `components/memo/` — MemoCard, **MemoContent** (markdown render + the checkbox
   offset-stamping rehype plugin → `toggleTaskAt`), MemoFeed, MemoActionMenu
   (bulk `setAllTasks`), ReactionBar, ShareDialog, DoryBadge
-- `components/editor/MemoEditor.tsx` — composer (tags/mentions/attachments, length cap)
+- `components/editor/` — **WYSIWYG (TipTap v3) over markdown storage** since v1.6.0:
+  `RichEditor.tsx` (shared core: toolbar variants full/slim, @member+#tag plain-text
+  suggestion popups, Cmd+Enter, paste/drop upload), `MemoEditor.tsx` (memo chrome:
+  visibility/Dory/attachments/drafts), `CommentEditor.tsx` (slim). The round-trip
+  contract lives in `lib/markdown-bridge.ts` + its vitest fidelity suite
+  (`markdown-bridge.test.ts`) — markdown in, markdown out, extraction-equivalent
 - `components/filters/` — FilterChipBar, SearchDialog
 - `components/ui/` — thin Radix wrappers (button, misc, overlays)
 - `hooks/queries.ts` — ALL query/mutation hooks (~35) + the hierarchical `keys` object

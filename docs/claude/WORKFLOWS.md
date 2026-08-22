@@ -21,7 +21,7 @@ pnpm dev:site              # marketing/docs site :4321 (Next.js) — separate pr
 
 ```bash
 pnpm typecheck             # strict tsc, all packages
-pnpm test                  # all vitest suites (shared + server; web has none)
+pnpm test                  # all vitest suites (shared + server + web markdown-bridge fidelity)
 pnpm build                 # production build: web dist + bundled server (tsup)
 
 # One file / one test:

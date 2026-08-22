@@ -18,7 +18,7 @@ codebase-memory MCP as project `nemomemo` — prefer `search_graph`/`trace_path`
 pnpm install               # workspace install (pnpm monorepo)
 pnpm dev                   # app dev: API on :5230 (tsx watch), web on :5173 (Vite, proxies /api and /file)
 pnpm dev:site              # marketing/docs site on :4321 (Next.js)
-pnpm test                  # all vitest suites (shared + server; web has none)
+pnpm test                  # all vitest suites (shared + server + web markdown-bridge fidelity)
 pnpm typecheck             # strict tsc across all packages
 pnpm build                 # production build: web dist + bundled server (tsup)
 

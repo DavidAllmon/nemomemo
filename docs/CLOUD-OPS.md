@@ -68,3 +68,19 @@ rebuild `demo`, `cloud`, and `site` per the usual path rules.
 ## Recovering a customer's claim link
 
 Stripe dashboard → Customers → the customer → metadata `nemomemo_claim_url`.
+
+
+## Deploy pipeline hardening (2026-08-22 incident)
+
+A day of releases filled the VM disk with Docker build cache (28.8 GB); the
+poller's build failed AFTER `git reset --hard`, so every later run saw
+HEAD == origin/main and exited silently — deploys wedged with no log line.
+`update.sh` on the VM now:
+
+- compares origin/main against `deployed.rev` (the last SUCCESSFUL deploy),
+  so failed builds retry on the next tick instead of wedging;
+- logs a `FAILED old=… new=…` line via an ERR trap (never silent again);
+- runs `docker builder prune -f --keep-storage 6g` after each deploy.
+
+Old script kept at `update.sh.bak-predisk`. Still open (roadmap): post-deploy
+smoke test + alerting; uptime monitoring will catch a stuck version externally.
