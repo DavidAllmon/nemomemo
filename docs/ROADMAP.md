@@ -71,10 +71,10 @@ Priority: **P0** do before anything else · **P1** next milestone · **P2** feat
 | Idea | Why | Effort |
 | --- | --- | --- |
 | **Link preview cards** | Server-side title/description/image fetch (SSRF-guarded); makes shared feeds richer. | M |
-| **Comment thread subscriptions** | Notify everyone who commented, not just the owner. | S |
+| ~~**Comment thread subscriptions**~~ ✅ v1.4.0 (`MEMO_THREAD` inbox type) | Notify everyone who commented, not just the owner. | — |
 | **RSS feeds** | `/u/:user/rss.xml` + explore feed — public reefs become followable. | S–M |
 | **Reaction notifications** | Optional inbox item when someone reacts. | S |
-| **NEW: Private-memo mention hint** | Field report 2026-08-22: mentions in PRIVATE memos never notify (by design — a ping would leak the memo's existence), but the editor doesn't say so, which reads as "mentions are broken". Show a small hint when @mentioning in a private memo; also hint when the mentioned name isn't a member of this reef. | S |
+| **NEW: Private-memo mention hint** — ✅ comment box in v1.4.0; main memo editor still open | Field report 2026-08-22: mentions in PRIVATE memos never notify (by design — a ping would leak the memo's existence), but the editor doesn't say so, which reads as "mentions are broken". Show a small hint when @mentioning in a private memo; also hint when the mentioned name isn't a member of this reef. | S |
 | **Share-as-image export** | Render a memo to a pretty PNG for messaging apps. | M |
 | **NEW: Weekly reef digest** | Post-SMTP: one optional email — what your reef-mates wrote this week. Brings quiet reefs back. | M |
 | **NEW: Public memo embeds** | oEmbed/iframe for a PUBLIC memo — quotable on blogs. | M |
