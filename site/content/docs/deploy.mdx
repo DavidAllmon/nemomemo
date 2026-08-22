@@ -1,7 +1,35 @@
 ---
 title: Deploy
-description: Docker in one command, Docker Compose, or build from source.
+description: One-click cloud buttons, Docker, Compose, source builds, and backups.
 ---
+
+## Prerequisites
+
+- **Docker deploys**: Docker Engine on any Linux box, NAS, Raspberry Pi, or VPS.
+  No repository clone needed — the image is on GitHub Container Registry.
+- **Source deploys**: `git`, Node.js 22+, pnpm.
+- **One-click cloud deploys**: just an account with the provider.
+
+## One-click cloud deploys
+
+NemoMemo is a stateful app (SQLite + uploads on disk), so it needs a host with a
+**persistent volume** — which is why you won't see Vercel/Netlify buttons here; those
+platforms are for static and serverless apps and would lose your data.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/DavidAllmon/nemomemo)
+&nbsp;
+[![Deploy to Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://app.koyeb.com/deploy?type=git&repository=github.com/DavidAllmon/nemomemo&branch=main&builder=dockerfile&name=nemomemo)
+
+- **Render** — the button reads this repo's [`render.yaml`](https://github.com/DavidAllmon/nemomemo/blob/main/render.yaml):
+  one Docker web service with a **1 GB persistent disk** mounted at `/app/data` and a
+  health check, preconfigured. Persistent disks require Render's paid Starter instance
+  (about $7/month). Sign in, click Apply, done.
+- **Koyeb** — the button prefills a Dockerfile build from this repo. After the first
+  deploy, attach a **volume** to the service mounted at `/app/data` in the Koyeb
+  dashboard (Volumes → attach) so your data survives redeploys.
+
+Both providers inject a `PORT` environment variable, which NemoMemo respects
+automatically.
 
 ## Docker
 
@@ -9,17 +37,27 @@ description: Docker in one command, Docker Compose, or build from source.
 docker run -d --name nemomemo \
   -p 5230:5230 \
   -v nemomemo-data:/app/data \
-  nemomemo
+  ghcr.io/davidallmon/nemomemo:latest
 ```
 
 Everything lives in the `/app/data` volume: `nemomemo.db` (SQLite) and `uploads/`.
+Images are published for **amd64 and arm64** (Raspberry Pi 4/5 works). Tags: `latest`
+tracks main; version tags appear on releases.
+
+Upgrading:
+
+```bash
+docker pull ghcr.io/davidallmon/nemomemo:latest
+docker rm -f nemomemo && docker run -d --name nemomemo \
+  -p 5230:5230 -v nemomemo-data:/app/data ghcr.io/davidallmon/nemomemo:latest
+```
 
 ## Docker Compose
 
 ```yaml
 services:
   nemomemo:
-    image: nemomemo
+    image: ghcr.io/davidallmon/nemomemo:latest
     ports:
       - "5230:5230"
     volumes:
@@ -31,24 +69,31 @@ volumes:
 
 ## Build from source
 
-Requires Node 22+ and pnpm.
-
 ```bash
-pnpm install
+git clone https://github.com/DavidAllmon/nemomemo.git
+cd nemomemo
+pnpm install --filter '!@nemomemo/site'
 pnpm build
 NEMOMEMO_WEB_DIST=web/dist node server/dist/index.js
 ```
 
-For development, `pnpm dev` runs the API on `:5230` and the web app on `:5173`.
+Or build the image yourself: `docker build -t nemomemo .` (the image contains only the
+app — never the marketing/docs site).
 
 ## Configuration
 
 | Env var | Default | Purpose |
 | --- | --- | --- |
-| `NEMOMEMO_PORT` | `5230` | HTTP port |
+| `NEMOMEMO_PORT` (or `PORT`) | `5230` | HTTP port |
 | `NEMOMEMO_DATA` | `./data` | Data directory |
 | `DORY_TTL_SECONDS` | `86400` | How long Dory remembers |
-| `NEMOMEMO_WEB_DIST` | — | Path to the built SPA |
+| `NEMOMEMO_WEB_DIST` | — | Path to the built SPA (source installs) |
+
+## Exposing it to the internet
+
+Put NemoMemo behind HTTPS — either a reverse proxy (Caddy, nginx, Traefik) terminating
+TLS in front of port 5230, or a **Cloudflare Tunnel** pointing at
+`http://localhost:5230` (no open ports needed; great for homelabs).
 
 ## Backups
 

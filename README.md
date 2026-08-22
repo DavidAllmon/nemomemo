@@ -42,28 +42,47 @@ can freely create, edit, comment, react, and let Dory forget things.
 
 ## Install NemoMemo (the app)
 
-This is all you need to self-host. The Docker image contains **only the app** — no
-marketing site, no docs site.
+One command — the image is published to GitHub Container Registry (amd64 + arm64), and
+it contains **only the app**: no marketing site, no docs site.
 
 ```bash
-docker build -t nemomemo .
-docker run -d -p 5230:5230 -v nemomemo-data:/app/data nemomemo
+docker run -d --name nemomemo \
+  -p 5230:5230 \
+  -v nemomemo-data:/app/data \
+  ghcr.io/davidallmon/nemomemo:latest
 ```
 
 Open **http://localhost:5230**, create your account (the first one becomes the admin),
 and start writing. All data — one SQLite database plus your uploads — lives in the
-`/app/data` volume.
+`/app/data` volume. Full guide: [Getting started](site/content/docs/getting-started.mdx)
+· [Deploy](site/content/docs/deploy.mdx).
+
+### One-click cloud deploy
+
+NemoMemo needs a host with a persistent volume (it's SQLite + uploads on disk):
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/DavidAllmon/nemomemo)
+&nbsp;
+[![Deploy to Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://app.koyeb.com/deploy?type=git&repository=github.com/DavidAllmon/nemomemo&branch=main&builder=dockerfile&name=nemomemo)
+
+Render is preconfigured by [`render.yaml`](render.yaml) (Docker service + 1 GB disk at
+`/app/data`, health check). On Koyeb, attach a volume at `/app/data` after the first
+deploy so data survives redeploys.
 
 <details>
-<summary>Prefer to run from source?</summary>
+<summary>Build it yourself / run from source</summary>
 
 ```bash
+git clone https://github.com/DavidAllmon/nemomemo.git && cd nemomemo
+
+# Docker:
+docker build -t nemomemo . && docker run -d -p 5230:5230 -v nemomemo-data:/app/data nemomemo
+
+# Or bare Node (22+) with pnpm:
 pnpm install --filter '!@nemomemo/site'   # app only, skips the website
 pnpm build
 NEMOMEMO_WEB_DIST=web/dist node server/dist/index.js
 ```
-
-Then open http://localhost:5230.
 </details>
 
 ## Develop locally

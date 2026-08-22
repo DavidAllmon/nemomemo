@@ -15,7 +15,8 @@ export interface Config {
 export function loadConfig(overrides: Partial<Config> = {}): Config {
   const dataDir = overrides.dataDir ?? process.env.NEMOMEMO_DATA ?? path.resolve('data');
   return {
-    port: overrides.port ?? Number(process.env.NEMOMEMO_PORT ?? 5230),
+    // PORT is the PaaS convention (Render, Koyeb, Railway, Fly all inject it).
+    port: overrides.port ?? Number(process.env.NEMOMEMO_PORT ?? process.env.PORT ?? 5230),
     dataDir,
     dbPath: overrides.dbPath ?? path.join(dataDir, 'nemomemo.db'),
     uploadsDir: overrides.uploadsDir ?? path.join(dataDir, 'uploads'),

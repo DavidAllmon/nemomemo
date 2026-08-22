@@ -169,7 +169,8 @@ export default function HomePage() {
         <h2 className="font-display text-3xl font-bold">Your server. One command.</h2>
         <pre className="mt-6 overflow-x-auto rounded-2xl border border-ocean-border bg-ocean-ink p-5 text-left text-sm text-ocean-bg">
           <code>{`docker run -d -p 5230:5230 \\
-  -v nemomemo-data:/app/data nemomemo`}</code>
+  -v nemomemo-data:/app/data \\
+  ghcr.io/davidallmon/nemomemo:latest`}</code>
         </pre>
         <p className="mt-3 text-sm text-ocean-muted">
           The first account you create becomes the reef keeper.{' '}

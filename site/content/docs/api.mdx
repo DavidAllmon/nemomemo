@@ -3,9 +3,17 @@ title: API reference
 description: The REST API behind everything the app does.
 ---
 
-Everything the web app does goes through a JSON API at `/api/v1`. Authentication is a
-session cookie obtained from `/auth/signin`. Errors come back as
-`{ "error": { "code", "message" } }` with a matching HTTP status.
+Everything the web app does goes through a JSON API at `/api/v1`. Errors come back as
+`{ "error": { "code", "message" } }` with a matching HTTP status; unknown paths return a
+JSON 404.
+
+## Authentication
+
+The API uses a **session cookie** obtained from `POST /auth/signin` — for scripts, keep a
+cookie jar (see the [example](#example) below). Sessions last 30 days and slide on use.
+Personal access tokens (`Authorization: Bearer …`) are on the
+[roadmap](https://github.com/DavidAllmon/nemomemo/blob/main/docs/ROADMAP.md) but not
+available yet.
 
 ## Auth
 

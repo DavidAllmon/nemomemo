@@ -3,15 +3,59 @@ title: Getting started
 description: From zero to your first memo in about two minutes.
 ---
 
+## Prerequisites
+
+You need exactly one of the following:
+
+- **Docker** (the fast path) — [install Docker Engine](https://docs.docker.com/engine/install/)
+  or Docker Desktop. Nothing else; you don't even need to clone the repository.
+- **Node.js 22+ and pnpm** (only if you'd rather run from source) — plus `git` to clone.
+
 ## 1. Run NemoMemo
 
-The fastest path is Docker:
+### Option A — Docker (recommended)
+
+The image is published to GitHub Container Registry, so this is genuinely one command:
 
 ```bash
-docker run -d -p 5230:5230 -v nemomemo-data:/app/data nemomemo
+docker run -d --name nemomemo \
+  -p 5230:5230 \
+  -v nemomemo-data:/app/data \
+  ghcr.io/davidallmon/nemomemo:latest
 ```
 
-Then open `http://localhost:5230`. (Other options: [Deploy](/docs/deploy).)
+Then open `http://localhost:5230`.
+
+### Option B — Docker Compose
+
+```yaml
+services:
+  nemomemo:
+    image: ghcr.io/davidallmon/nemomemo:latest
+    ports:
+      - "5230:5230"
+    volumes:
+      - nemomemo-data:/app/data
+    restart: unless-stopped
+volumes:
+  nemomemo-data:
+```
+
+```bash
+docker compose up -d
+```
+
+### Option C — from source
+
+```bash
+git clone https://github.com/DavidAllmon/nemomemo.git
+cd nemomemo
+pnpm install --filter '!@nemomemo/site'   # the app only; skips the website
+pnpm build
+NEMOMEMO_WEB_DIST=web/dist node server/dist/index.js
+```
+
+Want one-click cloud hosting instead? See [Deploy](/docs/deploy#one-click-cloud-deploys).
 
 ## 2. Create the reef keeper
 
@@ -34,3 +78,9 @@ visibility, and press **Save** (or ⌘+Enter). That's the whole loop.
 
 See that little fish button next to Save? That's a [Dory memo](/docs/dory) — the memo will
 be forgotten automatically in 24 hours. Try it with something disposable.
+
+## Where your data lives
+
+Everything is in the `/app/data` volume (or the `data/` directory for source installs):
+one SQLite database plus your uploads. That's the entire footprint — see
+[Deploy → Backups](/docs/deploy#backups) before you rely on it.

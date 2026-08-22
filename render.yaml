@@ -1,0 +1,16 @@
+# Render Blueprint — powers the "Deploy to Render" button.
+# One Docker web service with a persistent disk for the SQLite DB + uploads.
+services:
+  - type: web
+    name: nemomemo
+    runtime: docker
+    plan: starter # persistent disks require a paid instance type
+    autoDeploy: false # button deploys shouldn't track this repo's main branch
+    healthCheckPath: /healthz
+    envVars:
+      - key: NEMOMEMO_DATA
+        value: /app/data
+    disk:
+      name: nemomemo-data
+      mountPath: /app/data
+      sizeGB: 1
