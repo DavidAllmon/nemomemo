@@ -318,7 +318,7 @@ export function useUpdateUserSettings() {
 
 // ---------- Inbox ----------
 
-export function useInbox(status: 'UNREAD' | 'ARCHIVED', enabled = true) {
+export function useInbox(status: 'UNREAD' | 'READ' | 'ARCHIVED', enabled = true) {
   return useQuery({
     queryKey: keys.inbox(status),
     queryFn: () => api<{ items: InboxDto[]; unreadCount: number }>('GET', `/api/v1/inbox?status=${status}`),
@@ -330,11 +330,11 @@ export function useInbox(status: 'UNREAD' | 'ARCHIVED', enabled = true) {
 export function useInboxAction() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, action }: { id: number; action: 'archive' | 'unread' | 'delete' }) =>
+    mutationFn: ({ id, action }: { id: number; action: 'read' | 'unread' | 'archive' | 'delete' }) =>
       action === 'delete'
         ? api<{ ok: boolean }>('DELETE', `/api/v1/inbox/${id}`)
         : api<{ ok: boolean }>('PATCH', `/api/v1/inbox/${id}`, {
-            status: action === 'archive' ? 'ARCHIVED' : 'UNREAD',
+            status: action === 'archive' ? 'ARCHIVED' : action === 'read' ? 'READ' : 'UNREAD',
           }),
     onSuccess: () => void client.invalidateQueries({ queryKey: ['inbox'] }),
   });

@@ -124,8 +124,11 @@ export function MemoCard({
   const { data: viewer } = useViewer();
   const update = useUpdateMemo();
   const [editing, setEditing] = useState(false);
-  const isOwner = viewer && (viewer.username === memo.creator.username || viewer.role === 'ADMIN');
+  // Only the creator edits content (inline editor, checkboxes) — admins moderate
+  // through the action menu but never rewrite someone's words.
+  const isCreator = viewer?.username === memo.creator.username;
   const Visibility = VISIBILITY_META[memo.visibility].icon;
+  const edited = memo.updatedTs > memo.createdTs;
 
   if (editing) {
     return (
@@ -148,12 +151,19 @@ export function MemoCard({
           <Link to={`/u/${memo.creator.username}`} className="text-sm font-bold hover:underline">
             {memo.creator.nickname}
           </Link>
-          <Tip label={`Written ${absoluteTime(memo.createdTs)}`}>
-            <Link to={`/memos/${memo.uid}`} className="block text-xs text-muted-foreground hover:underline">
-              {relativeTime(memo.createdTs)}
-              {memo.rowStatus === 'ARCHIVED' ? ' · archived' : ''}
-            </Link>
-          </Tip>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Tip label={`Written ${absoluteTime(memo.createdTs)}`}>
+              <Link to={`/memos/${memo.uid}`} className="block hover:underline">
+                {relativeTime(memo.createdTs)}
+                {memo.rowStatus === 'ARCHIVED' ? ' · archived' : ''}
+              </Link>
+            </Tip>
+            {edited ? (
+              <Tip label={`Edited ${absoluteTime(memo.updatedTs)}`}>
+                <span className="italic">· edited</span>
+              </Tip>
+            ) : null}
+          </div>
         </div>
         {memo.forgetAt != null ? <DoryBadge forgetAt={memo.forgetAt} /> : null}
         {memo.pinned ? <Pin className="size-3.5 text-primary" aria-label="Pinned" /> : null}
@@ -161,7 +171,7 @@ export function MemoCard({
           <Visibility className="size-3.5 text-muted-foreground" />
         </Tip>
         {viewer || shareToken == null ? (
-          <MemoActionMenu memo={memo} onEdit={isOwner ? () => setEditing(true) : undefined} />
+          <MemoActionMenu memo={memo} onEdit={isCreator ? () => setEditing(true) : undefined} />
         ) : null}
       </header>
 
@@ -169,7 +179,7 @@ export function MemoCard({
         content={memo.content}
         className={cn(compact && 'max-h-64 overflow-hidden')}
         onContentChange={
-          isOwner && memo.rowStatus === 'NORMAL'
+          isCreator && memo.rowStatus === 'NORMAL'
             ? (next) => update.mutate({ uid: memo.uid, content: next })
             : undefined
         }

@@ -40,7 +40,10 @@ export function MemoActionMenu({ memo, onEdit }: { memo: MemoDto; onEdit?: () =>
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
+  // Creator-or-admin may moderate (archive/delete); only the creator edits —
+  // pins, Dory, tasks, and Edit rewrite content or curation, so they're theirs.
   const isOwner = viewer && (viewer.username === memo.creator.username || viewer.role === 'ADMIN');
+  const isCreator = viewer?.username === memo.creator.username;
   const isComment = memo.parentUid != null;
   const archived = memo.rowStatus === 'ARCHIVED';
 
@@ -63,7 +66,7 @@ export function MemoActionMenu({ memo, onEdit }: { memo: MemoDto; onEdit?: () =>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {isOwner && !archived && !isComment ? (
+          {isCreator && !archived && !isComment ? (
             <DropdownMenuItem
               onSelect={() => update.mutate({ uid: memo.uid, pinned: !memo.pinned })}
               disabled={memo.forgetAt != null}
@@ -72,12 +75,12 @@ export function MemoActionMenu({ memo, onEdit }: { memo: MemoDto; onEdit?: () =>
               {memo.pinned ? 'Unpin' : 'Pin to top'}
             </DropdownMenuItem>
           ) : null}
-          {isOwner && !archived && onEdit ? (
+          {isCreator && !archived && onEdit ? (
             <DropdownMenuItem onSelect={onEdit}>
               <Pencil className="size-4" /> Edit
             </DropdownMenuItem>
           ) : null}
-          {isOwner && !archived && !isComment ? (
+          {isCreator && !archived && !isComment ? (
             <DropdownMenuItem
               onSelect={() => update.mutate({ uid: memo.uid, dory: memo.forgetAt == null })}
               disabled={memo.pinned}
@@ -99,7 +102,7 @@ export function MemoActionMenu({ memo, onEdit }: { memo: MemoDto; onEdit?: () =>
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
-          {isOwner && !archived && memo.property.hasTaskList ? (
+          {isCreator && !archived && memo.property.hasTaskList ? (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <ListChecks className="size-4" /> Tasks

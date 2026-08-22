@@ -153,6 +153,18 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
     const viewer = requireViewer(c);
     const memo = ownedMemo(c, c.req.param('uid'));
     const body = c.req.valid('json');
+    // Admins may moderate (archive/restore) but never rewrite someone's words:
+    // only the creator can touch content, visibility, dory, pins, or links.
+    const editing =
+      body.content != null ||
+      body.visibility != null ||
+      body.dory != null ||
+      body.pinned != null ||
+      body.attachmentUids != null ||
+      body.relatedMemoUids != null;
+    if (editing && memo.creatorId !== viewer.id) {
+      throw apiError('FORBIDDEN', 'Only the author can edit this memo');
+    }
     const now = nowSeconds();
 
     const patch: Partial<MemoRow> = {};
@@ -167,6 +179,9 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
       const after = buildPayload(body.content);
       patch.content = body.content;
       patch.payload = after.payload;
+      // updatedTs means "words last changed" — pins/archives/visibility don't
+      // count, so the "edited" badge only appears for real edits.
+      patch.updatedTs = now;
       mentionsToNotify = after.mentions.filter((name) => !before.mentions.includes(name));
     }
     if (body.visibility != null) patch.visibility = body.visibility;
@@ -187,8 +202,10 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
     const nextForgetAt = 'forgetAt' in patch ? (patch.forgetAt ?? null) : memo.forgetAt;
     assertDoryRules(nextPinned, nextForgetAt);
 
-    patch.updatedTs = now;
-    const updated = db.update(memos).set(patch).where(eq(memos.id, memo.id)).returning().get();
+    const updated =
+      Object.keys(patch).length > 0
+        ? db.update(memos).set(patch).where(eq(memos.id, memo.id)).returning().get()
+        : memo;
 
     if (body.attachmentUids != null) linkAttachments(db, memo.id, memo.creatorId, body.attachmentUids);
     if (body.relatedMemoUids != null) setReferenceRelations(db, memo.id, body.relatedMemoUids, viewer);

@@ -109,7 +109,8 @@ export const inboxes = sqliteTable('inbox', {
   receiverId: integer('receiver_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  status: text('status', { enum: ['UNREAD', 'ARCHIVED'] }).notNull().default('UNREAD'),
+  // Keep these enums in sync with the CHECK constraints in migrations 0003+.
+  status: text('status', { enum: ['UNREAD', 'READ', 'ARCHIVED'] }).notNull().default('UNREAD'),
   type: text('type', { enum: ['MEMO_COMMENT', 'MEMO_MENTION', 'MEMO_THREAD'] }).notNull(),
   memoId: integer('memo_id').references(() => memos.id, { onDelete: 'cascade' }),
 });

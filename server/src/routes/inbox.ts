@@ -14,7 +14,8 @@ export function inboxRoutes(db: Db): Hono<AppEnv> {
 
   app.get('/', (c) => {
     const viewer = requireViewer(c);
-    const status = c.req.query('status') === 'ARCHIVED' ? 'ARCHIVED' : 'UNREAD';
+    const raw = c.req.query('status');
+    const status = raw === 'ARCHIVED' ? 'ARCHIVED' : raw === 'READ' ? 'READ' : 'UNREAD';
     const rows = db
       .select()
       .from(inboxes)
@@ -80,7 +81,7 @@ export function inboxRoutes(db: Db): Hono<AppEnv> {
   app.post('/read-all', (c) => {
     const viewer = requireViewer(c);
     db.update(inboxes)
-      .set({ status: 'ARCHIVED' })
+      .set({ status: 'READ' })
       .where(and(eq(inboxes.receiverId, viewer.id), eq(inboxes.status, 'UNREAD')))
       .run();
     return c.json({ ok: true });

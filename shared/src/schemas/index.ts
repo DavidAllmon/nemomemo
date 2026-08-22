@@ -129,7 +129,7 @@ export const updateInstanceSettingsRequestSchema = z.object({
 });
 
 export const inboxUpdateRequestSchema = z.object({
-  status: z.enum(['UNREAD', 'ARCHIVED']),
+  status: z.enum(['UNREAD', 'READ', 'ARCHIVED']),
 });
 
 // ---------- Response DTO types ----------
@@ -207,7 +207,7 @@ export interface ShareDto {
 export interface InboxDto {
   id: number;
   createdTs: number;
-  status: 'UNREAD' | 'ARCHIVED';
+  status: 'UNREAD' | 'READ' | 'ARCHIVED';
   type: 'MEMO_COMMENT' | 'MEMO_MENTION' | 'MEMO_THREAD';
   sender: UserDto | null;
   memoUid: string | null;
