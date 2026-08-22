@@ -1,0 +1,289 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import type { Hono } from 'hono';
+import Stripe from 'stripe';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { loadConfig } from '../config.js';
+import { makeCloudApp } from '../cloud/app.js';
+import { billingRoutes } from '../cloud/billing.js';
+import { Registry } from '../cloud/registry.js';
+import { makeStripeGateway, type StripeGateway } from '../cloud/stripe.js';
+import { ReefFleet } from '../cloud/tenants.js';
+
+const BASE_DOMAIN = 'reef.test';
+const APP_HOST = `app.${BASE_DOMAIN}`;
+const APP_URL = `http://${APP_HOST}`;
+
+interface FakeSession {
+  id: string;
+  priceId: string;
+  customerId: string | null;
+  subscriptionId: string | null;
+  paymentStatus: string;
+}
+
+/** In-memory Stripe: webhook "signature" is the literal string 'valid'. */
+class FakeStripe implements StripeGateway {
+  sessions = new Map<string, FakeSession>();
+  customerMetadata = new Map<string, Record<string, string>>();
+  created: { priceId: string; successUrl: string; cancelUrl: string }[] = [];
+  private counter = 0;
+
+  async createCheckoutSession(opts: { priceId: string; successUrl: string; cancelUrl: string }) {
+    this.created.push(opts);
+    const id = `cs_test_${++this.counter}`;
+    this.sessions.set(id, { id, priceId: opts.priceId, customerId: null, subscriptionId: null, paymentStatus: 'unpaid' });
+    return { id, url: `https://checkout.stripe.test/${id}` };
+  }
+
+  completePayment(sessionId: string, customerId: string, subscriptionId: string): void {
+    const session = this.sessions.get(sessionId)!;
+    session.customerId = customerId;
+    session.subscriptionId = subscriptionId;
+    session.paymentStatus = 'paid';
+  }
+
+  async retrieveCheckoutSession(id: string) {
+    const session = this.sessions.get(id);
+    if (!session) throw new Error(`no such session ${id}`);
+    return session;
+  }
+
+  async updateCustomerMetadata(customerId: string, metadata: Record<string, string>) {
+    this.customerMetadata.set(customerId, { ...this.customerMetadata.get(customerId), ...metadata });
+  }
+
+  async getCustomerMetadata(customerId: string) {
+    return this.customerMetadata.get(customerId) ?? {};
+  }
+
+  async createBillingPortalSession() {
+    return { url: 'https://portal.stripe.test/session' };
+  }
+
+  verifyWebhook(payload: string, signatureHeader: string) {
+    if (signatureHeader !== 'valid') throw new Error('bad signature');
+    return JSON.parse(payload) as { type: string; data: { object: Record<string, unknown> } };
+  }
+}
+
+interface BillingTestContext {
+  app: Hono;
+  registry: Registry;
+  fleet: ReefFleet;
+  stripe: FakeStripe;
+  scratch: string;
+}
+
+function makeBillingTestContext(): BillingTestContext {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'nemomemo-billing-test-'));
+  const base = loadConfig({ dataDir: scratch, webDistDir: null });
+  const registry = new Registry(path.join(scratch, 'registry.db'));
+  const reefsDir = path.join(scratch, 'reefs');
+  const fleet = new ReefFleet(base, reefsDir);
+  const stripe = new FakeStripe();
+  const billing = billingRoutes({
+    registry,
+    fleet,
+    gateway: stripe,
+    appUrl: APP_URL,
+    baseDomain: BASE_DOMAIN,
+    cancelUrl: 'https://cancel.test/pricing',
+    prices: { month: 'price_month', year: 'price_year' },
+    reefsDir,
+  });
+  const app = makeCloudApp(registry, fleet, { baseDomain: BASE_DOMAIN, appHost: APP_HOST }, billing);
+  return { app, registry, fleet, stripe, scratch };
+}
+
+async function postWebhook(ctx: BillingTestContext, event: unknown, signature = 'valid'): Promise<Response> {
+  return ctx.app.request(`${APP_URL}/cloud/webhook/stripe`, {
+    method: 'POST',
+    headers: { host: APP_HOST, 'stripe-signature': signature, 'content-type': 'application/json' },
+    body: JSON.stringify(event),
+  });
+}
+
+async function postClaim(ctx: BillingTestContext, fields: Record<string, string>): Promise<Response> {
+  return ctx.app.request(`${APP_URL}/cloud/claim`, {
+    method: 'POST',
+    headers: { host: APP_HOST, 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(fields).toString(),
+  });
+}
+
+/** Runs checkout + paid webhook; returns the raw claim token. */
+async function payAndProvision(ctx: BillingTestContext, customerId = 'cus_1'): Promise<string> {
+  const checkout = await ctx.app.request(`${APP_URL}/cloud/checkout?interval=month`, {
+    headers: { host: APP_HOST },
+  });
+  expect(checkout.status).toBe(303);
+  const sessionId = checkout.headers.get('location')!.split('/').pop()!;
+  ctx.stripe.completePayment(sessionId, customerId, 'sub_1');
+  const hook = await postWebhook(ctx, {
+    type: 'checkout.session.completed',
+    data: { object: { customer: customerId, subscription: 'sub_1' } },
+  });
+  expect(hook.status).toBe(200);
+  const claimUrl = ctx.stripe.customerMetadata.get(customerId)!.nemomemo_claim_url!;
+  return new URL(claimUrl).searchParams.get('token')!;
+}
+
+describe('cloud billing + claim flow', () => {
+  let ctx: BillingTestContext;
+
+  beforeEach(() => {
+    ctx = makeBillingTestContext();
+  });
+
+  afterEach(() => {
+    ctx.fleet.closeAll();
+    ctx.registry.close();
+    fs.rmSync(ctx.scratch, { recursive: true, force: true });
+  });
+
+  it('checkout redirects to Stripe with the right price', async () => {
+    const month = await ctx.app.request(`${APP_URL}/cloud/checkout?interval=month`, { headers: { host: APP_HOST } });
+    expect(month.status).toBe(303);
+    const year = await ctx.app.request(`${APP_URL}/cloud/checkout?interval=year`, { headers: { host: APP_HOST } });
+    expect(year.status).toBe(303);
+    expect(ctx.stripe.created.map((s) => s.priceId)).toEqual(['price_month', 'price_year']);
+    expect(ctx.stripe.created[0]!.successUrl).toBe(`${APP_URL}/claim?session_id={CHECKOUT_SESSION_ID}`);
+
+    const bad = await ctx.app.request(`${APP_URL}/cloud/checkout?interval=weekly`, { headers: { host: APP_HOST } });
+    expect(bad.status).toBe(400);
+  });
+
+  it('paid checkout provisions exactly one reef and a working claim link, idempotently', async () => {
+    const token = await payAndProvision(ctx);
+
+    const reefs = ctx.registry.listReefs();
+    expect(reefs).toHaveLength(1);
+    expect(reefs[0]!.status).toBe('provisioned');
+    expect(reefs[0]!.slug).toMatch(/^pending-/);
+    expect(reefs[0]!.stripeCustomerId).toBe('cus_1');
+
+    // Duplicate webhook delivery must not create a second reef or rotate the token.
+    await postWebhook(ctx, {
+      type: 'checkout.session.completed',
+      data: { object: { customer: 'cus_1', subscription: 'sub_1' } },
+    });
+    expect(ctx.registry.listReefs()).toHaveLength(1);
+
+    const form = await ctx.app.request(`${APP_URL}/claim?token=${token}`, { headers: { host: APP_HOST } });
+    expect(form.status).toBe(200);
+    expect(await form.text()).toContain('Pick your reef');
+
+    // The success-page path (session_id) lands on the same claim, same reef.
+    const viaSession = await ctx.app.request(`${APP_URL}/claim?session_id=cs_test_1`, { headers: { host: APP_HOST } });
+    expect(viaSession.status).toBe(200);
+    expect(await viaSession.text()).toContain(token);
+    expect(ctx.registry.listReefs()).toHaveLength(1);
+  });
+
+  it('claim renames the reef, creates the admin, and the reef works', async () => {
+    const token = await payAndProvision(ctx);
+    const pendingSlug = ctx.registry.listReefs()[0]!.slug;
+
+    // The placeholder reef was visited pre-claim, so its data dir exists.
+    await ctx.app.request(`http://${pendingSlug}.${BASE_DOMAIN}/api/v1/instance/profile`, {
+      headers: { host: `${pendingSlug}.${BASE_DOMAIN}` },
+    });
+    expect(fs.existsSync(path.join(ctx.scratch, 'reefs', pendingSlug))).toBe(true);
+
+    const claimed = await postClaim(ctx, {
+      token,
+      slug: 'lagoon',
+      username: 'nemo',
+      password: 'password123',
+    });
+    expect(claimed.status).toBe(200);
+    expect(await claimed.text()).toContain('lagoon.reef.test');
+
+    const reef = ctx.registry.getReefBySlug('lagoon')!;
+    expect(reef.status).toBe('active');
+    expect(ctx.registry.getReefBySlug(pendingSlug)).toBeNull();
+    expect(fs.existsSync(path.join(ctx.scratch, 'reefs', 'lagoon'))).toBe(true);
+    expect(fs.existsSync(path.join(ctx.scratch, 'reefs', pendingSlug))).toBe(false);
+
+    // The first account is the admin, and signin works on the reef host.
+    const signin = await ctx.app.request(`http://lagoon.${BASE_DOMAIN}/api/v1/auth/signin`, {
+      method: 'POST',
+      headers: { host: `lagoon.${BASE_DOMAIN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ username: 'nemo', password: 'password123' }),
+    });
+    expect(signin.status).toBe(200);
+    expect(((await signin.json()) as { user: { role: string } }).user.role).toBe('ADMIN');
+
+    // The claim token is burned.
+    const reuse = await postClaim(ctx, { token, slug: 'other', username: 'x', password: 'password123' });
+    expect(reuse.status).toBe(404);
+  });
+
+  it('claim rejects taken, reserved, and malformed slugs without burning the token', async () => {
+    ctx.registry.createReef('coral', { status: 'active' });
+    const token = await payAndProvision(ctx);
+
+    const taken = await postClaim(ctx, { token, slug: 'coral', username: 'nemo', password: 'password123' });
+    expect(taken.status).toBe(409);
+    const reserved = await postClaim(ctx, { token, slug: 'app', username: 'nemo', password: 'password123' });
+    expect(reserved.status).toBe(400);
+    const malformed = await postClaim(ctx, { token, slug: 'Not A Slug', username: 'nemo', password: 'password123' });
+    expect(malformed.status).toBe(400);
+    const shortPassword = await postClaim(ctx, { token, slug: 'lagoon', username: 'nemo', password: 'shrt' });
+    expect(shortPassword.status).toBe(400);
+
+    // Still claimable after all those mistakes.
+    const ok = await postClaim(ctx, { token, slug: 'lagoon', username: 'nemo', password: 'password123' });
+    expect(ok.status).toBe(200);
+  });
+
+  it('subscription lifecycle: payment failure, recovery, and cancellation', async () => {
+    const token = await payAndProvision(ctx);
+    await postClaim(ctx, { token, slug: 'lagoon', username: 'nemo', password: 'password123' });
+    const host = `lagoon.${BASE_DOMAIN}`;
+
+    await postWebhook(ctx, { type: 'invoice.payment_failed', data: { object: { customer: 'cus_1' } } });
+    expect(ctx.registry.getReefBySlug('lagoon')!.status).toBe('past_due');
+    // Past-due reefs still serve (banner + grace handling is cloud UX, phase 3).
+    const during = await ctx.app.request(`http://${host}/api/v1/instance/profile`, { headers: { host } });
+    expect(during.status).toBe(200);
+
+    await postWebhook(ctx, { type: 'invoice.paid', data: { object: { customer: 'cus_1' } } });
+    expect(ctx.registry.getReefBySlug('lagoon')!.status).toBe('active');
+
+    await postWebhook(ctx, { type: 'customer.subscription.deleted', data: { object: { customer: 'cus_1' } } });
+    expect(ctx.registry.getReefBySlug('lagoon')!.status).toBe('suspended');
+    const suspended = await ctx.app.request(`http://${host}/api/v1/instance/profile`, { headers: { host } });
+    expect(suspended.status).toBe(403);
+  });
+
+  it('rejects webhooks with bad signatures', async () => {
+    const response = await postWebhook(ctx, { type: 'checkout.session.completed', data: { object: {} } }, 'forged');
+    expect(response.status).toBe(400);
+    expect(ctx.registry.listReefs()).toHaveLength(0);
+  });
+
+  it('unpaid checkout sessions cannot reach the claim form', async () => {
+    const checkout = await ctx.app.request(`${APP_URL}/cloud/checkout?interval=month`, { headers: { host: APP_HOST } });
+    const sessionId = checkout.headers.get('location')!.split('/').pop()!;
+    const page = await ctx.app.request(`${APP_URL}/claim?session_id=${sessionId}`, { headers: { host: APP_HOST } });
+    expect(page.status).toBe(402);
+    expect(ctx.registry.listReefs()).toHaveLength(0);
+  });
+
+  it('the real gateway verifies genuine Stripe signatures and rejects forgeries', () => {
+    const secret = 'whsec_test_secret';
+    const gateway = makeStripeGateway('sk_test_dummy', secret);
+    const payload = JSON.stringify({ type: 'invoice.paid', data: { object: { customer: 'cus_9' } } });
+    const stripe = new Stripe('sk_test_dummy');
+    const goodHeader = stripe.webhooks.generateTestHeaderString({ payload, secret });
+
+    const event = gateway.verifyWebhook(payload, goodHeader);
+    expect(event.type).toBe('invoice.paid');
+
+    const forgedHeader = stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_wrong' });
+    expect(() => gateway.verifyWebhook(payload, forgedHeader)).toThrow();
+  });
+});

@@ -25,11 +25,12 @@ function reefError(c: Context, status: 403 | 404, code: string, message: string)
   );
 }
 
-/** The apex/app host: health + (in later phases) sign-up, claim, and billing. */
-export function makePortalApp(): Hono {
+/** The apex/app host: health, checkout, webhook, and the claim flow. */
+export function makePortalApp(billing?: Hono): Hono {
   const portal = new Hono();
   portal.get('/healthz', (c) => c.json({ ok: true, service: 'nemomemo-cloud' }));
   portal.get('/', (c) => c.json({ service: 'nemomemo-cloud', message: 'Just keep swimming 🐠' }));
+  if (billing) portal.route('/', billing);
   portal.all('*', (c) =>
     c.json({ error: { code: 'NOT_FOUND', message: 'No such endpoint' } }, 404),
   );
@@ -41,8 +42,13 @@ export function makePortalApp(): Hono {
  * to that reef's own app instance. A request physically cannot reach another
  * reef's database — each tenant app closes over its own Db handle.
  */
-export function makeCloudApp(registry: Registry, fleet: ReefFleet, settings: CloudSettings): Hono {
-  const portal = makePortalApp();
+export function makeCloudApp(
+  registry: Registry,
+  fleet: ReefFleet,
+  settings: CloudSettings,
+  billing?: Hono,
+): Hono {
+  const portal = makePortalApp(billing);
   const baseDomain = settings.baseDomain.toLowerCase();
   const appHost = settings.appHost.toLowerCase();
   const portalHosts = new Set([appHost, baseDomain, `www.${baseDomain}`]);

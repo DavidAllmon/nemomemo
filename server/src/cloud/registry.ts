@@ -111,6 +111,13 @@ export class Registry {
     return raw ? toReefRow(raw) : null;
   }
 
+  getReefById(id: number): ReefRow | null {
+    const raw = this.sqlite.prepare('SELECT * FROM reef WHERE id = ?').get(id) as
+      | RawReefRow
+      | undefined;
+    return raw ? toReefRow(raw) : null;
+  }
+
   getReefByStripeCustomerId(customerId: string): ReefRow | null {
     const raw = this.sqlite
       .prepare('SELECT * FROM reef WHERE stripe_customer_id = ?')
@@ -141,6 +148,35 @@ export class Registry {
 
   setReefStatus(slug: string, status: ReefStatus): void {
     this.sqlite.prepare('UPDATE reef SET status = ? WHERE slug = ?').run(status, slug);
+  }
+
+  setReefStatusById(id: number, status: ReefStatus): void {
+    this.sqlite.prepare('UPDATE reef SET status = ? WHERE id = ?').run(status, id);
+  }
+
+  renameReef(id: number, slug: string): void {
+    if (!REEF_SLUG_RE.test(slug)) throw new Error(`Invalid reef slug: ${slug}`);
+    if (RESERVED_SLUGS.has(slug)) throw new Error(`Reserved reef slug: ${slug}`);
+    this.sqlite.prepare('UPDATE reef SET slug = ? WHERE id = ?').run(slug, id);
+  }
+
+  createClaimToken(reefId: number, tokenHash: string, expiresTs: number): void {
+    this.sqlite
+      .prepare('INSERT INTO claim_token (token_hash, reef_id, expires_ts) VALUES (?, ?, ?)')
+      .run(tokenHash, reefId, expiresTs);
+  }
+
+  getClaimToken(tokenHash: string): { id: number; reefId: number; expiresTs: number; usedTs: number | null } | null {
+    const raw = this.sqlite
+      .prepare('SELECT id, reef_id, expires_ts, used_ts FROM claim_token WHERE token_hash = ?')
+      .get(tokenHash) as { id: number; reef_id: number; expires_ts: number; used_ts: number | null } | undefined;
+    return raw
+      ? { id: raw.id, reefId: raw.reef_id, expiresTs: raw.expires_ts, usedTs: raw.used_ts }
+      : null;
+  }
+
+  markClaimTokenUsed(id: number): void {
+    this.sqlite.prepare('UPDATE claim_token SET used_ts = ? WHERE id = ?').run(nowSeconds(), id);
   }
 
   listReefs(): ReefRow[] {
