@@ -177,13 +177,15 @@ export function MemoCard({
 
       <footer className="flex items-center gap-2">
         <ReactionBar memo={memo} />
-        {showCommentsLink && memo.commentCount > 0 ? (
+        {showCommentsLink ? (
           <Link
             to={`/memos/${memo.uid}#comments`}
             className="ml-auto flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
           >
             <MessageCircle className="size-3.5" />
-            {memo.commentCount} {memo.commentCount === 1 ? 'comment' : 'comments'}
+            {memo.commentCount > 0
+              ? `${memo.commentCount} ${memo.commentCount === 1 ? 'comment' : 'comments'}`
+              : 'Comment'}
           </Link>
         ) : null}
       </footer>
