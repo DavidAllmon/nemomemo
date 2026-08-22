@@ -156,6 +156,30 @@ describe('cloud billing + claim flow', () => {
     expect(bad.status).toBe(400);
   });
 
+  it('checkout is rate limited per IP', async () => {
+    for (let i = 0; i < 10; i++) {
+      const response = await ctx.app.request(`${APP_URL}/cloud/checkout?interval=month`, {
+        headers: { host: APP_HOST, 'cf-connecting-ip': '203.0.113.7' },
+      });
+      expect(response.status).toBe(303);
+    }
+    const limited = await ctx.app.request(`${APP_URL}/cloud/checkout?interval=month`, {
+      headers: { host: APP_HOST, 'cf-connecting-ip': '203.0.113.7' },
+    });
+    expect(limited.status).toBe(429);
+    const otherIp = await ctx.app.request(`${APP_URL}/cloud/checkout?interval=month`, {
+      headers: { host: APP_HOST, 'cf-connecting-ip': '198.51.100.9' },
+    });
+    expect(otherIp.status).toBe(303);
+  });
+
+  it('claim form asks for at least 8 password characters', async () => {
+    const token = await payAndProvision(ctx);
+    const form = await ctx.app.request(`${APP_URL}/claim?token=${token}`, { headers: { host: APP_HOST } });
+    expect(form.status).toBe(200);
+    expect(await form.text()).toContain('minlength="8"');
+  });
+
   it('paid checkout provisions exactly one reef and a working claim link, idempotently', async () => {
     const token = await payAndProvision(ctx);
 

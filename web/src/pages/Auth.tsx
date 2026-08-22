@@ -74,6 +74,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
             id="password"
             type="password"
             autoComplete={effectiveMode === 'signup' ? 'new-password' : 'current-password'}
+            minLength={effectiveMode === 'signup' ? 8 : undefined}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />

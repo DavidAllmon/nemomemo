@@ -7,6 +7,7 @@ import { getCookie } from 'hono/cookie';
 import { customAlphabet } from 'nanoid';
 import { nowSeconds } from '../lib/time.js';
 import { resolveSessionViewer, SESSION_COOKIE } from '../middleware/auth.js';
+import { makeRateLimiter } from '../middleware/rate-limit.js';
 import { REEF_SLUG_RE, RESERVED_SLUGS, type ReefRow, type Registry } from './registry.js';
 import type { StripeGateway, StripeWebhookEvent } from './stripe.js';
 import type { ReefFleet, ReefHandle } from './tenants.js';
@@ -122,7 +123,7 @@ ${opts.error ? `<p class="err">${escapeHtml(opts.error)}</p>` : ''}
   <label for="username">Reefkeeper username</label>
   <input id="username" name="username" required autocapitalize="none">
   <label for="password">Password</label>
-  <input id="password" name="password" type="password" required minlength="6">
+  <input id="password" name="password" type="password" required minlength="8">
   <button type="submit" id="claim-btn">Claim my reef</button>
 </form>
 <div class="progress" id="claim-progress" hidden>
@@ -265,7 +266,10 @@ export function billingRoutes(deps: BillingDeps): Hono {
     ),
   );
 
-  app.get('/cloud/checkout', async (c) => {
+  // Each hit creates a Stripe checkout session — don't let a loop mint thousands.
+  const checkoutLimiter = makeRateLimiter({ scope: 'checkout', windowMs: 60_000, max: 10 });
+
+  app.get('/cloud/checkout', checkoutLimiter, async (c) => {
     const interval = c.req.query('interval') === 'year' ? 'year' : c.req.query('interval') === 'month' ? 'month' : null;
     if (!interval) {
       return c.json({ error: { code: 'INVALID_ARGUMENT', message: 'interval must be month or year' } }, 400);
@@ -367,7 +371,7 @@ export function billingRoutes(deps: BillingDeps): Hono {
     if (deps.registry.getReefBySlug(slug)) return fail('That reef address is already taken — try another.', 409);
     const credentials = signupRequestSchema.safeParse({ username, password });
     if (!credentials.success) {
-      return fail('Username must be 1–32 letters, numbers, or hyphens; password at least 6 characters.');
+      return fail('Username must be 1–32 letters, numbers, or hyphens; password at least 8 characters.');
     }
 
     // Claim: rename the placeholder, activate, burn the token, then create the

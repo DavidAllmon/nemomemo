@@ -12,13 +12,34 @@ import { memoRoutes } from './routes/memos.js';
 import { shareRoutes } from './routes/shares.js';
 import { userRoutes } from './routes/users.js';
 
+/** Baseline security headers, set only where a route hasn't already chosen its own. */
+function applySecurityHeaders(headers: Headers): void {
+  const defaults: [string, string][] = [
+    ['x-content-type-options', 'nosniff'],
+    ['x-frame-options', 'DENY'],
+    ['referrer-policy', 'strict-origin-when-cross-origin'],
+  ];
+  for (const [name, value] of defaults) {
+    if (!headers.has(name)) headers.set(name, value);
+  }
+}
+
 export function makeApp(db: Db, config: Config): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
 
   app.onError((error, c) => {
-    if (error instanceof HTTPException) return error.getResponse();
-    console.error('[api] unhandled error:', error);
-    return c.json({ error: { code: 'INTERNAL', message: 'Something went wrong under the sea' } }, 500);
+    const response =
+      error instanceof HTTPException
+        ? error.getResponse()
+        : (console.error('[api] unhandled error:', error),
+          c.json({ error: { code: 'INTERNAL', message: 'Something went wrong under the sea' } }, 500));
+    applySecurityHeaders(response.headers);
+    return response;
+  });
+
+  app.use('*', async (c, next) => {
+    await next();
+    applySecurityHeaders(c.res.headers);
   });
 
   app.use('*', viewerMiddleware(db));

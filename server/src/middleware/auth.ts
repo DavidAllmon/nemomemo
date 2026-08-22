@@ -22,6 +22,13 @@ function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
+/** True when the client reached us over https (directly or via a trusted proxy). */
+function isSecureRequest(c: Context): boolean {
+  const forwarded = c.req.header('x-forwarded-proto');
+  if (forwarded) return forwarded.split(',')[0]!.trim() === 'https';
+  return new URL(c.req.url).protocol === 'https:';
+}
+
 export function createSession(db: Db, c: Context, userId: number): void {
   const token = randomBytes(32).toString('base64url');
   const now = nowSeconds();
@@ -37,6 +44,8 @@ export function createSession(db: Db, c: Context, userId: number): void {
     sameSite: 'Lax',
     path: '/',
     maxAge: SESSION_TTL_SECONDS,
+    // Secure only when actually on https: plain-http LAN self-hosts must keep working.
+    secure: isSecureRequest(c),
   });
 }
 

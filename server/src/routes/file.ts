@@ -14,6 +14,18 @@ import { getParentMemo } from '../services/memo-service.js';
 import { getInstanceGeneral } from '../services/settings.js';
 import { thumbnailPath } from './attachments.js';
 
+/**
+ * Only inert media renders inline; anything scriptable (svg, html, …) downloads
+ * instead. Browsers ignore content-disposition for subresource loads, so svg
+ * attachments still work inside <img> — only direct navigation is defused.
+ */
+function contentDisposition(type: string): 'inline' | 'attachment' {
+  if (type.startsWith('image/') && type !== 'image/svg+xml') return 'inline';
+  if (type.startsWith('audio/') || type.startsWith('video/')) return 'inline';
+  if (type === 'application/pdf') return 'inline';
+  return 'attachment';
+}
+
 export function fileRoutes(db: Db, config: Config): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
 
@@ -66,6 +78,7 @@ export function fileRoutes(db: Db, config: Config): Hono<AppEnv> {
           headers: {
             'content-type': 'image/webp',
             'cache-control': 'private, max-age=3600',
+            'x-content-type-options': 'nosniff',
           },
         });
       } catch {
@@ -74,12 +87,16 @@ export function fileRoutes(db: Db, config: Config): Hono<AppEnv> {
     }
 
     const stat = fs.statSync(absolute);
+    const disposition = contentDisposition(row.type);
     const headers: Record<string, string> = {
       'content-type': row.type || 'application/octet-stream',
       'accept-ranges': 'bytes',
       'cache-control': 'private, max-age=3600',
-      'content-disposition': `inline; filename*=UTF-8''${encodeURIComponent(row.filename)}`,
+      'content-disposition': `${disposition}; filename*=UTF-8''${encodeURIComponent(row.filename)}`,
+      'x-content-type-options': 'nosniff',
     };
+    // Belt and braces for anything that might still render: no scripts, no forms.
+    if (disposition === 'attachment') headers['content-security-policy'] = 'sandbox';
 
     const range = c.req.header('range');
     if (range) {

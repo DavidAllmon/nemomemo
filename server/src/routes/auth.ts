@@ -13,13 +13,24 @@ import {
   requireViewer,
   type AppEnv,
 } from '../middleware/auth.js';
+import { makeRateLimiter } from '../middleware/rate-limit.js';
 import { userToDto } from '../services/memo-service.js';
 import { getInstanceGeneral } from '../services/settings.js';
+import { randomBytes } from 'node:crypto';
+
+// A real bcrypt hash of an unguessable value, computed once per process: signin
+// compares against it when the username doesn't exist, so unknown-user and
+// wrong-password take the same time and usernames can't be enumerated by clock.
+const dummyHash = bcrypt.hash(randomBytes(32).toString('hex'), 12);
 
 export function authRoutes(db: Db, config: Config): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
+  // Limiters sit BEFORE validation so garbage requests count too; bcrypt runs on
+  // the event loop, so unlimited guessing doubles as a CPU DoS (audit F3).
+  const signupLimiter = makeRateLimiter({ scope: 'signup', windowMs: 60 * 60_000, max: 30 });
+  const signinLimiter = makeRateLimiter({ scope: 'signin', windowMs: 60_000, max: 10 });
 
-  app.post('/signup', zValidator('json', signupRequestSchema), async (c) => {
+  app.post('/signup', signupLimiter, zValidator('json', signupRequestSchema), async (c) => {
     const body = c.req.valid('json');
     // Hash BEFORE any checks: everything after this line is synchronous
     // SQLite, so two concurrent signups can't both observe an empty user
@@ -53,10 +64,11 @@ export function authRoutes(db: Db, config: Config): Hono<AppEnv> {
     return c.json({ user: userToDto(created, { includeEmail: true }) });
   });
 
-  app.post('/signin', zValidator('json', signinRequestSchema), async (c) => {
+  app.post('/signin', signinLimiter, zValidator('json', signinRequestSchema), async (c) => {
     const body = c.req.valid('json');
     const user = db.select().from(users).where(eq(users.username, body.username)).get();
-    if (!user || !(await bcrypt.compare(body.password, user.passwordHash))) {
+    const passwordOk = await bcrypt.compare(body.password, user?.passwordHash ?? (await dummyHash));
+    if (!user || !passwordOk) {
       throw apiError('UNAUTHENTICATED', 'Incorrect username or password');
     }
     if (user.rowStatus === 'ARCHIVED') {

@@ -72,8 +72,8 @@ function AccountSection() {
         <Input value={email} onChange={(e) => setEmail(e.target.value)} />
         <label className="text-xs font-semibold text-muted-foreground">About you</label>
         <Input value={description} onChange={(e) => setDescription(e.target.value)} />
-        <label className="text-xs font-semibold text-muted-foreground">New password (leave blank to keep)</label>
-        <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <label className="text-xs font-semibold text-muted-foreground">New password (leave blank to keep, 8+ characters)</label>
+        <Input type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
         <div className="mt-1 flex items-center gap-2">
           <Button size="sm" onClick={() => void save()}>
             Save changes

@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Deep context (read what the task needs)
+
+This file is the compact index; the deep dives live in **`docs/claude/`** — start at
+`docs/claude/README.md` for the reading map. In short: `MAP.md` (where everything
+lives: routes, services, components), `DATA-MODEL.md` (tables, payload JSON,
+migrations), `GOTCHAS.md` (invariants that fail silently — read before writing code),
+`WORKFLOWS.md` (release/test/deploy procedures). The repo is also indexed in the
+codebase-memory MCP as project `nemomemo` — prefer `search_graph`/`trace_path`/
+`get_code_snippet` over grep for structural questions; re-index after large refactors.
+
 ## Commands
 
 ```bash

@@ -9,9 +9,27 @@ import {
 
 // ---------- Request schemas (validated at the route boundary) ----------
 
+export const passwordSchema = z.string().min(8, 'Password must be at least 8 characters').max(128);
+
+/**
+ * Avatars are either uploaded images (data:image/* URIs, capped so a giant blob
+ * can't bloat the user row) or plain web URLs — never javascript:, data:text/html,
+ * or other scriptable schemes.
+ */
+export const avatarUrlSchema = z
+  .string()
+  .max(2_000_000)
+  .refine(
+    (value) =>
+      value === '' ||
+      value.startsWith('data:image/') ||
+      (/^https?:\/\//.test(value) && value.length <= 2048),
+    'Avatar must be an image data URI or a web URL',
+  );
+
 export const signupRequestSchema = z.object({
   username: z.string().regex(USERNAME_REGEX, 'Username must be 1-32 letters, numbers, or hyphens'),
-  password: z.string().min(6).max(128),
+  password: passwordSchema,
   nickname: z.string().max(64).optional(),
 });
 
@@ -53,14 +71,14 @@ export const createShareRequestSchema = z.object({
 export const updateAccountRequestSchema = z.object({
   nickname: z.string().max(64).optional(),
   email: z.string().email().or(z.literal('')).optional(),
-  avatarUrl: z.string().max(2_000_000).optional(),
+  avatarUrl: avatarUrlSchema.optional(),
   description: z.string().max(512).optional(),
-  password: z.string().min(6).max(128).optional(),
+  password: passwordSchema.optional(),
 });
 
 export const adminCreateUserRequestSchema = z.object({
   username: z.string().regex(USERNAME_REGEX),
-  password: z.string().min(6).max(128),
+  password: passwordSchema,
   role: z.enum(ROLES).default('USER'),
   nickname: z.string().max(64).optional(),
 });
@@ -68,7 +86,7 @@ export const adminCreateUserRequestSchema = z.object({
 export const adminUpdateUserRequestSchema = z.object({
   role: z.enum(ROLES).optional(),
   rowStatus: z.enum(ROW_STATUSES).optional(),
-  password: z.string().min(6).max(128).optional(),
+  password: passwordSchema.optional(),
 });
 
 export const renameTagRequestSchema = z.object({
