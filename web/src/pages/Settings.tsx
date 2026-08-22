@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Settings as SettingsIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Visibility } from '@nemomemo/shared';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/misc.js';
@@ -15,7 +15,7 @@ import {
   useViewer,
   type CloudBillingInfo,
 } from '@/hooks/queries.js';
-import { api, ApiError } from '@/lib/api.js';
+import { api, ApiError, apiUpload } from '@/lib/api.js';
 import { cn } from '@/lib/utils.js';
 
 type Section = 'account' | 'preferences' | 'members' | 'instance' | 'backups' | 'billing';
@@ -343,32 +343,144 @@ function InstanceSection() {
   );
 }
 
-function BackupsSection() {
+function BackupsSection({ isCloud }: { isCloud: boolean }) {
+  const [restoreState, setRestoreState] = useState<'idle' | 'uploading' | 'restarting'>('idle');
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const restore = async (file: File) => {
+    const sure = window.confirm(
+      `Restore from "${file.name}"?\n\nThis replaces ALL current memos, members, and files with the backup's contents, then restarts the reef. The current data is set aside on the server as a safety copy.`,
+    );
+    if (!sure) return;
+    setRestoreError(null);
+    setRestoreState('uploading');
+    try {
+      const result = await apiUpload<{ ok: boolean; restarting: boolean }>('/api/v1/instance/restore', file);
+      if (!result.restarting) {
+        setRestoreState('idle');
+        setRestoreError('Backup restored — restart the server to finish.');
+        return;
+      }
+      setRestoreState('restarting');
+      // The server exits to swap databases; poll until it's back, then reload.
+      const poll = async () => {
+        for (let attempt = 0; attempt < 60; attempt++) {
+          await new Promise((r) => setTimeout(r, 2000));
+          try {
+            const health = await fetch('/healthz');
+            if (health.ok) {
+              window.location.reload();
+              return;
+            }
+          } catch {
+            // still restarting
+          }
+        }
+        setRestoreState('idle');
+        setRestoreError("The reef is taking longer than expected to come back — refresh in a minute.");
+      };
+      void poll();
+    } catch (error) {
+      setRestoreState('idle');
+      setRestoreError(error instanceof ApiError ? error.message : 'Restore failed — nothing was changed');
+    }
+  };
+
+  if (isCloud) {
+    return (
+      <SectionCard title="Backups">
+        <p className="text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">Your reef is backed up automatically.</span>{' '}
+          Every night we take an encrypted snapshot of your entire reef — memos, members,
+          and files — and store it off-server. We keep 14 nightly and 8 weekly snapshots.
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Need to roll back to an earlier day?{' '}
+          <a
+            href="https://github.com/DavidAllmon/nemomemo/discussions"
+            target="_blank"
+            rel="noreferrer"
+            className="text-ocean underline"
+          >
+            Reach out
+          </a>{' '}
+          and we&apos;ll restore any snapshot for you.
+        </p>
+        <div className="mt-3">
+          <Button size="sm" onClick={() => { window.location.href = '/api/v1/instance/backup'; }}>
+            Export my reef
+          </Button>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          The export is yours to keep — one zip with everything, ready to archive or move
+          to a self-hosted reef.
+        </p>
+      </SectionCard>
+    );
+  }
+
   return (
-    <SectionCard title="Backups">
-      <p className="text-sm text-muted-foreground">
-        Download your whole reef as one zip: the database (a safe snapshot, even while
-        everyone keeps writing) and every uploaded file. Keep a copy somewhere that
-        isn&apos;t this server. 🐟
-      </p>
-      <div className="mt-3">
-        <Button size="sm" onClick={() => { window.location.href = '/api/v1/instance/backup'; }}>
-          Download backup
-        </Button>
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        The zip mirrors the data folder, so restoring is unzip-and-replace — see the{' '}
-        <a
-          href="https://trynemomemo.com/docs/deploy#backups"
-          target="_blank"
-          rel="noreferrer"
-          className="text-ocean underline"
-        >
-          backup &amp; restore guide
-        </a>
-        .
-      </p>
-    </SectionCard>
+    <div className="flex flex-col gap-4">
+      <SectionCard title="Download a backup">
+        <p className="text-sm text-muted-foreground">
+          One zip with your whole reef: the database (a safe snapshot, even while everyone
+          keeps writing) and every uploaded file. Keep a copy somewhere that isn&apos;t
+          this server. 🐟
+        </p>
+        <div className="mt-3">
+          <Button size="sm" onClick={() => { window.location.href = '/api/v1/instance/backup'; }}>
+            Download backup
+          </Button>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Want it automatic and off-machine? See the{' '}
+          <a
+            href="https://trynemomemo.com/docs/deploy#backups"
+            target="_blank"
+            rel="noreferrer"
+            className="text-ocean underline"
+          >
+            backup guide
+          </a>
+          .
+        </p>
+      </SectionCard>
+
+      <SectionCard title="Restore from a backup">
+        <p className="text-sm text-muted-foreground">
+          Upload a backup zip and the reef becomes exactly what it was when that backup
+          was taken. The current data is set aside on the server first, and the reef
+          restarts to finish — everyone is signed out for a few seconds.
+        </p>
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".zip,application/zip"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            if (file) void restore(file);
+          }}
+        />
+        <div className="mt-3 flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={restoreState !== 'idle'}
+            onClick={() => fileInput.current?.click()}
+          >
+            {restoreState === 'uploading'
+              ? 'Checking the backup…'
+              : restoreState === 'restarting'
+                ? 'Restoring — the reef is restarting…'
+                : 'Restore from backup…'}
+          </Button>
+        </div>
+        {restoreError ? <p className="mt-2 text-xs font-semibold text-destructive">{restoreError}</p> : null}
+      </SectionCard>
+    </div>
   );
 }
 
@@ -462,7 +574,7 @@ export function SettingsPage() {
       {section === 'preferences' ? <PreferencesSection /> : null}
       {section === 'members' && isAdmin ? <MembersSection /> : null}
       {section === 'instance' && isAdmin ? <InstanceSection /> : null}
-      {section === 'backups' && isAdmin ? <BackupsSection /> : null}
+      {section === 'backups' && isAdmin ? <BackupsSection isCloud={Boolean(cloudBilling)} /> : null}
       {section === 'billing' && isAdmin && cloudBilling ? <CloudBillingSection billing={cloudBilling} /> : null}
     </div>
   );

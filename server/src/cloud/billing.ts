@@ -55,6 +55,12 @@ function page(title: string, body: string): string {
   .err{background:#fef2f2;color:#b91c1c;padding:.6rem .8rem;border-radius:.5rem;margin-top:1rem}
   .link{word-break:break-all;background:#f0f9ff;padding:.6rem .8rem;border-radius:.5rem;font-size:.85rem}
   a{color:#0284c7}
+  .progress{margin-top:1.2rem}
+  .progress .track{height:.55rem;border-radius:99px;background:#e0f2fe;overflow:hidden}
+  .progress .fish{height:100%;width:35%;border-radius:99px;background:#0284c7;animation:swim 1.6s ease-in-out infinite}
+  .progress p{font-size:.9rem;color:#0369a1;margin:.6rem 0 0}
+  @keyframes swim{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+  @media (prefers-reduced-motion: reduce){.progress .fish{animation:none;width:100%}}
 </style></head><body><main>${body}</main></body></html>`;
 }
 
@@ -94,13 +100,22 @@ async function ensureProvisioned(
   return { reef, claimUrl };
 }
 
+function alreadyClaimedPage(deps: BillingDeps, slug: string): string {
+  const host = `${escapeHtml(slug)}.${escapeHtml(deps.baseDomain)}`;
+  return page(
+    'Your reef is ready',
+    `<div style="font-size:2.5rem">🐠</div><h1>Good news — this reef is already claimed!</h1>
+<p>Your reef is live at <strong><a href="https://${host}">${host}</a></strong>. Swim over and sign in with the reefkeeper account you created.</p>`,
+  );
+}
+
 function claimFormHtml(deps: BillingDeps, token: string, opts: { claimUrl?: string; error?: string } = {}): string {
   return page(
     'Claim your reef',
     `<div style="font-size:2.5rem">🐠</div><h1>Your reef is paid for — time to claim it!</h1>
 ${opts.claimUrl ? `<p>Save this link in case you drift away (it's also on your Stripe receipt's customer record):</p><p class="link">${escapeHtml(opts.claimUrl)}</p>` : ''}
 ${opts.error ? `<p class="err">${escapeHtml(opts.error)}</p>` : ''}
-<form method="post" action="/cloud/claim">
+<form method="post" action="/cloud/claim" id="claim-form">
   <input type="hidden" name="token" value="${escapeHtml(token)}">
   <label for="slug">Pick your reef's address</label>
   <div class="slug"><input id="slug" name="slug" required pattern="[a-z0-9][a-z0-9-]*" placeholder="coral" autocapitalize="none"><span>.${escapeHtml(deps.baseDomain)}</span></div>
@@ -108,8 +123,37 @@ ${opts.error ? `<p class="err">${escapeHtml(opts.error)}</p>` : ''}
   <input id="username" name="username" required autocapitalize="none">
   <label for="password">Password</label>
   <input id="password" name="password" type="password" required minlength="6">
-  <button type="submit">Claim my reef</button>
-</form>`,
+  <button type="submit" id="claim-btn">Claim my reef</button>
+</form>
+<div class="progress" id="claim-progress" hidden>
+  <div class="track"><div class="fish"></div></div>
+  <p id="claim-progress-msg">Building your reef… don't close this page. 🐠</p>
+</div>
+<script>
+(function () {
+  var form = document.getElementById('claim-form');
+  var btn = document.getElementById('claim-btn');
+  var box = document.getElementById('claim-progress');
+  var msg = document.getElementById('claim-progress-msg');
+  var lines = [
+    'Building your reef… don\\u2019t close this page. \\ud83d\\udc20',
+    'Laying the coral foundations…',
+    'Filling it with water (the good kind)…',
+    'Setting up your reefkeeper account…',
+    'Still working — big oceans take a moment…'
+  ];
+  var submitted = false;
+  form.addEventListener('submit', function (event) {
+    if (submitted) { event.preventDefault(); return; }
+    submitted = true;
+    btn.disabled = true;
+    btn.textContent = 'Building your reef…';
+    box.hidden = false;
+    var i = 0;
+    setInterval(function () { i = Math.min(i + 1, lines.length - 1); msg.textContent = lines[i]; }, 7000);
+  });
+})();
+</script>`,
   );
 }
 
@@ -271,6 +315,14 @@ export function billingRoutes(deps: BillingDeps): Hono {
 
     if (rawToken) {
       const claim = deps.registry.getClaimToken(hashToken(rawToken));
+      // A used token whose reef is live means the claim worked (maybe they
+      // refreshed or came back) — celebrate, don't scare.
+      if (claim?.usedTs != null) {
+        const reef = deps.registry.getReefById(claim.reefId);
+        if (reef && reef.status !== 'canceled' && !reef.slug.startsWith('pending-')) {
+          return c.html(alreadyClaimedPage(deps, reef.slug));
+        }
+      }
       if (!claim || claim.usedTs != null || claim.expiresTs <= nowSeconds()) {
         return c.html(
           page('Link expired', `<h1>This claim link swam away 🐠</h1><p>If you already claimed your reef, sign in there. Otherwise contact support and we'll get you a fresh one.</p>`),
@@ -291,6 +343,13 @@ export function billingRoutes(deps: BillingDeps): Hono {
     const password = typeof body.password === 'string' ? body.password : '';
 
     const claim = deps.registry.getClaimToken(hashToken(rawToken));
+    // Double-submit / refresh after a successful claim: point at the live reef.
+    if (claim?.usedTs != null) {
+      const claimed = deps.registry.getReefById(claim.reefId);
+      if (claimed && claimed.status !== 'canceled' && !claimed.slug.startsWith('pending-')) {
+        return c.html(alreadyClaimedPage(deps, claimed.slug));
+      }
+    }
     if (!claim || claim.usedTs != null || claim.expiresTs <= nowSeconds()) {
       return c.html(page('Link expired', `<h1>This claim link swam away 🐠</h1><p>Contact support for a fresh one.</p>`), 404);
     }
@@ -313,6 +372,7 @@ export function billingRoutes(deps: BillingDeps): Hono {
 
     // Claim: rename the placeholder, activate, burn the token, then create the
     // first (admin) account through the reef's own signup route.
+    const startedAt = Date.now();
     const oldSlug = reef.slug;
     deps.fleet.evict(oldSlug);
     const oldDir = path.join(deps.reefsDir, oldSlug);
@@ -335,6 +395,7 @@ export function billingRoutes(deps: BillingDeps): Hono {
       );
     }
 
+    console.log(`[cloud] reef ${slug} claimed in ${Date.now() - startedAt}ms`);
     const reefUrl = `https://${slug}.${deps.baseDomain}`;
     return c.html(
       page(

@@ -171,7 +171,12 @@ somewhere that isn't this server, like a password manager.
 
 ### Restoring
 
-Stop the container, put the files back, start it again:
+**The easy way**: as the reefkeeper, **Settings → Backups → Restore from backup** —
+upload a backup zip, and the reef verifies it, sets the current data aside as a safety
+copy, swaps the backup in, and restarts itself. Done.
+
+**By hand** (if the app won't start, or you prefer the shell): stop the container, put
+the files back, start it again:
 
 ```bash
 docker stop <container>

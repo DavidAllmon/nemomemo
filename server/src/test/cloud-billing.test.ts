@@ -217,9 +217,17 @@ describe('cloud billing + claim flow', () => {
     expect(signin.status).toBe(200);
     expect(((await signin.json()) as { user: { role: string } }).user.role).toBe('ADMIN');
 
-    // The claim token is burned.
+    // Re-submitting the burned token (double-click, refresh) is friendly, not
+    // scary: it points at the already-live reef instead of erroring.
     const reuse = await postClaim(ctx, { token, slug: 'other', username: 'x', password: 'password123' });
-    expect(reuse.status).toBe(404);
+    expect(reuse.status).toBe(200);
+    expect(await reuse.text()).toContain('already claimed');
+    expect(ctx.registry.getReefBySlug('other')).toBeNull();
+
+    // Same for revisiting the claim page.
+    const revisit = await ctx.app.request(`${APP_URL}/claim?token=${token}`, { headers: { host: APP_HOST } });
+    expect(revisit.status).toBe(200);
+    expect(await revisit.text()).toContain('lagoon.reef.test');
   });
 
   it('claim rejects taken, reserved, and malformed slugs without burning the token', async () => {

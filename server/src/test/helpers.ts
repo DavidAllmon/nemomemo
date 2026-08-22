@@ -22,7 +22,7 @@ export function makeTestApp(overrides: Partial<Config> = {}): TestContext {
     ...overrides,
   });
   fs.mkdirSync(config.uploadsDir, { recursive: true });
-  const db = createDb(':memory:');
+  const db = createDb(config.dbPath);
   const app = makeApp(db, config);
   return { app, db, config };
 }

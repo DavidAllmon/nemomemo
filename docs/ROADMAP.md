@@ -33,7 +33,8 @@ Priority: **P0** do before anything else · **P1** next milestone · **P2** feat
 | → **Optional email verification** | Anchor accounts for recovery; keep optional to stay low-friction. | M |
 | **Suspended-reef self-rescue** | The "taking a nap" page currently dead-ends. Add "resubscribe / fix billing" path (Stripe-emailed portal link) so churned reefs can wake themselves. | M |
 | **90-day deletion job** | ToS promises suspended-reef deletion after 90 days; today it's manual. Registry sweep + `rm -rf` after grace, with a log. | S–M |
-| **Self-serve reef export** | Settings → "Download my reef" (Markdown + JSON + uploads zip). The ToS/privacy pages already promise export "at any time" — make it one click. Doubles as the self-host bridge. | M |
+| ~~**Self-serve reef export**~~ ✅ v1.1.0 (zip) + restore-by-upload for self-host in v1.2.0; Markdown-format export still open | Settings → Backups. | M |
+| **Cloud snapshot browser + one-click rollback** | David's vision: the Backups tab lists every nightly snapshot; pick a date, restore the reef to it. Needs a host-side backup agent the app can query (restic creds stay off the containers) + per-reef restore via fleet evict/replace. Support-manual rollback in the meantime. | L |
 | **"What's New" banner** | The changelog exists (v1.0.0+); show a one-line dismissible banner when a reef's version changes (HopeLinx `lastSeenVersion` pattern) linking to /changelog. | S |
 | **Password minimum → 8** (audit F8) + show-password toggle + caps-lock hint | Auth-page polish batch. | S |
 

@@ -13,7 +13,9 @@ if (process.env.NEMOMEMO_CLOUD === '1') {
   const { startCloud } = await import('./cloud/index.js');
   startCloud();
 } else {
-  const config = loadConfig();
+  // Docker's restart policy (or the operator) brings the process back up; the
+  // delay lets the restore response reach the browser first.
+  const config = loadConfig({ requestRestart: () => setTimeout(() => process.exit(0), 500) });
   fs.mkdirSync(config.uploadsDir, { recursive: true });
   const db = createDb(config.dbPath);
   const app = makeApp(db, config);

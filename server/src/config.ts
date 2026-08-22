@@ -12,6 +12,12 @@ export interface Config {
   webDistDir: string | null;
   /** Fair-use brakes for hosted reefs; null (self-host) means no limits. */
   cloudLimits: { maxMembers: number; maxStorageBytes: number } | null;
+  /**
+   * How this process restarts itself (used after a backup restore so the fresh
+   * database takes over). Set by the single-tenant entry point; null in tests
+   * and cloud mode (a cloud reef restore must never kill the shared process).
+   */
+  requestRestart: (() => void) | null;
 }
 
 export function loadConfig(overrides: Partial<Config> = {}): Config {
@@ -28,5 +34,6 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
     version: overrides.version ?? NEMOMEMO_VERSION,
     webDistDir: overrides.webDistDir ?? process.env.NEMOMEMO_WEB_DIST ?? null,
     cloudLimits: overrides.cloudLimits ?? null,
+    requestRestart: overrides.requestRestart ?? null,
   };
 }
