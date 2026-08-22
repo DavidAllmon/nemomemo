@@ -39,6 +39,10 @@ export function makeStripeGateway(secretKey: string, webhookSecret: string): Str
         success_url: successUrl,
         cancel_url: cancelUrl,
         allow_promotion_codes: true,
+        // The Stripe account hosts several products; this tag is how the
+        // webhook knows a session (and its subscription) belongs to NemoMemo.
+        metadata: { app: 'nemomemo-cloud' },
+        subscription_data: { metadata: { app: 'nemomemo-cloud' } },
       });
       if (!session.url) throw new Error('Stripe returned a checkout session without a URL');
       return { id: session.id, url: session.url };

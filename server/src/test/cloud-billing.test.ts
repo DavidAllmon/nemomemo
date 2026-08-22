@@ -124,7 +124,7 @@ async function payAndProvision(ctx: BillingTestContext, customerId = 'cus_1'): P
   ctx.stripe.completePayment(sessionId, customerId, 'sub_1');
   const hook = await postWebhook(ctx, {
     type: 'checkout.session.completed',
-    data: { object: { customer: customerId, subscription: 'sub_1' } },
+    data: { object: { customer: customerId, subscription: 'sub_1', metadata: { app: 'nemomemo-cloud' } } },
   });
   expect(hook.status).toBe(200);
   const claimUrl = ctx.stripe.customerMetadata.get(customerId)!.nemomemo_claim_url!;
@@ -168,7 +168,7 @@ describe('cloud billing + claim flow', () => {
     // Duplicate webhook delivery must not create a second reef or rotate the token.
     await postWebhook(ctx, {
       type: 'checkout.session.completed',
-      data: { object: { customer: 'cus_1', subscription: 'sub_1' } },
+      data: { object: { customer: 'cus_1', subscription: 'sub_1', metadata: { app: 'nemomemo-cloud' } } },
     });
     expect(ctx.registry.listReefs()).toHaveLength(1);
 
@@ -254,10 +254,47 @@ describe('cloud billing + claim flow', () => {
     await postWebhook(ctx, { type: 'invoice.paid', data: { object: { customer: 'cus_1' } } });
     expect(ctx.registry.getReefBySlug('lagoon')!.status).toBe('active');
 
-    await postWebhook(ctx, { type: 'customer.subscription.deleted', data: { object: { customer: 'cus_1' } } });
+    await postWebhook(ctx, {
+      type: 'customer.subscription.deleted',
+      data: { object: { id: 'sub_1', customer: 'cus_1' } },
+    });
     expect(ctx.registry.getReefBySlug('lagoon')!.status).toBe('suspended');
     const suspended = await ctx.app.request(`http://${host}/api/v1/instance/profile`, { headers: { host } });
     expect(suspended.status).toBe(403);
+  });
+
+  it("other products' events on the shared Stripe account never touch reefs", async () => {
+    const token = await payAndProvision(ctx);
+    await postClaim(ctx, { token, slug: 'lagoon', username: 'nemo', password: 'password123' });
+
+    // A different product's checkout (no app tag) must not provision a reef.
+    await postWebhook(ctx, {
+      type: 'checkout.session.completed',
+      data: { object: { customer: 'cus_sytepro', subscription: 'sub_sytepro' } },
+    });
+    expect(ctx.registry.listReefs()).toHaveLength(1);
+    expect(ctx.registry.getReefByStripeCustomerId('cus_sytepro')).toBeNull();
+
+    // The reef's customer cancels a DIFFERENT product's subscription: reef unharmed.
+    await postWebhook(ctx, {
+      type: 'customer.subscription.deleted',
+      data: { object: { id: 'sub_other_product', customer: 'cus_1' } },
+    });
+    expect(ctx.registry.getReefBySlug('lagoon')!.status).toBe('active');
+
+    // A failed invoice for another product's subscription: reef unharmed.
+    await postWebhook(ctx, {
+      type: 'invoice.payment_failed',
+      data: { object: { customer: 'cus_1', subscription: 'sub_other_product' } },
+    });
+    expect(ctx.registry.getReefBySlug('lagoon')!.status).toBe('active');
+
+    // But its own subscription's failed invoice still bites (newer parent shape).
+    await postWebhook(ctx, {
+      type: 'invoice.payment_failed',
+      data: { object: { customer: 'cus_1', parent: { subscription_details: { subscription: 'sub_1' } } } },
+    });
+    expect(ctx.registry.getReefBySlug('lagoon')!.status).toBe('past_due');
   });
 
   it('rejects webhooks with bad signatures', async () => {

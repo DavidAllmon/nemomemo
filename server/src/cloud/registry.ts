@@ -154,6 +154,10 @@ export class Registry {
     this.sqlite.prepare('UPDATE reef SET status = ? WHERE id = ?').run(status, id);
   }
 
+  updateReefSubscription(id: number, subscriptionId: string): void {
+    this.sqlite.prepare('UPDATE reef SET stripe_subscription_id = ? WHERE id = ?').run(subscriptionId, id);
+  }
+
   renameReef(id: number, slug: string): void {
     if (!REEF_SLUG_RE.test(slug)) throw new Error(`Invalid reef slug: ${slug}`);
     if (RESERVED_SLUGS.has(slug)) throw new Error(`Reserved reef slug: ${slug}`);

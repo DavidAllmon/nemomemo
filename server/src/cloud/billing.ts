@@ -66,6 +66,9 @@ async function ensureProvisioned(
 ): Promise<{ reef: ReefRow; claimUrl: string }> {
   const existing = deps.registry.getReefByStripeCustomerId(customerId);
   if (existing) {
+    if (!existing.stripeSubscriptionId && subscriptionId) {
+      deps.registry.updateReefSubscription(existing.id, subscriptionId);
+    }
     const metadata = await deps.gateway.getCustomerMetadata(customerId);
     const claimUrl = metadata.nemomemo_claim_url;
     if (claimUrl) return { reef: existing, claimUrl };
@@ -110,32 +113,52 @@ ${opts.error ? `<p class="err">${escapeHtml(opts.error)}</p>` : ''}
   );
 }
 
+/**
+ * The Stripe account is shared with other products, so every handler must
+ * prove an event is NemoMemo's before acting: checkout sessions carry an
+ * `app` metadata tag, and subscription/invoice events must reference the
+ * reef's own subscription — a customer may hold other products' subscriptions.
+ */
 function handleWebhookEvent(deps: BillingDeps, event: StripeWebhookEvent): Promise<void> | void {
   const object = event.data.object;
   const customerId = typeof object.customer === 'string' ? object.customer : null;
+  const metadata = (object.metadata ?? {}) as Record<string, unknown>;
+
   switch (event.type) {
     case 'checkout.session.completed': {
       if (!customerId) return;
+      if (metadata.app !== 'nemomemo-cloud') return;
       const subscriptionId = typeof object.subscription === 'string' ? object.subscription : null;
       return ensureProvisioned(deps, customerId, subscriptionId).then(() => undefined);
     }
-    case 'invoice.payment_failed': {
-      if (!customerId) return;
-      const reef = deps.registry.getReefByStripeCustomerId(customerId);
-      if (reef && reef.status === 'active') deps.registry.setReefStatusById(reef.id, 'past_due');
-      return;
-    }
+    case 'invoice.payment_failed':
     case 'invoice.paid': {
       if (!customerId) return;
       const reef = deps.registry.getReefByStripeCustomerId(customerId);
-      if (reef && reef.status === 'past_due') deps.registry.setReefStatusById(reef.id, 'active');
+      if (!reef) return;
+      const parent = object.parent as { subscription_details?: { subscription?: unknown } } | undefined;
+      const invoiceSub =
+        typeof object.subscription === 'string'
+          ? object.subscription
+          : typeof parent?.subscription_details?.subscription === 'string'
+            ? parent.subscription_details.subscription
+            : null;
+      if (reef.stripeSubscriptionId && invoiceSub && invoiceSub !== reef.stripeSubscriptionId) return;
+      if (event.type === 'invoice.payment_failed' && reef.status === 'active') {
+        deps.registry.setReefStatusById(reef.id, 'past_due');
+      } else if (event.type === 'invoice.paid' && reef.status === 'past_due') {
+        deps.registry.setReefStatusById(reef.id, 'active');
+      }
       return;
     }
     case 'customer.subscription.deleted': {
       if (!customerId) return;
       const reef = deps.registry.getReefByStripeCustomerId(customerId);
+      if (!reef) return;
+      const subId = typeof object.id === 'string' ? object.id : null;
+      if (reef.stripeSubscriptionId && subId !== reef.stripeSubscriptionId) return;
       // Data is retained for the grace window; deletion is a separate, manual step.
-      if (reef && reef.status !== 'canceled') deps.registry.setReefStatusById(reef.id, 'suspended');
+      if (reef.status !== 'canceled') deps.registry.setReefStatusById(reef.id, 'suspended');
       return;
     }
     default:
