@@ -97,11 +97,61 @@ TLS in front of port 5230, or a **Cloudflare Tunnel** pointing at
 
 ## Backups
 
-Back up two things: the SQLite database and the uploads directory.
+Your whole reef is two things inside the data volume: `nemomemo.db` (SQLite) and
+`uploads/`. Back up both. (On NemoMemo Cloud we do this for you nightly — self-hosting
+means this part is yours.)
+
+### A safe snapshot (Docker)
+
+Don't copy `nemomemo.db` while the app is running — a plain `cp` can catch it
+mid-write. SQLite's `.backup` takes a consistent snapshot even while live:
 
 ```bash
-sqlite3 /app/data/nemomemo.db ".backup /backups/nemomemo-$(date +%F).db"
-cp -r /app/data/uploads /backups/uploads-$(date +%F)
+mkdir -p ~/nemomemo-backups
+docker exec <container> sh -c \
+  'apk add --no-cache sqlite >/dev/null 2>&1 || true; sqlite3 /app/data/nemomemo.db ".backup /app/data/backup.db"'
+docker cp <container>:/app/data/backup.db ~/nemomemo-backups/nemomemo-$(date +%F).db
+docker cp <container>:/app/data/uploads   ~/nemomemo-backups/uploads-$(date +%F)
+docker exec <container> rm /app/data/backup.db
 ```
 
-Backups only matter if restore is realistic — test yours once before you depend on it.
+(Running from source instead? Just point `sqlite3` and `cp` at your data directory
+directly.)
+
+### Make it nightly
+
+Put those commands in a script and add a cron line on the host:
+
+```bash
+17 3 * * * /home/you/backup-nemomemo.sh >> /home/you/nemomemo-backups/backup.log 2>&1
+```
+
+### Off the machine (recommended)
+
+A backup on the same disk dies with the disk. [restic](https://restic.net) — the same
+tool NemoMemo Cloud's own backups use — encrypts your backup folder and pushes it to
+almost anywhere: another machine over SFTP, or any S3-compatible bucket (Cloudflare R2
+and Backblaze B2 both have free tiers that fit a reef comfortably):
+
+```bash
+restic -r s3:https://<endpoint>/<bucket> init      # once; pick a passphrase and KEEP IT SAFE
+restic -r s3:https://<endpoint>/<bucket> backup ~/nemomemo-backups
+restic -r s3:https://<endpoint>/<bucket> forget --keep-daily 14 --keep-weekly 8 --prune
+```
+
+Without the restic passphrase a backup can never be restored — store it somewhere that
+isn't this server.
+
+### Restoring
+
+Stop the container, put the files back, start it again:
+
+```bash
+docker stop <container>
+docker cp ~/nemomemo-backups/nemomemo-2026-08-22.db <container>:/app/data/nemomemo.db
+docker cp ~/nemomemo-backups/uploads-2026-08-22/.   <container>:/app/data/uploads
+docker start <container>
+```
+
+Backups only matter if restore is realistic — do one practice restore before you depend
+on it. Just keep swimming (with copies). 🐟
