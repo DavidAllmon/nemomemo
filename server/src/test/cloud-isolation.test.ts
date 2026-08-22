@@ -288,6 +288,10 @@ describe('cloud cross-tenant isolation', () => {
     expect(health.status).toBe(200);
     expect(((await health.json()) as { ok: boolean }).ok).toBe(true);
 
+    // Docker's healthcheck probes by localhost with no reef hostname.
+    const anonymous = await reefRequest(ctx.app, 'GET', 'localhost', '/healthz');
+    expect(anonymous.status).toBe(200);
+
     const api = await reefRequest(ctx.app, 'GET', APP_HOST, '/api/v1/instance/profile');
     expect(api.status).toBe(404);
   });

@@ -55,6 +55,9 @@ export function makeCloudApp(
   const portalHosts = new Set([appHost, baseDomain, `www.${baseDomain}`]);
 
   const app = new Hono();
+  // Host-agnostic health endpoint: Docker's healthcheck (and any monitor
+  // probing by IP) has no reef hostname to offer.
+  app.get('/healthz', (c) => c.json({ ok: true, service: 'nemomemo-cloud' }));
   app.all('*', (c) => {
     const rawHost = c.req.header('host') ?? new URL(c.req.url).host;
     const host = rawHost.toLowerCase().split(':')[0]!;
