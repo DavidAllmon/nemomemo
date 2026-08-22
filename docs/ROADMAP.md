@@ -17,8 +17,8 @@ Priority: **P0** do before anything else · **P1** next milestone · **P2** feat
 | --- | --- | --- |
 | ~~**Off-VM nightly backups**~~ ✅ DONE 2026-08-22 | restic → Cloudflare R2 (`nemomemo-cloud-backups`, free tier), consistent SQLite snapshots nightly at 07:17 UTC, 14 daily + 8 weekly retention, restore drill verified. | — |
 | **Uptime monitoring** | External monitor (UptimeRobot/healthchecks.io free tier) on app host, a reef, demo, site — plus the backup script's success ping. | S |
-| **Security fix PR** (audit F1, F4, F5, F7) | Attachment serving headers (SVG/HTML stored-XSS within a reef), `Secure` cookie flag, security-header middleware, sign-in timing dummy-hash. All small, all testable, one PR. | M |
-| **Rate limiting** (audit F3) | Unlimited password guessing on sign-in doubles as a CPU DoS (bcryptjs on the event loop, one process serves all reefs). Per-IP + per-username limiter honoring `CF-Connecting-IP`; swap bcryptjs → native bcrypt/argon2 while there. | M |
+| ~~**Security fix PR** (audit F1, F4, F5, F6, F7, F8)~~ ✅ DONE 2026-08-22 (v1.3.0) | Attachment nosniff + sandbox/attachment disposition, `Secure` cookie flag, security-header middleware, sign-in dummy-hash, avatarUrl scheme/size cap, password min 8. | — |
+| ~~**Rate limiting** (audit F3)~~ ✅ v1.3.0 (limiter) | Per-IP fixed-window limiter honoring `CF-Connecting-IP` on signin/signup/checkout. **Still open (S):** swap bcryptjs → native bcrypt/argon2 off the event loop. | S |
 | **Rotate the live Stripe key** | The live key transited chat during launch; roll it in the dashboard, re-run the env swap. Hygiene, not an incident. | S |
 | **Stripe public business name → "NemoMemo"** | Receipts still say "Techitdave". Dashboard setting. | S |
 
@@ -36,7 +36,7 @@ Priority: **P0** do before anything else · **P1** next milestone · **P2** feat
 | ~~**Self-serve reef export**~~ ✅ v1.1.0 (zip) + restore-by-upload for self-host in v1.2.0; Markdown-format export still open | Settings → Backups. | M |
 | **Cloud snapshot browser + one-click rollback** | David's vision: the Backups tab lists every nightly snapshot; pick a date, restore the reef to it. Needs a host-side backup agent the app can query (restic creds stay off the containers) + per-reef restore via fleet evict/replace. Support-manual rollback in the meantime. | L |
 | **"What's New" banner** | The changelog exists (v1.0.0+); show a one-line dismissible banner when a reef's version changes (HopeLinx `lastSeenVersion` pattern) linking to /changelog. | S |
-| **Password minimum → 8** (audit F8) + show-password toggle + caps-lock hint | Auth-page polish batch. | S |
+| ~~**Password minimum → 8** (audit F8)~~ ✅ v1.3.0; show-password toggle + caps-lock hint still open | Auth-page polish batch. | S |
 
 ## P2 — Feature waves, by the job people hire a memo pad for
 
@@ -121,7 +121,7 @@ Priority: **P0** do before anything else · **P1** next milestone · **P2** feat
 5. **S** Remove server's unused remark/unified deps.
 6. **S** Delete dead `toggleTask`.
 7. **S** Logo SVG canonical-copy note.
-8. **NEW S** `avatarUrl` validation + size cap (audit F6).
+8. ~~**NEW S** `avatarUrl` validation + size cap (audit F6).~~ ✅ v1.3.0
 9. **NEW M** Post-deploy smoke test in `update.sh` (curl healthz + one API call; auto-rollback is L, alert first).
 10. **NEW M** Error tracking (self-hosted-friendly Sentry or log-based) — right now production errors vanish into `docker logs`.
 
