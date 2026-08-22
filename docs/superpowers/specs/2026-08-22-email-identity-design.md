@@ -1,7 +1,7 @@
 # Email identity & recovery — design
 
-Date: 2026-08-22 · Status: DRAFT — awaiting David's review · Supersedes nothing;
-implements the ROADMAP P1 "email milestone".
+Date: 2026-08-22 · Status: APPROVED (David, in-chat) · Implements the ROADMAP P1
+"email milestone" + pulls TOTP 2FA forward from P2.
 
 ## Problem
 
@@ -86,14 +86,28 @@ warning before a reef suspends.
 - New `email.test.ts` (fake mailer): verify flow, reset flow end-to-end incl.
   token expiry/reuse, enumeration-safety, no-SMTP degradation. TDD throughout.
 
-## Rollout (two releases)
+### 7. TOTP 2FA (opt-in for everyone — David, 2026-08-22)
+
+- Authenticator-app TOTP only (no SMS, consistent with no-phones). Enrollment in
+  Settings: QR code (otpauth:// URI) + manual secret + 10 single-use backup
+  codes (hashed at rest). Sign-in: after password success, users with 2FA get a
+  six-digit challenge (or a backup code). Disable requires a current code.
+- Data: `user.totp_secret` (encrypted-at-rest is overkill for SQLite-on-disk
+  threat model; store raw like password hashes' peer) + `backup_code` rows
+  (hashed). Ships AFTER password reset exists (lockout recovery path first).
+- No per-reef enforcement switch in v1; "require for reefkeepers" is a possible
+  later instance setting.
+
+## Rollout (three releases)
 
 1. **v1.8.0 — identity**: mailer service, migration 0004, email-required
    signup + claim email field, sign-in-by-email, verification, add-email
-   banner. Needs David: an SMTP account (recommend Brevo free 300/day or
-   Resend; any SMTP works) → creds into cloud.env + VM restart.
+   banner, `emailEnabled` in the instance profile. David already has Brevo —
+   creds (`NEMOMEMO_SMTP_*`) go into cloud.env + VM restart when ready; the
+   feature ships dark until the env vars exist.
 2. **v1.9.0 — recovery & lifecycle**: password reset, claim-link email via
    Stripe address, welcome email, dunning email.
+3. **v1.10.0 — 2FA**: TOTP enrollment/challenge/backup codes per section 7.
 
 ## Out of scope
 
