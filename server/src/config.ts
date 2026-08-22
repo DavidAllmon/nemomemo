@@ -10,6 +10,8 @@ export interface Config {
   version: string;
   /** Absolute path to the built SPA (served in production); null in dev/tests. */
   webDistDir: string | null;
+  /** Fair-use brakes for hosted reefs; null (self-host) means no limits. */
+  cloudLimits: { maxMembers: number; maxStorageBytes: number } | null;
 }
 
 export function loadConfig(overrides: Partial<Config> = {}): Config {
@@ -25,5 +27,6 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
       (process.env.DORY_TTL_SECONDS ? Number(process.env.DORY_TTL_SECONDS) : DORY_TTL_SECONDS),
     version: overrides.version ?? '0.1.0',
     webDistDir: overrides.webDistDir ?? process.env.NEMOMEMO_WEB_DIST ?? null,
+    cloudLimits: overrides.cloudLimits ?? null,
   };
 }

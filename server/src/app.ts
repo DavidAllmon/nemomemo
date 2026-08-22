@@ -26,7 +26,7 @@ export function makeApp(db: Db, config: Config): Hono<AppEnv> {
   app.get('/healthz', (c) => c.json({ ok: true }));
 
   const api = new Hono<AppEnv>();
-  api.route('/auth', authRoutes(db));
+  api.route('/auth', authRoutes(db, config));
   api.route('/instance', instanceRoutes(db, config));
   api.route('/memos', memoRoutes(db, config));
   api.route('/shares', shareRoutes(db));

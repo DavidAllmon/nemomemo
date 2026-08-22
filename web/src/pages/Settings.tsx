@@ -7,16 +7,18 @@ import { Input } from '@/components/ui/misc.js';
 import { useTheme, type Theme } from '@/context/theme.js';
 import {
   keys,
+  useCloudBilling,
   useInstanceSettings,
   useMembers,
   useUpdateUserSettings,
   useUserSettings,
   useViewer,
+  type CloudBillingInfo,
 } from '@/hooks/queries.js';
 import { api, ApiError } from '@/lib/api.js';
 import { cn } from '@/lib/utils.js';
 
-type Section = 'account' | 'preferences' | 'members' | 'instance';
+type Section = 'account' | 'preferences' | 'members' | 'instance' | 'billing';
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -341,16 +343,68 @@ function InstanceSection() {
   );
 }
 
+function CloudBillingSection({ billing }: { billing: CloudBillingInfo }) {
+  const { status, flash } = useStatus();
+  const [opening, setOpening] = useState(false);
+
+  const openPortal = async () => {
+    setOpening(true);
+    try {
+      const { url } = await api<{ url: string }>('POST', '/api/v1/cloud/billing/portal');
+      window.location.href = url;
+    } catch (error) {
+      setOpening(false);
+      flash(error instanceof ApiError ? error.message : 'Could not open the billing portal');
+    }
+  };
+
+  const statusCopy: Record<CloudBillingInfo['status'], string> = {
+    provisioned: 'Waiting to be claimed',
+    active: 'Active — swimming happily',
+    past_due: "Past due — a payment didn't make it through",
+    suspended: 'Suspended',
+    canceled: 'Canceled',
+  };
+
+  return (
+    <SectionCard title="Billing">
+      <p className="text-sm">
+        Subscription status:{' '}
+        <span className={cn('font-semibold', billing.status === 'active' ? 'text-ocean' : 'text-destructive')}>
+          {statusCopy[billing.status]}
+        </span>
+      </p>
+      {billing.limits ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Fair use: up to {billing.limits.maxMembers} members and{' '}
+          {Math.round(billing.limits.maxStorageBytes / (1024 * 1024 * 1024))} GB of attachments. Need more? Just ask.
+        </p>
+      ) : null}
+      <div className="mt-3 flex items-center gap-2">
+        <Button size="sm" disabled={opening} onClick={() => void openPortal()}>
+          Manage billing
+        </Button>
+        {status ? <span className="text-xs font-semibold text-ocean">{status}</span> : null}
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Card updates, invoices, and cancellation all live in the Stripe portal — we never see your card.
+      </p>
+    </SectionCard>
+  );
+}
+
 export function SettingsPage() {
   const { data: viewer } = useViewer();
   const [section, setSection] = useState<Section>('account');
   const isAdmin = viewer?.role === 'ADMIN';
+  const { data: cloudBilling } = useCloudBilling(isAdmin);
 
   const sections: { id: Section; label: string; adminOnly?: boolean }[] = [
     { id: 'account', label: 'Account' },
     { id: 'preferences', label: 'Preferences' },
     { id: 'members', label: 'Members', adminOnly: true },
     { id: 'instance', label: 'Reef', adminOnly: true },
+    ...(cloudBilling ? [{ id: 'billing' as const, label: 'Billing', adminOnly: true }] : []),
   ];
 
   return (
@@ -378,6 +432,7 @@ export function SettingsPage() {
       {section === 'preferences' ? <PreferencesSection /> : null}
       {section === 'members' && isAdmin ? <MembersSection /> : null}
       {section === 'instance' && isAdmin ? <InstanceSection /> : null}
+      {section === 'billing' && isAdmin && cloudBilling ? <CloudBillingSection billing={cloudBilling} /> : null}
     </div>
   );
 }

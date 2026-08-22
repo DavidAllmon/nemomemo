@@ -1,5 +1,5 @@
 import type { AttachmentDto } from '@nemomemo/shared';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -42,6 +42,13 @@ export function attachmentRoutes(db: Db, config: Config): Hono<AppEnv> {
     const file = body.file;
     if (!(file instanceof File)) throw apiError('INVALID_ARGUMENT', 'Expected a `file` upload');
     if (file.size > MAX_UPLOAD_BYTES) throw apiError('INVALID_ARGUMENT', 'File is too large (max 32 MiB)');
+    if (config.cloudLimits) {
+      const used =
+        db.select({ total: sql<number>`coalesce(sum(size), 0)` }).from(attachments).get()?.total ?? 0;
+      if (used + file.size > config.cloudLimits.maxStorageBytes) {
+        throw apiError('INVALID_ARGUMENT', "This reef's storage is full — tidy up some attachments first");
+      }
+    }
 
     const uid = newUid();
     const filename = sanitizeFilename(file.name);

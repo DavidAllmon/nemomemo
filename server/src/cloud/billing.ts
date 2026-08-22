@@ -2,12 +2,14 @@ import { signupRequestSchema } from '@nemomemo/shared';
 import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
+import { getCookie } from 'hono/cookie';
 import { customAlphabet } from 'nanoid';
 import { nowSeconds } from '../lib/time.js';
+import { resolveSessionViewer, SESSION_COOKIE } from '../middleware/auth.js';
 import { REEF_SLUG_RE, RESERVED_SLUGS, type ReefRow, type Registry } from './registry.js';
 import type { StripeGateway, StripeWebhookEvent } from './stripe.js';
-import type { ReefFleet } from './tenants.js';
+import type { ReefFleet, ReefHandle } from './tenants.js';
 
 const CLAIM_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
 const placeholderSlug = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 10);
@@ -141,8 +143,60 @@ function handleWebhookEvent(deps: BillingDeps, event: StripeWebhookEvent): Promi
   }
 }
 
+/**
+ * Cloud-only API served on reef hosts (`/api/v1/cloud/*`), handled by the
+ * outer router before the tenant app — the tenant app itself stays
+ * cloud-unaware. The viewer is resolved against the reef's own database.
+ */
+export async function handleReefCloudApi(
+  deps: BillingDeps,
+  reef: ReefRow,
+  handle: ReefHandle,
+  c: Context,
+): Promise<Response> {
+  const pathname = new URL(c.req.url).pathname;
+  const token = getCookie(c, SESSION_COOKIE);
+  const viewer = token ? resolveSessionViewer(handle.db, token) : null;
+  if (!viewer || viewer.user.role !== 'ADMIN') {
+    return c.json({ error: { code: 'FORBIDDEN', message: 'Reefkeeper access required' } }, 403);
+  }
+
+  if (c.req.method === 'GET' && pathname === '/api/v1/cloud/billing') {
+    return c.json({
+      status: reef.status,
+      limits: handle.config.cloudLimits,
+    });
+  }
+
+  if (c.req.method === 'POST' && pathname === '/api/v1/cloud/billing/portal') {
+    if (!reef.stripeCustomerId) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'No billing on file for this reef' } }, 404);
+    }
+    const session = await deps.gateway.createBillingPortalSession(
+      reef.stripeCustomerId,
+      `https://${reef.slug}.${deps.baseDomain}/settings`,
+    );
+    return c.json({ url: session.url });
+  }
+
+  return c.json({ error: { code: 'NOT_FOUND', message: 'No such endpoint' } }, 404);
+}
+
 export function billingRoutes(deps: BillingDeps): Hono {
   const app = new Hono();
+
+  app.get('/', (c) =>
+    c.html(
+      page(
+        'Get your reef',
+        `<div style="font-size:2.5rem">🐠</div><h1>NemoMemo Cloud</h1>
+<p>Your own private reef — memos, members, and a Dory or two — hosted for you. Try the <a href="https://demo.trynemomemo.com">live demo</a> first, then dive in:</p>
+<form method="get" action="/cloud/checkout"><input type="hidden" name="interval" value="month"><button type="submit">$1.99 / month</button></form>
+<form method="get" action="/cloud/checkout"><input type="hidden" name="interval" value="year"><button type="submit" style="background:#0369a1">$19 / year — two months free</button></form>
+<p style="font-size:.85rem;color:#0369a1">Pay first, claim your reef right after — no trial, no card UI of ours, all handled by Stripe. Lost your reef? Your claim link lives on your Stripe receipt's customer record.</p>`,
+      ),
+    ),
+  );
 
   app.get('/cloud/checkout', async (c) => {
     const interval = c.req.query('interval') === 'year' ? 'year' : c.req.query('interval') === 'month' ? 'month' : null;

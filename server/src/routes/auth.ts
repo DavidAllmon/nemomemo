@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import bcrypt from 'bcryptjs';
 import { eq, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import type { Config } from '../config.js';
 import type { Db } from '../db/index.js';
 import { users } from '../db/schema.js';
 import { apiError } from '../lib/errors.js';
@@ -15,7 +16,7 @@ import {
 import { userToDto } from '../services/memo-service.js';
 import { getInstanceGeneral } from '../services/settings.js';
 
-export function authRoutes(db: Db): Hono<AppEnv> {
+export function authRoutes(db: Db, config: Config): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
 
   app.post('/signup', zValidator('json', signupRequestSchema), async (c) => {
@@ -30,6 +31,9 @@ export function authRoutes(db: Db): Hono<AppEnv> {
 
     if (!isFirstUser && !getInstanceGeneral(db).allowRegistration) {
       throw apiError('FORBIDDEN', 'Sign-ups are closed on this reef');
+    }
+    if (!isFirstUser && config.cloudLimits && userCount >= config.cloudLimits.maxMembers) {
+      throw apiError('FORBIDDEN', 'This reef is at capacity — contact your reefkeeper');
     }
     const existing = db.select().from(users).where(eq(users.username, body.username)).get();
     if (existing) throw apiError('ALREADY_EXISTS', 'That username is already taken');

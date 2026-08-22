@@ -37,6 +37,7 @@ export class ReefFleet {
     private base: Config,
     private reefsDir: string,
     private maxOpen = 64,
+    private limits: Config['cloudLimits'] = null,
   ) {}
 
   get(slug: string): ReefHandle {
@@ -57,6 +58,7 @@ export class ReefFleet {
       webDistDir: this.base.webDistDir,
       version: this.base.version,
       port: this.base.port,
+      cloudLimits: this.limits,
     });
     fs.mkdirSync(config.uploadsDir, { recursive: true });
     const db = createDb(config.dbPath);

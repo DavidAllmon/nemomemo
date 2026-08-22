@@ -48,28 +48,38 @@ export function destroySession(db: Db, c: Context): void {
   deleteCookie(c, SESSION_COOKIE, { path: '/' });
 }
 
+/** Pure session-token → active user lookup (also used by the cloud layer). */
+export function resolveSessionViewer(
+  db: Db,
+  token: string,
+): { user: UserRow; sessionId: number; lastSeenTs: number } | null {
+  const now = nowSeconds();
+  const session = db
+    .select()
+    .from(userSessions)
+    .where(and(eq(userSessions.tokenHash, hashToken(token)), gt(userSessions.expiresTs, now)))
+    .get();
+  if (!session) return null;
+  const user = db.select().from(users).where(eq(users.id, session.userId)).get();
+  if (!user || user.rowStatus !== 'NORMAL') return null;
+  return { user, sessionId: session.id, lastSeenTs: session.lastSeenTs };
+}
+
 /** Resolves the viewer from the session cookie; never rejects the request itself. */
 export function viewerMiddleware(db: Db): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     c.set('viewer', null);
     const token = getCookie(c, SESSION_COOKIE);
     if (token) {
-      const now = nowSeconds();
-      const session = db
-        .select()
-        .from(userSessions)
-        .where(and(eq(userSessions.tokenHash, hashToken(token)), gt(userSessions.expiresTs, now)))
-        .get();
-      if (session) {
-        const user = db.select().from(users).where(eq(users.id, session.userId)).get();
-        if (user && user.rowStatus === 'NORMAL') {
-          c.set('viewer', user);
-          if (now - session.lastSeenTs > SESSION_TOUCH_INTERVAL_SECONDS) {
-            db.update(userSessions)
-              .set({ lastSeenTs: now, expiresTs: now + SESSION_TTL_SECONDS })
-              .where(eq(userSessions.id, session.id))
-              .run();
-          }
+      const resolved = resolveSessionViewer(db, token);
+      if (resolved) {
+        c.set('viewer', resolved.user);
+        const now = nowSeconds();
+        if (now - resolved.lastSeenTs > SESSION_TOUCH_INTERVAL_SECONDS) {
+          db.update(userSessions)
+            .set({ lastSeenTs: now, expiresTs: now + SESSION_TTL_SECONDS })
+            .where(eq(userSessions.id, resolved.sessionId))
+            .run();
         }
       }
     }

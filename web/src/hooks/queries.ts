@@ -37,6 +37,7 @@ export const keys = {
   inbox: (status: string) => ['inbox', status] as const,
   attachments: (params: Record<string, string | undefined>) => ['attachments', params] as const,
   members: ['members'] as const,
+  cloudBilling: ['cloud', 'billing'] as const,
 };
 
 // ---------- Viewer & instance ----------
@@ -53,6 +54,29 @@ export function useViewer() {
         throw error;
       }
     },
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+}
+
+export interface CloudBillingInfo {
+  status: 'provisioned' | 'active' | 'past_due' | 'suspended' | 'canceled';
+  limits: { maxMembers: number; maxStorageBytes: number } | null;
+}
+
+/** Hosted reefs only: 403/404 (self-host, non-admin) resolves to null and hides all cloud UI. */
+export function useCloudBilling(enabled: boolean) {
+  return useQuery({
+    queryKey: keys.cloudBilling,
+    queryFn: async () => {
+      try {
+        return await api<CloudBillingInfo>('GET', '/api/v1/cloud/billing');
+      } catch (error) {
+        if (error instanceof ApiError && (error.status === 403 || error.status === 404)) return null;
+        throw error;
+      }
+    },
+    enabled,
     staleTime: 5 * 60_000,
     retry: false,
   });

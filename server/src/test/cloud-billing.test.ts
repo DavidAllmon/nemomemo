@@ -6,7 +6,6 @@ import Stripe from 'stripe';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { loadConfig } from '../config.js';
 import { makeCloudApp } from '../cloud/app.js';
-import { billingRoutes } from '../cloud/billing.js';
 import { Registry } from '../cloud/registry.js';
 import { makeStripeGateway, type StripeGateway } from '../cloud/stripe.js';
 import { ReefFleet } from '../cloud/tenants.js';
@@ -81,9 +80,12 @@ function makeBillingTestContext(): BillingTestContext {
   const base = loadConfig({ dataDir: scratch, webDistDir: null });
   const registry = new Registry(path.join(scratch, 'registry.db'));
   const reefsDir = path.join(scratch, 'reefs');
-  const fleet = new ReefFleet(base, reefsDir);
+  const fleet = new ReefFleet(base, reefsDir, 64, {
+    maxMembers: 2,
+    maxStorageBytes: 10 * 1024,
+  });
   const stripe = new FakeStripe();
-  const billing = billingRoutes({
+  const app = makeCloudApp(registry, fleet, { baseDomain: BASE_DOMAIN, appHost: APP_HOST }, {
     registry,
     fleet,
     gateway: stripe,
@@ -93,7 +95,6 @@ function makeBillingTestContext(): BillingTestContext {
     prices: { month: 'price_month', year: 'price_year' },
     reefsDir,
   });
-  const app = makeCloudApp(registry, fleet, { baseDomain: BASE_DOMAIN, appHost: APP_HOST }, billing);
   return { app, registry, fleet, stripe, scratch };
 }
 
@@ -271,6 +272,97 @@ describe('cloud billing + claim flow', () => {
     const page = await ctx.app.request(`${APP_URL}/claim?session_id=${sessionId}`, { headers: { host: APP_HOST } });
     expect(page.status).toBe(402);
     expect(ctx.registry.listReefs()).toHaveLength(0);
+  });
+
+  it('the app host serves the landing page with both checkout buttons', async () => {
+    const landing = await ctx.app.request(`${APP_URL}/`, { headers: { host: APP_HOST } });
+    expect(landing.status).toBe(200);
+    const html = await landing.text();
+    expect(html).toContain('$1.99 / month');
+    expect(html).toContain('$19 / year');
+  });
+
+  it('reef-host billing API: admin sees status + portal, others are refused', async () => {
+    const token = await payAndProvision(ctx);
+    await postClaim(ctx, { token, slug: 'lagoon', username: 'nemo', password: 'password123' });
+    const host = `lagoon.${BASE_DOMAIN}`;
+
+    const signin = await ctx.app.request(`http://${host}/api/v1/auth/signin`, {
+      method: 'POST',
+      headers: { host, 'content-type': 'application/json' },
+      body: JSON.stringify({ username: 'nemo', password: 'password123' }),
+    });
+    const adminCookie = signin.headers.get('set-cookie')!.split(';')[0]!;
+
+    const anonymous = await ctx.app.request(`http://${host}/api/v1/cloud/billing`, { headers: { host } });
+    expect(anonymous.status).toBe(403);
+
+    const billing = await ctx.app.request(`http://${host}/api/v1/cloud/billing`, {
+      headers: { host, cookie: adminCookie },
+    });
+    expect(billing.status).toBe(200);
+    const info = (await billing.json()) as { status: string; limits: { maxMembers: number } };
+    expect(info.status).toBe('active');
+    expect(info.limits.maxMembers).toBe(2);
+
+    const portal = await ctx.app.request(`http://${host}/api/v1/cloud/billing/portal`, {
+      method: 'POST',
+      headers: { host, cookie: adminCookie },
+    });
+    expect(portal.status).toBe(200);
+    expect(((await portal.json()) as { url: string }).url).toContain('portal.stripe.test');
+
+    // A regular member is not a reefkeeper.
+    const memberSignup = await ctx.app.request(`http://${host}/api/v1/auth/signup`, {
+      method: 'POST',
+      headers: { host, 'content-type': 'application/json' },
+      body: JSON.stringify({ username: 'guppy', password: 'password123' }),
+    });
+    expect(memberSignup.status).toBe(200);
+    const memberCookie = memberSignup.headers.get('set-cookie')!.split(';')[0]!;
+    const memberTry = await ctx.app.request(`http://${host}/api/v1/cloud/billing`, {
+      headers: { host, cookie: memberCookie },
+    });
+    expect(memberTry.status).toBe(403);
+  });
+
+  it('fair-use brakes: member cap and storage cap bind on cloud reefs only', async () => {
+    const token = await payAndProvision(ctx);
+    await postClaim(ctx, { token, slug: 'lagoon', username: 'nemo', password: 'password123' });
+    const host = `lagoon.${BASE_DOMAIN}`;
+    const signupOn = (username: string) =>
+      ctx.app.request(`http://${host}/api/v1/auth/signup`, {
+        method: 'POST',
+        headers: { host, 'content-type': 'application/json' },
+        body: JSON.stringify({ username, password: 'password123' }),
+      });
+
+    // maxMembers = 2: the admin + one more, then the reef is full.
+    expect((await signupOn('guppy')).status).toBe(200);
+    const third = await signupOn('too-many');
+    expect(third.status).toBe(403);
+    expect(JSON.stringify(await third.json())).toContain('capacity');
+
+    // maxStorageBytes = 10 KiB: an 11 KiB upload is refused, a small one is fine.
+    const signin = await ctx.app.request(`http://${host}/api/v1/auth/signin`, {
+      method: 'POST',
+      headers: { host, 'content-type': 'application/json' },
+      body: JSON.stringify({ username: 'nemo', password: 'password123' }),
+    });
+    const cookie = signin.headers.get('set-cookie')!.split(';')[0]!;
+    const upload = (name: string, bytes: number) => {
+      const form = new FormData();
+      form.append('file', new File([new Uint8Array(bytes)], name, { type: 'application/octet-stream' }));
+      return ctx.app.request(`http://${host}/api/v1/attachments`, {
+        method: 'POST',
+        headers: { host, cookie },
+        body: form,
+      });
+    };
+    expect((await upload('small.bin', 1024)).status).toBe(201);
+    const over = await upload('big.bin', 11 * 1024);
+    expect(over.status).toBe(400);
+    expect(JSON.stringify(await over.json())).toContain('storage is full');
   });
 
   it('the real gateway verifies genuine Stripe signatures and rejects forgeries', () => {

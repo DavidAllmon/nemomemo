@@ -5,6 +5,24 @@ import { NemoLogo, Wordmark } from '@/components/NemoLogo.js';
 import { SearchDialog } from '@/components/filters/SearchDialog.js';
 import { Sidebar } from '@/components/layout/Sidebar.js';
 import { Button } from '@/components/ui/button.js';
+import { useCloudBilling, useViewer } from '@/hooks/queries.js';
+
+/** Hosted reefs only: reefkeepers see when a payment needs attention. */
+function PastDueBanner() {
+  const { data: viewer } = useViewer();
+  const { data: billing } = useCloudBilling(viewer?.role === 'ADMIN');
+  if (billing?.status !== 'past_due') return null;
+  return (
+    <div className="mb-4 rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm">
+      <span className="font-semibold">A payment didn't make it through the current. 🐡</span>{' '}
+      Update your card in{' '}
+      <Link to="/settings" className="font-semibold underline">
+        Settings → Billing
+      </Link>{' '}
+      to keep your reef swimming.
+    </div>
+  );
+}
 
 export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -67,6 +85,7 @@ export function AppShell() {
           flush right; content centers within it. */}
       <main className="min-w-0 flex-1 px-3 py-4 md:h-dvh md:overflow-y-auto md:px-6">
         <div className="mx-auto w-full max-w-2xl">
+          <PastDueBanner />
           <Outlet />
         </div>
       </main>

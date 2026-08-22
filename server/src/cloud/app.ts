@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
+import { billingRoutes, handleReefCloudApi, type BillingDeps } from './billing.js';
 import { REEF_SLUG_RE, type Registry } from './registry.js';
 import type { ReefFleet } from './tenants.js';
 
@@ -29,8 +30,8 @@ function reefError(c: Context, status: 403 | 404, code: string, message: string)
 export function makePortalApp(billing?: Hono): Hono {
   const portal = new Hono();
   portal.get('/healthz', (c) => c.json({ ok: true, service: 'nemomemo-cloud' }));
-  portal.get('/', (c) => c.json({ service: 'nemomemo-cloud', message: 'Just keep swimming 🐠' }));
   if (billing) portal.route('/', billing);
+  portal.get('/', (c) => c.json({ service: 'nemomemo-cloud', message: 'Just keep swimming 🐠' }));
   portal.all('*', (c) =>
     c.json({ error: { code: 'NOT_FOUND', message: 'No such endpoint' } }, 404),
   );
@@ -46,9 +47,9 @@ export function makeCloudApp(
   registry: Registry,
   fleet: ReefFleet,
   settings: CloudSettings,
-  billing?: Hono,
+  billing?: BillingDeps,
 ): Hono {
-  const portal = makePortalApp(billing);
+  const portal = makePortalApp(billing ? billingRoutes(billing) : undefined);
   const baseDomain = settings.baseDomain.toLowerCase();
   const appHost = settings.appHost.toLowerCase();
   const portalHosts = new Set([appHost, baseDomain, `www.${baseDomain}`]);
@@ -75,7 +76,11 @@ export function makeCloudApp(
     if (reef.status === 'suspended') {
       return reefError(c, 403, 'REEF_SUSPENDED', 'This reef is taking a nap');
     }
-    return fleet.get(slug).app.fetch(c.req.raw);
+    const handle = fleet.get(slug);
+    if (billing && new URL(c.req.url).pathname.startsWith('/api/v1/cloud/')) {
+      return handleReefCloudApi(billing, reef, handle, c);
+    }
+    return handle.app.fetch(c.req.raw);
   });
   return app;
 }

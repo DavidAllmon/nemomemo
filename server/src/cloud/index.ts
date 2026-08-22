@@ -3,7 +3,7 @@ import path from 'node:path';
 import { loadConfig } from '../config.js';
 import { sweepDoryMemos } from '../services/dory-sweeper.js';
 import { makeCloudApp, type CloudSettings } from './app.js';
-import { billingRoutes } from './billing.js';
+import type { BillingDeps } from './billing.js';
 import { Registry } from './registry.js';
 import { makeStripeGateway } from './stripe.js';
 import { ReefFleet } from './tenants.js';
@@ -20,10 +20,16 @@ export function startCloud(): void {
   const base = loadConfig();
   const settings = loadCloudSettings();
   const registry = new Registry(path.join(base.dataDir, 'registry.db'));
+  // Fair-use brakes ("unlimited in spirit"): raiseable via env, never lowered silently.
+  const limits = {
+    maxMembers: Number(process.env.NEMOMEMO_CLOUD_MAX_MEMBERS ?? 25),
+    maxStorageBytes: Number(process.env.NEMOMEMO_CLOUD_MAX_STORAGE_GB ?? 5) * 1024 * 1024 * 1024,
+  };
   const fleet = new ReefFleet(
     base,
     path.join(base.dataDir, 'reefs'),
     Number(process.env.NEMOMEMO_CLOUD_MAX_OPEN_REEFS ?? 64),
+    limits,
   );
   // Billing switches on only when Stripe env is present; without it the cloud
   // still serves reefs (useful for local poking and the pre-billing rollout).
@@ -31,9 +37,9 @@ export function startCloud(): void {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   const priceMonth = process.env.STRIPE_PRICE_MONTHLY_ID;
   const priceYear = process.env.STRIPE_PRICE_YEARLY_ID;
-  let billing;
+  let billing: BillingDeps | undefined;
   if (stripeKey && webhookSecret && priceMonth && priceYear) {
-    billing = billingRoutes({
+    billing = {
       registry,
       fleet,
       gateway: makeStripeGateway(stripeKey, webhookSecret),
@@ -42,7 +48,7 @@ export function startCloud(): void {
       cancelUrl: process.env.NEMOMEMO_CLOUD_CANCEL_URL ?? `https://${settings.baseDomain}/pricing`,
       prices: { month: priceMonth, year: priceYear },
       reefsDir: path.join(base.dataDir, 'reefs'),
-    });
+    };
     console.log('[cloud] Stripe billing routes enabled');
   } else {
     console.log('[cloud] Stripe env incomplete — billing routes disabled');
