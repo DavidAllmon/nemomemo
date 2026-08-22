@@ -101,6 +101,13 @@ Your whole reef is two things inside the data volume: `nemomemo.db` (SQLite) and
 `uploads/`. Back up both. (On NemoMemo Cloud we do this for you nightly — self-hosting
 means this part is yours.)
 
+### The easy way: the button
+
+As the reefkeeper (admin), open **Settings → Backups → Download backup**. You get one
+zip containing a consistent database snapshot (safe even while people are writing) and
+every uploaded file. Do that on a schedule you'll actually keep, store the zip somewhere
+that isn't the server, and you're covered. Everything below is for automating it.
+
 ### A safe snapshot (Docker)
 
 Don't copy `nemomemo.db` while the app is running — a plain `cp` can catch it
@@ -130,17 +137,37 @@ Put those commands in a script and add a cron line on the host:
 
 A backup on the same disk dies with the disk. [restic](https://restic.net) — the same
 tool NemoMemo Cloud's own backups use — encrypts your backup folder and pushes it to
-almost anywhere: another machine over SFTP, or any S3-compatible bucket (Cloudflare R2
-and Backblaze B2 both have free tiers that fit a reef comfortably):
+almost anywhere: another machine over SFTP, or any S3-compatible bucket.
+
+**Getting a free bucket** (either of these comfortably fits a reef in its free tier):
+
+- **Cloudflare R2** ([pricing](https://developers.cloudflare.com/r2/pricing/): 10 GB +
+  free egress): in the Cloudflare dashboard go to **R2** → **Create bucket** (pick any
+  name, e.g. `my-reef-backups`). Then **R2 → Manage R2 API Tokens → Account API Tokens
+  → Create**: permissions **Object Read & Write**, *apply to your bucket only*, TTL
+  Forever. The confirmation screen shows an **Access Key ID**, **Secret Access Key**,
+  and your account's S3 **endpoint URL** — copy all three (the secret is shown only
+  once).
+- **Backblaze B2** ([pricing](https://www.backblaze.com/cloud-storage/pricing): first
+  10 GB always free): create a bucket, then **Application Keys → Add a New Application
+  Key** scoped to that bucket; the key ID/key are your S3 credentials and the endpoint
+  is shown on the bucket page.
+
+**Then wire restic to it:**
 
 ```bash
-restic -r s3:https://<endpoint>/<bucket> init      # once; pick a passphrase and KEEP IT SAFE
-restic -r s3:https://<endpoint>/<bucket> backup ~/nemomemo-backups
-restic -r s3:https://<endpoint>/<bucket> forget --keep-daily 14 --keep-weekly 8 --prune
+export AWS_ACCESS_KEY_ID=<access key id>
+export AWS_SECRET_ACCESS_KEY=<secret access key>
+export RESTIC_REPOSITORY=s3:https://<endpoint>/<bucket>
+export RESTIC_PASSWORD=<pick a strong passphrase and KEEP IT SAFE>
+
+restic init                                            # once
+restic backup ~/nemomemo-backups                       # each night (add to your cron script)
+restic forget --keep-daily 14 --keep-weekly 8 --prune  # retention
 ```
 
-Without the restic passphrase a backup can never be restored — store it somewhere that
-isn't this server.
+Without the restic passphrase a backup can never be restored — store it (and the keys)
+somewhere that isn't this server, like a password manager.
 
 ### Restoring
 

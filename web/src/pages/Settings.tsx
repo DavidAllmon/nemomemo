@@ -18,7 +18,7 @@ import {
 import { api, ApiError } from '@/lib/api.js';
 import { cn } from '@/lib/utils.js';
 
-type Section = 'account' | 'preferences' | 'members' | 'instance' | 'billing';
+type Section = 'account' | 'preferences' | 'members' | 'instance' | 'backups' | 'billing';
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -343,6 +343,35 @@ function InstanceSection() {
   );
 }
 
+function BackupsSection() {
+  return (
+    <SectionCard title="Backups">
+      <p className="text-sm text-muted-foreground">
+        Download your whole reef as one zip: the database (a safe snapshot, even while
+        everyone keeps writing) and every uploaded file. Keep a copy somewhere that
+        isn&apos;t this server. 🐟
+      </p>
+      <div className="mt-3">
+        <Button size="sm" onClick={() => { window.location.href = '/api/v1/instance/backup'; }}>
+          Download backup
+        </Button>
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        The zip mirrors the data folder, so restoring is unzip-and-replace — see the{' '}
+        <a
+          href="https://trynemomemo.com/docs/deploy#backups"
+          target="_blank"
+          rel="noreferrer"
+          className="text-ocean underline"
+        >
+          backup &amp; restore guide
+        </a>
+        .
+      </p>
+    </SectionCard>
+  );
+}
+
 function CloudBillingSection({ billing }: { billing: CloudBillingInfo }) {
   const { status, flash } = useStatus();
   const [opening, setOpening] = useState(false);
@@ -404,6 +433,7 @@ export function SettingsPage() {
     { id: 'preferences', label: 'Preferences' },
     { id: 'members', label: 'Members', adminOnly: true },
     { id: 'instance', label: 'Reef', adminOnly: true },
+    { id: 'backups', label: 'Backups', adminOnly: true },
     ...(cloudBilling ? [{ id: 'billing' as const, label: 'Billing', adminOnly: true }] : []),
   ];
 
@@ -432,6 +462,7 @@ export function SettingsPage() {
       {section === 'preferences' ? <PreferencesSection /> : null}
       {section === 'members' && isAdmin ? <MembersSection /> : null}
       {section === 'instance' && isAdmin ? <InstanceSection /> : null}
+      {section === 'backups' && isAdmin ? <BackupsSection /> : null}
       {section === 'billing' && isAdmin && cloudBilling ? <CloudBillingSection billing={cloudBilling} /> : null}
     </div>
   );
