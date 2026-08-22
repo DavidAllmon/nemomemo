@@ -40,6 +40,15 @@ export const verifyEmailRequestSchema = z.object({
   token: z.string().min(1).max(128),
 });
 
+export const forgotPasswordRequestSchema = z.object({
+  email: emailSchema,
+});
+
+export const resetPasswordRequestSchema = z.object({
+  token: z.string().min(1).max(128),
+  password: passwordSchema,
+});
+
 export const signinRequestSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
@@ -86,7 +95,9 @@ export const updateAccountRequestSchema = z.object({
 
 export const adminCreateUserRequestSchema = z.object({
   username: z.string().regex(USERNAME_REGEX),
-  password: passwordSchema,
+  email: emailSchema,
+  // Omitted password = email an invite instead (requires SMTP on the instance).
+  password: passwordSchema.optional(),
   role: z.enum(ROLES).default('USER'),
   nickname: z.string().max(64).optional(),
 });

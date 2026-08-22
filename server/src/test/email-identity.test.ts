@@ -124,7 +124,9 @@ describe('email verification', () => {
     );
     expect(change.status).toBe(200);
     expect((await me(app, cookie)).emailVerified).toBe(false);
-    expect(sentMail.at(-1)!.to).toBe('new@test.reef');
+    // Verification goes to the NEW address; the old one gets a security notice.
+    expect(sentMail.some((m) => m.to === 'new@test.reef' && /verify/i.test(m.subject))).toBe(true);
+    expect(sentMail.some((m) => m.to === 'coral@test.reef' && /email/i.test(m.subject))).toBe(true);
   });
 });
 

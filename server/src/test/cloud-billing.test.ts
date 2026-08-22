@@ -77,6 +77,7 @@ interface BillingTestContext {
   fleet: ReefFleet;
   stripe: FakeStripe;
   scratch: string;
+  sentMail: { to: string; subject: string; text: string }[];
 }
 
 function makeBillingTestContext(): BillingTestContext {
@@ -89,6 +90,7 @@ function makeBillingTestContext(): BillingTestContext {
     maxStorageBytes: 10 * 1024,
   });
   const stripe = new FakeStripe();
+  const sentMail: { to: string; subject: string; text: string }[] = [];
   const app = makeCloudApp(registry, fleet, { baseDomain: BASE_DOMAIN, appHost: APP_HOST }, {
     registry,
     fleet,
@@ -98,8 +100,9 @@ function makeBillingTestContext(): BillingTestContext {
     cancelUrl: 'https://cancel.test/pricing',
     prices: { month: 'price_month', year: 'price_year' },
     reefsDir,
+    mailer: { send: async (message) => void sentMail.push(message) },
   });
-  return { app, registry, fleet, stripe, scratch };
+  return { app, registry, fleet, stripe, scratch, sentMail };
 }
 
 async function postWebhook(ctx: BillingTestContext, event: unknown, signature = 'valid'): Promise<Response> {
@@ -175,6 +178,22 @@ describe('cloud billing + claim flow', () => {
       headers: { host: APP_HOST, 'cf-connecting-ip': '198.51.100.9' },
     });
     expect(otherIp.status).toBe(303);
+  });
+
+  it('emails the claim link to the buyer and dunning on failed payment', async () => {
+    const token = await payAndProvision(ctx);
+    const claimMail = ctx.sentMail.find((m) => m.to === 'cus_1@customer.test' && /claim/i.test(m.subject));
+    expect(claimMail).toBeTruthy();
+    expect(claimMail!.text).toContain(token);
+
+    await postClaim(ctx, { token, slug: 'lagoon', email: 'keeper@claim.test', username: 'nemo', password: 'password123' });
+    ctx.sentMail.length = 0;
+    const hook = await postWebhook(ctx, {
+      type: 'invoice.payment_failed',
+      data: { object: { customer: 'cus_1', subscription: 'sub_1' } },
+    });
+    expect(hook.status).toBe(200);
+    expect(ctx.sentMail.some((m) => m.to === 'cus_1@customer.test' && /payment/i.test(m.subject))).toBe(true);
   });
 
   it('claim form asks for at least 8 password characters', async () => {

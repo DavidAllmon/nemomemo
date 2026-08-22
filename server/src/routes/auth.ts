@@ -1,11 +1,11 @@
-import { signinRequestSchema, signupRequestSchema, verifyEmailRequestSchema } from '@nemomemo/shared';
+import { forgotPasswordRequestSchema, resetPasswordRequestSchema, signinRequestSchema, signupRequestSchema, verifyEmailRequestSchema } from '@nemomemo/shared';
 import { zValidator } from '@hono/zod-validator';
 import bcrypt from 'bcryptjs';
 import { eq, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import type { Config } from '../config.js';
 import type { Db } from '../db/index.js';
-import { users } from '../db/schema.js';
+import { users, userSessions } from '../db/schema.js';
 import { apiError } from '../lib/errors.js';
 import {
   createSession,
@@ -15,7 +15,7 @@ import {
 } from '../middleware/auth.js';
 import { makeRateLimiter } from '../middleware/rate-limit.js';
 import { consumeAuthToken, createAuthToken } from '../services/auth-tokens.js';
-import { trySend, verifyEmailMessage, welcomeMessage, type Mailer } from '../services/email.js';
+import { inviteMessage, resetPasswordMessage, trySend, verifyEmailMessage, welcomeMessage, type Mailer } from '../services/email.js';
 import { userToDto } from '../services/memo-service.js';
 import { getInstanceGeneral } from '../services/settings.js';
 import { randomBytes } from 'node:crypto';
@@ -23,6 +23,8 @@ import type { Context } from 'hono';
 import { nowSeconds } from '../lib/time.js';
 
 const VERIFY_TTL_SECONDS = 7 * 24 * 3600;
+const RESET_TTL_SECONDS = 60 * 60;
+const INVITE_TTL_SECONDS = 7 * 24 * 3600;
 
 /** Case-insensitive lookup of a user by email; null unless exactly one match. */
 export function findUserByEmail(db: Db, email: string): typeof users.$inferSelect | null {
@@ -57,6 +59,21 @@ export function sendVerificationEmail(
     ? welcomeMessage(instanceName, user.username, link)
     : verifyEmailMessage(instanceName, user.username, link);
   trySend(mailer, { to: user.email, ...message });
+}
+
+/** Invite = a long-lived set-password link; redeeming it also verifies the email. */
+export function sendInviteEmail(
+  db: Db,
+  mailer: Mailer | null,
+  c: Context,
+  user: typeof users.$inferSelect,
+  inviterName: string,
+): void {
+  if (!mailer || !user.email) return;
+  const token = createAuthToken(db, user.id, 'PASSWORD_RESET', INVITE_TTL_SECONDS);
+  const link = `${requestOrigin(c)}/auth/reset?token=${token}&invite=1`;
+  const instanceName = getInstanceGeneral(db).name;
+  trySend(mailer, { to: user.email, ...inviteMessage(instanceName, inviterName, user.username, link) });
 }
 
 // A real bcrypt hash of an unguessable value, computed once per process: signin
@@ -154,6 +171,36 @@ export function authRoutes(db: Db, config: Config, mailer: Mailer | null): Hono<
     if (!viewer.email) throw apiError('INVALID_ARGUMENT', 'Add an email to your account first');
     if (viewer.emailVerifiedTs != null) return c.json({ ok: true });
     sendVerificationEmail(db, mailer, c, viewer);
+    return c.json({ ok: true });
+  });
+
+  // Rate-limited and enumeration-safe: the answer never reveals whether the
+  // email exists — the difference lives only in the recipient's inbox.
+  const forgotLimiter = makeRateLimiter({ scope: 'forgot', windowMs: 60 * 60_000, max: 5 });
+  app.post('/forgot', forgotLimiter, zValidator('json', forgotPasswordRequestSchema), (c) => {
+    const user = findUserByEmail(db, c.req.valid('json').email);
+    if (user && user.rowStatus === 'NORMAL' && mailer) {
+      const token = createAuthToken(db, user.id, 'PASSWORD_RESET', RESET_TTL_SECONDS);
+      const link = `${requestOrigin(c)}/auth/reset?token=${token}`;
+      const instanceName = getInstanceGeneral(db).name;
+      trySend(mailer, { to: user.email, ...resetPasswordMessage(instanceName, user.username, link) });
+    }
+    return c.json({ ok: true });
+  });
+
+  const resetLimiter = makeRateLimiter({ scope: 'reset', windowMs: 60 * 60_000, max: 10 });
+  app.post('/reset', resetLimiter, zValidator('json', resetPasswordRequestSchema), async (c) => {
+    const body = c.req.valid('json');
+    // Hash before consuming so a slow bcrypt can't hold a burned token open.
+    const passwordHash = await bcrypt.hash(body.password, 12);
+    const userId = consumeAuthToken(db, body.token, 'PASSWORD_RESET');
+    if (userId == null) {
+      throw apiError('INVALID_ARGUMENT', 'This link swam away — request a fresh one from the sign-in page');
+    }
+    // Arriving via an emailed link proves the inbox: verified. Every existing
+    // session dies — whoever set this password signs in fresh.
+    db.update(users).set({ passwordHash, emailVerifiedTs: nowSeconds() }).where(eq(users.id, userId)).run();
+    db.delete(userSessions).where(eq(userSessions.userId, userId)).run();
     return c.json({ ok: true });
   });
 

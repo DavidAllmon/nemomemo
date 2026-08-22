@@ -232,10 +232,13 @@ function PreferencesSection() {
 function MembersSection() {
   const { data } = useMembers(true);
   const { data: viewer } = useViewer();
+  const { data: profile } = useInstanceProfile();
   const queryClient = useQueryClient();
   const { status, flash } = useStatus();
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const emailEnabled = profile?.emailEnabled ?? false;
 
   const act = async (fn: () => Promise<unknown>, success: string) => {
     try {
@@ -250,26 +253,38 @@ function MembersSection() {
   return (
     <SectionCard title="Members">
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Input placeholder="username" className="w-36" value={username} onChange={(e) => setUsername(e.target.value)} />
+        <Input placeholder="username" className="w-32" value={username} onChange={(e) => setUsername(e.target.value)} />
         <Input
-          placeholder="password"
+          placeholder="email"
+          type="email"
+          className="w-44"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <Input
+          placeholder={emailEnabled ? 'password (blank = invite)' : 'password'}
           type="password"
-          className="w-36"
+          className="w-44"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
         <Button
           size="sm"
-          disabled={!username || !password}
+          disabled={!username || !email || (!password && !emailEnabled)}
           onClick={() =>
             void act(async () => {
-              await api('POST', '/api/v1/users', { username, password });
+              await api('POST', '/api/v1/users', {
+                username,
+                email,
+                ...(password ? { password } : {}),
+              });
               setUsername('');
+              setEmail('');
               setPassword('');
-            }, 'Member added')
+            }, password ? 'Member added' : 'Invite sent 📨')
           }
         >
-          Add member
+          {password || !emailEnabled ? 'Add member' : 'Send invite'}
         </Button>
         {status ? <span className="text-xs font-semibold text-ocean">{status}</span> : null}
       </div>

@@ -9,6 +9,7 @@ import { nowSeconds } from '../lib/time.js';
 import { resolveSessionViewer, SESSION_COOKIE } from '../middleware/auth.js';
 import { makeRateLimiter } from '../middleware/rate-limit.js';
 import { REEF_SLUG_RE, RESERVED_SLUGS, type ReefRow, type Registry } from './registry.js';
+import { claimLinkMessage, dunningMessage, trySend, type Mailer } from '../services/email.js';
 import type { StripeGateway, StripeWebhookEvent } from './stripe.js';
 import type { ReefFleet, ReefHandle } from './tenants.js';
 
@@ -28,6 +29,8 @@ export interface BillingDeps {
   prices: { month: string; year: string };
   /** Where each reef's data lives; needed to move a dir when a slug is claimed. */
   reefsDir: string;
+  /** Platform mailer (claim links, dunning); null when SMTP env is unset. */
+  mailer: Mailer | null;
 }
 
 function hashToken(token: string): string {
@@ -95,9 +98,13 @@ async function ensureProvisioned(
   const token = randomBytes(32).toString('base64url');
   deps.registry.createClaimToken(reef.id, hashToken(token), nowSeconds() + CLAIM_TOKEN_TTL_SECONDS);
   const claimUrl = `${deps.appUrl}/claim?token=${token}`;
-  // No email in v1: the claim link lives on-screen and in Stripe customer
-  // metadata so it can be recovered from the dashboard.
+  // The claim link lives in three places: on-screen, in Stripe customer
+  // metadata (dashboard recovery), and — when SMTP is up — in the buyer's inbox.
   await deps.gateway.updateCustomerMetadata(customerId, { nemomemo_claim_url: claimUrl });
+  if (deps.mailer) {
+    const email = await deps.gateway.getCustomerEmail(customerId).catch(() => null);
+    if (email) trySend(deps.mailer, { to: email, ...claimLinkMessage(claimUrl) });
+  }
   return { reef, claimUrl };
 }
 
@@ -193,6 +200,14 @@ function handleWebhookEvent(deps: BillingDeps, event: StripeWebhookEvent): Promi
       if (reef.stripeSubscriptionId && invoiceSub && invoiceSub !== reef.stripeSubscriptionId) return;
       if (event.type === 'invoice.payment_failed' && reef.status === 'active') {
         deps.registry.setReefStatusById(reef.id, 'past_due');
+        if (deps.mailer && customerId) {
+          return deps.gateway
+            .getCustomerEmail(customerId)
+            .catch(() => null)
+            .then((email) => {
+              if (email) trySend(deps.mailer, { to: email, ...dunningMessage(reef.slug, deps.baseDomain) });
+            });
+        }
       } else if (event.type === 'invoice.paid' && reef.status === 'past_due') {
         deps.registry.setReefStatusById(reef.id, 'active');
       }
@@ -394,9 +409,15 @@ export function billingRoutes(deps: BillingDeps): Hono {
     deps.registry.markClaimTokenUsed(claim.id);
 
     const handle = deps.fleet.get(slug);
+    // Give the internal request the reef's public identity so the welcome
+    // email's verify link points at https://<slug>.<domain>, not nowhere.
     const signup = await handle.app.request('/api/v1/auth/signup', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        host: `${slug}.${deps.baseDomain}`,
+        'x-forwarded-proto': 'https',
+      },
       body: JSON.stringify(credentials.data),
     });
     if (signup.status !== 200) {

@@ -14,8 +14,9 @@ import { Hono } from 'hono';
 import type { Db } from '../db/index.js';
 import { memos, users, userSessions } from '../db/schema.js';
 import { apiError } from '../lib/errors.js';
-import { sendVerificationEmail } from './auth.js';
-import type { Mailer } from '../services/email.js';
+import { sendInviteEmail, sendVerificationEmail } from './auth.js';
+import { emailChangedMessage, passwordChangedMessage, trySend, type Mailer } from '../services/email.js';
+import { randomBytes } from 'node:crypto';
 import { nowSeconds } from '../lib/time.js';
 import { requireAdmin, requireViewer, type AppEnv } from '../middleware/auth.js';
 import {
@@ -137,7 +138,20 @@ export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
     if (body.description != null) patch.description = body.description;
     if (body.password) patch.passwordHash = await bcrypt.hash(body.password, 12);
     const updated = db.update(users).set(patch).where(eq(users.id, viewer.id)).returning().get();
-    if (emailChanged && updated.email) sendVerificationEmail(db, mailer, c, updated);
+    const instanceName = getInstanceGeneral(db).name;
+    if (emailChanged && updated.email) {
+      sendVerificationEmail(db, mailer, c, updated);
+      // Heads-up to the OLD address — the takeover tripwire.
+      if (viewer.email) {
+        trySend(mailer, {
+          to: viewer.email,
+          ...emailChangedMessage(instanceName, updated.username, updated.email),
+        });
+      }
+    }
+    if (body.password && updated.email) {
+      trySend(mailer, { to: updated.email, ...passwordChangedMessage(instanceName, updated.username) });
+    }
     return c.json({ user: userToDto(updated, { includeEmail: true }) });
   });
 
@@ -150,21 +164,37 @@ export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
   });
 
   app.post('/', zValidator('json', adminCreateUserRequestSchema), async (c) => {
-    requireAdmin(c);
+    const admin = requireAdmin(c);
     const body = c.req.valid('json');
+    if (!body.password && !mailer) {
+      throw apiError(
+        'INVALID_ARGUMENT',
+        'This reef has no email set up — choose a password for the new member instead',
+      );
+    }
     if (db.select().from(users).where(eq(users.username, body.username)).get()) {
       throw apiError('ALREADY_EXISTS', 'That username is already taken');
     }
+    if (db.select().from(users).where(eq(users.email, body.email)).get()) {
+      throw apiError('ALREADY_EXISTS', 'That email already belongs to a reef account');
+    }
+    // No password = invited: an unusable random hash until they set their own
+    // via the emailed link (which also verifies the address).
+    const passwordHash = await bcrypt.hash(body.password ?? randomBytes(32).toString('hex'), 12);
     const created = db
       .insert(users)
       .values({
         username: body.username,
         nickname: body.nickname ?? body.username,
-        passwordHash: await bcrypt.hash(body.password, 12),
+        email: body.email,
+        passwordHash,
         role: body.role,
       })
       .returning()
       .get();
+    if (!body.password) {
+      sendInviteEmail(db, mailer, c, created, admin.nickname || admin.username);
+    }
     return c.json({ user: userToDto(created, { includeEmail: true }) }, 201);
   });
 

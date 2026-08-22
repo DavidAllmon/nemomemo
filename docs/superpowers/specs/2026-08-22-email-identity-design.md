@@ -62,6 +62,22 @@ warning before a reef suspends.
   v1 — possession of the inbox is proven the first time any reset is used.
 - Self-host without SMTP: no verification flow exists; email is just identity.
 
+### 4b. Admin invites (David, 2026-08-23)
+
+- Admin adds a member with username + email + role — no password. The member
+  gets an invite email with a set-your-password link (a PASSWORD_RESET token
+  with a 7-day TTL — same table, same redemption endpoint as reset). Setting a
+  password via an emailed link also marks the email verified (inbox proven).
+- Without a mailer (self-host, no SMTP) the admin form falls back to setting a
+  password directly, as today. Admin create therefore takes password OR email-
+  invite, never neither.
+
+### 4c. Security notification emails
+
+- Password changed (via Settings or reset): "your password just changed" to
+  the account email. Email changed: notice to the OLD address. Both
+  fire-and-forget, mailer-gated.
+
 ### 5. Password reset (the payoff — audit F2)
 
 - `POST /auth/forgot` (rate-limited 5/hr/IP, always returns 200 — no account

@@ -4,6 +4,7 @@ import { loadConfig } from '../config.js';
 import { sweepDoryMemos } from '../services/dory-sweeper.js';
 import { makeCloudApp, type CloudSettings } from './app.js';
 import type { BillingDeps } from './billing.js';
+import { makeSmtpMailer } from '../services/email.js';
 import { Registry } from './registry.js';
 import { makeStripeGateway } from './stripe.js';
 import { ReefFleet } from './tenants.js';
@@ -48,6 +49,7 @@ export function startCloud(): void {
       cancelUrl: process.env.NEMOMEMO_CLOUD_CANCEL_URL ?? `https://${settings.baseDomain}/pricing`,
       prices: { month: priceMonth, year: priceYear },
       reefsDir: path.join(base.dataDir, 'reefs'),
+      mailer: base.smtp ? makeSmtpMailer(base.smtp) : null,
     };
     console.log('[cloud] Stripe billing routes enabled');
   } else {

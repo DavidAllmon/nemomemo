@@ -96,6 +96,11 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
             onChange={(event) => setPassword(event.target.value)}
           />
           {error ? <p className="text-sm font-semibold text-destructive">{error}</p> : null}
+          {effectiveMode === 'signin' && profile?.emailEnabled ? (
+            <Link to="/auth/forgot" className="text-xs font-semibold text-ocean hover:underline">
+              Forgot your password?
+            </Link>
+          ) : null}
           <Button type="submit" disabled={pending || !username || !password || (effectiveMode === 'signup' && !email)}>
             {pending
               ? 'Diving in…'
