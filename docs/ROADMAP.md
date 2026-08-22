@@ -1,65 +1,142 @@
-# NemoMemo roadmap — brainstorm, 2026-08-22
+# NemoMemo roadmap — 2026-08-22 (post-launch edition)
 
-Ideas organized by the jobs people actually hire a memo pad for. Nothing here is
-committed; this is the menu we choose from. Effort: S (< half day), M (a day or two),
-L (a week-ish).
+The complete picture now that NemoMemo Cloud is **live and taking real money**: security
+findings, operations debt, the feature menu, and code health — in priority order.
+Sources: the 2026-08-22 security audit (findings F1–F8, report artifact kept by David),
+`docs/AUDIT-2026-08-22.md` (code audit + simplification backlog), and the launch itself.
 
-## The capture job — "get it down before it swims off"
+Effort: **S** (< half day) · **M** (a day or two) · **L** (a week-ish).
+Priority: **P0** do before anything else · **P1** next milestone · **P2** feature waves ·
+**P3** someday/speculative.
+
+---
+
+## P0 — Now (paying customers exist; these are the fires-in-waiting)
+
+| Item | Why | Effort |
+| --- | --- | --- |
+| **Off-VM nightly backups** ⚠️ | THE outstanding launch rule — customer reefs live on one homelab disk. `deploy/backup-cloud.sh` is ready; needs a restic destination (free Backblaze B2 tier fits) + cron + one restore drill. | S |
+| **Uptime monitoring** | External monitor (UptimeRobot/healthchecks.io free tier) on app host, a reef, demo, site — plus the backup script's success ping. | S |
+| **Security fix PR** (audit F1, F4, F5, F7) | Attachment serving headers (SVG/HTML stored-XSS within a reef), `Secure` cookie flag, security-header middleware, sign-in timing dummy-hash. All small, all testable, one PR. | M |
+| **Rate limiting** (audit F3) | Unlimited password guessing on sign-in doubles as a CPU DoS (bcryptjs on the event loop, one process serves all reefs). Per-IP + per-username limiter honoring `CF-Connecting-IP`; swap bcryptjs → native bcrypt/argon2 while there. | M |
+| **Rotate the live Stripe key** | The live key transited chat during launch; roll it in the dashboard, re-run the env swap. Hygiene, not an incident. | S |
+| **Stripe public business name → "NemoMemo"** | Receipts still say "Techitdave". Dashboard setting. | S |
+
+## P1 — Next milestone: email (one feature unlocks five) + cloud lifecycle
+
+| Item | Why | Effort |
+| --- | --- | --- |
+| **SMTP email service** | The keystone: env-configured (self-host optional), one small service. Everything below depends on it. | M |
+| → **Password reset** (audit F2) | The #1 support fire waiting to happen: today a reefkeeper who forgets their password loses their reef until manual VM surgery. | M |
+| → **Claim link + receipt emails** | Claim links currently live on-screen + Stripe metadata only. | S |
+| → **Dunning emails** | "Your payment didn't make it through" before a reef suspends — saves real revenue. | S |
+| → **Optional email verification** | Anchor accounts for recovery; keep optional to stay low-friction. | M |
+| **Suspended-reef self-rescue** | The "taking a nap" page currently dead-ends. Add "resubscribe / fix billing" path (Stripe-emailed portal link) so churned reefs can wake themselves. | M |
+| **90-day deletion job** | ToS promises suspended-reef deletion after 90 days; today it's manual. Registry sweep + `rm -rf` after grace, with a log. | S–M |
+| **Self-serve reef export** | Settings → "Download my reef" (Markdown + JSON + uploads zip). The ToS/privacy pages already promise export "at any time" — make it one click. Doubles as the self-host bridge. | M |
+| **"What's New" banner** | The changelog exists (v1.0.0+); show a one-line dismissible banner when a reef's version changes (HopeLinx `lastSeenVersion` pattern) linking to /changelog. | S |
+| **Password minimum → 8** (audit F8) + show-password toggle + caps-lock hint | Auth-page polish batch. | S |
+
+## P2 — Feature waves, by the job people hire a memo pad for
+
+### The capture job — "get it down before it swims off"
 
 | Idea | Why | Effort |
 | --- | --- | --- |
-| **PWA + mobile share target** | Install NemoMemo on a phone home screen; share a link/photo from any app straight into a new memo. Biggest single capture win. | M |
-| **Memo templates** | One-tap skeletons for recurring shapes: daily journal prompt, standup, meeting note, recipe. Stored per user like saved views. | M |
-| **Paste-a-URL → markdown link** | Pasting a URL over selected text wraps it as `[selection](url)`; pasting bare URLs offers a title fetch. | S |
-| **Keyboard shortcuts** | `c` compose, `/` search, `j/k` navigate feed, `e` edit — plus a `?` cheat-sheet dialog. (Memos still lists theirs as WIP — easy win.) | S–M |
-| **Slash commands in editor** | `/task`, `/table`, `/dory` inserting structures — discoverable power. | M |
+| **PWA + mobile share target** | Install on a phone; share a link/photo from any app into a memo. Biggest single capture win. | M |
+| **Memo templates** | One-tap skeletons: daily journal, standup, meeting note, recipe. Stored per user like saved views. | M |
+| **Keyboard shortcuts** | `c` compose, `/` search, `j/k` feed, `e` edit, `?` cheat sheet. | S–M |
+| **Paste-a-URL → markdown link** | Paste over selection wraps `[selection](url)`; bare URLs offer a title fetch. | S |
+| **Slash commands in editor** | `/task`, `/table`, `/dory` — discoverable power. | M |
+| **NEW: Voice memos** | A record button producing an audio attachment (playback already works). Capture while walking. | M |
+| **NEW: Draft autosave** | The editor keeps an unsent draft per device (localStorage) — no more lost half-thoughts on a closed tab. | S |
+| **NEW: Email-in capture** | Post-SMTP, later: mail to a private address → memo in your reef. | L |
 
-## The retrieval job — "find it again"
-
-| Idea | Why | Effort |
-| --- | --- | --- |
-| **SQLite FTS5 full-text search** | Current search is a LIKE scan; FTS5 gives ranked, fast, typo-tolerant-ish search with zero new infra. Foundation for everything below. | M |
-| **"On this day" / resurfacing** | Journalers' favorite feature: show memos from a year/month ago on Home. Pairs beautifully with the heatmap. | S–M |
-| **Random memo ("Go fish")** | One button that surfaces a forgotten note — the daily-review ritual, NemoMemo-flavored. | S |
-| **Pinned tags / favorites in sidebar** | Let users star the 3 tags they live in. | S |
-| **Bulk select** | Multi-select in feed → archive/tag/delete at once. | M |
-
-## The sharing job — small groups leaving notes for each other
+### The retrieval job — "find it again"
 
 | Idea | Why | Effort |
 | --- | --- | --- |
-| **Link preview cards** | Paste a link, get title/description/image (server-side fetch with SSRF guards). Memos shipped this in v0.29; it makes shared feeds much richer. | M |
-| **Comment thread subscriptions** | Notify everyone who commented, not just the memo owner. | S |
-| **RSS feeds** (`/u/:user/rss.xml`, explore feed) | Parity with memos; makes public reefs followable. | S–M |
-| **Reaction notifications** | Optional inbox item when someone reacts to your memo. | S |
+| **SQLite FTS5 full-text search** | Replaces the LIKE scan with ranked fast search, zero new infra. Foundation for everything here. | M |
+| **"On this day" resurfacing** | Memos from a year/month ago on Home; journalers' favorite; pairs with the heatmap. | S–M |
+| **Random memo ("Go fish")** | Surface one forgotten note — the daily-review ritual, reef-flavored. | S |
+| **Pinned tags / favorites in sidebar** | Star the 3 tags you live in. | S |
+| **Bulk select** | Multi-select → archive/tag/delete at once. | M |
+| **NEW: Calendar month view** | The heatmap's big sibling: click a month, see the timeline as a calendar. | M |
+| **NEW: Streaks** | "12 days writing" on the profile next to the heatmap — cheap, sticky. | S |
+| **NEW: Trash (undo delete)** | Deleted memos linger 7 days before hard delete. Safety net people expect. | M |
+
+### The sharing job — small groups leaving notes for each other
+
+| Idea | Why | Effort |
+| --- | --- | --- |
+| **Link preview cards** | Server-side title/description/image fetch (SSRF-guarded); makes shared feeds richer. | M |
+| **Comment thread subscriptions** | Notify everyone who commented, not just the owner. | S |
+| **RSS feeds** | `/u/:user/rss.xml` + explore feed — public reefs become followable. | S–M |
+| **Reaction notifications** | Optional inbox item when someone reacts. | S |
 | **Share-as-image export** | Render a memo to a pretty PNG for messaging apps. | M |
+| **NEW: Weekly reef digest** | Post-SMTP: one optional email — what your reef-mates wrote this week. Brings quiet reefs back. | M |
+| **NEW: Public memo embeds** | oEmbed/iframe for a PUBLIC memo — quotable on blogs. | M |
 
-## The forgetting job — Dory's department (our differentiator; invest here)
-
-| Idea | Why | Effort |
-| --- | --- | --- |
-| **Per-memo forget window** | 1h / 24h / 3d / 7d picker on the Dory toggle (default stays 24h). Parking spots vs. weekly scratch notes. | S |
-| **"Dory is about to forget…" notice** | Inbox item (or banner) 1 hour before expiry with a one-click Rescue (archive) button. Turns anxiety into trust. | M |
-| **Dory's Memory page** | A view of everything currently fading, sorted by time left — the ephemeral inbox. | S–M |
-| **Dory statistics** | "Dory has forgotten 214 memos for you" on the profile — makes the feature legible and fun. | S |
-
-## The ownership job — self-hosters and tinkerers
+### The forgetting job — Dory's department (the differentiator; invest here)
 
 | Idea | Why | Effort |
 | --- | --- | --- |
-| **Export (Markdown zip + JSON)** | Memos' most-requested gap is still WIP there — shipping real export/import first is a genuine wedge. | M |
-| **Import from Memos / Google Keep** | Same wedge from the other side; Memos' API makes theirs scriptable. | M–L |
-| **Personal access tokens** | `Authorization: Bearer` for scripts, Shortcuts, bots. Prereq for integrations. | M |
-| **Webhooks** | memo.created/updated/deleted events (Standard Webhooks signing) → automation. | M |
+| **Per-memo forget window** | 1h / 24h / 3d / 7d picker (default 24h). Parking spots vs. weekly scratch notes. | S |
+| **"Dory is about to forget…" notice** | Inbox/banner 1h before expiry with one-click Rescue. Turns anxiety into trust. | M |
+| **Dory's Memory page** | Everything currently fading, sorted by time left — the ephemeral inbox. | S–M |
+| **Dory statistics** | "Dory has forgotten 214 memos for you." Makes the feature legible and fun. | S |
+| **NEW: Recurring Dory reminders** | "Every Monday: water the plants" — a memo that re-appears and re-forgets. Reminder-lite without becoming a task manager. | M–L |
+
+### The ownership job — self-hosters and tinkerers
+
+| Idea | Why | Effort |
+| --- | --- | --- |
+| **Export (Markdown zip + JSON)** | Shared with P1's self-serve export — the trust feature and the Memos wedge. | M |
+| **Import from Memos / Google Keep** | The wedge from the other side. | M–L |
+| **Personal access tokens** | Bearer auth for scripts, Shortcuts, bots. Prereq for integrations. | M |
+| **Webhooks out** | memo.created/updated/deleted (Standard Webhooks signing) → automation, Zapier/n8n. | M |
 | **S3/external storage** | For instances whose attachments outgrow the disk. | L |
+| **Web clipper extension** | Big but high-leverage capture surface. | L |
 | **i18n** | Community translations once the surface stabilizes. | L |
-| **Web clipper extension** | The footer slot is already waiting. Big but high-leverage. | L |
 
-## Suggested first wave (when we pick)
+### NEW: The cloud job — running a paid reef well
 
-1. FTS5 search + keyboard shortcuts (retrieval + capture, both cheap, felt daily)
-2. Dory forget-window picker + pre-forget rescue notice (deepen the differentiator)
-3. PWA + share target (mobile capture)
-4. Markdown/JSON export (trust + the memos wedge)
-5. Simplification backlog items 1–4 from `AUDIT-2026-08-22.md` alongside, since they
-   touch the same files.
+| Idea | Why | Effort |
+| --- | --- | --- |
+| **Gift a reef** | A year of NemoMemo as a $19 gift link — memo pads are giftable in a way SaaS rarely is. | M |
+| **2FA (TOTP)** | At least for reefkeepers, once email/reset exists. | M |
+| **Session management** | "Signed in on 3 devices — sign out everywhere" in Settings; data model already supports it. | S–M |
+| **Self-serve account deletion** | Members can delete their own account (ToS/GDPR story currently routes through support). | S |
+| **Custom domains** | `memos.yourname.com` → your reef. Premium-tier candidate. | L |
+| **Reef appearance** | Accent color / mascot picker per reef — cheap delight, makes a reef feel owned. | M |
+| **Fair-use raise flow** | "Ask for more" button instead of an email address when caps bind. | S |
+
+## Code health (from `docs/AUDIT-2026-08-22.md` — still open)
+
+1. **S** Dedupe tag/mention regexes (shared ⇄ web).
+2. **M** Move `/-/tags` + `/:u/stats` aggregation into SQL `json_each` (removes the 10k cap) — do before any reef grows large.
+3. **S** Extract `assertOwner` into `services/acl.ts`.
+4. **M** Route-level code splitting (1.4MB chunk → lazy routes; editor/highlighter chunks).
+5. **S** Remove server's unused remark/unified deps.
+6. **S** Delete dead `toggleTask`.
+7. **S** Logo SVG canonical-copy note.
+8. **NEW S** `avatarUrl` validation + size cap (audit F6).
+9. **NEW M** Post-deploy smoke test in `update.sh` (curl healthz + one API call; auto-rollback is L, alert first).
+10. **NEW M** Error tracking (self-hosted-friendly Sentry or log-based) — right now production errors vanish into `docker logs`.
+
+## Business & legal
+
+| Item | Why | Effort |
+| --- | --- | --- |
+| **Trademark "NemoMemo"** | The license now blocks resale; the trademark blocks the *name*. ~$300 USPTO when revenue justifies. | S (money) |
+| **Stripe Tax** | Off at launch per plan; revisit when US state thresholds get close. | S |
+| **VPS migration path** | The homelab → $5 VPS rsync+tunnel move, documented and rehearsed, for when uptime expectations grow. | M |
+| **Staging lane** | A `staging` branch + container on the VM so risky changes soak before hitting paying reefs. | M |
+
+## Suggested order
+
+1. **P0, all of it** — backups first, same week the security PR lands.
+2. **Email milestone** (P1) — reset + claim + dunning; then suspended-self-rescue + 90-day job + export.
+3. **First feature wave**: FTS5 + keyboard shortcuts + Dory forget-window + pre-forget notice + What's-New banner (cheap, felt daily, deepens the differentiator).
+4. **Second wave**: PWA/share target + export/import + access tokens (capture + the Memos wedge).
+5. Code-health items 1–4 ride along whenever their files are already open.
