@@ -342,3 +342,25 @@ body {
 .cm-editor .cm-placeholder {
   color: var(--muted-foreground);
 }
+.cm-tooltip.cm-tooltip-autocomplete {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--popover);
+  overflow: hidden;
+  box-shadow: 0 8px 24px oklch(0 0 0 / 0.12);
+}
+.cm-tooltip-autocomplete ul li {
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  padding: 3px 8px !important;
+  color: var(--foreground);
+}
+.cm-tooltip-autocomplete ul li[aria-selected] {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+.cm-tooltip-autocomplete .cm-completionDetail {
+  color: var(--muted-foreground);
+  font-style: normal;
+  margin-inline-start: 0.75em;
+}

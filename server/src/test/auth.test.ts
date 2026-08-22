@@ -69,6 +69,18 @@ describe('auth', () => {
     expect(blocked.status).toBe(403);
   });
 
+  it('mentionable lists active members for signed-in users only', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    await signup(app, 'dory');
+    const response = await jsonRequest(app, 'GET', '/api/v1/users/-/mentionable', undefined, cookie);
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as { users: { username: string; nickname: string }[] };
+    expect(json.users.map((u) => u.username)).toEqual(['dory', 'marlin']);
+    const anon = await jsonRequest(app, 'GET', '/api/v1/users/-/mentionable');
+    expect(anon.status).toBe(401);
+  });
+
   it('duplicate usernames are rejected', async () => {
     const { app } = makeTestApp();
     await signup(app, 'marlin');

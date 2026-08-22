@@ -37,6 +37,18 @@ export function userRoutes(db: Db): Hono<AppEnv> {
 
   // ---------- Viewer's own resources (the `-` segment, like memos) ----------
 
+  /** Members the viewer can @mention — any active account on the instance. */
+  app.get('/-/mentionable', (c) => {
+    requireViewer(c);
+    const rows = db
+      .select({ username: users.username, nickname: users.nickname })
+      .from(users)
+      .where(eq(users.rowStatus, 'NORMAL'))
+      .orderBy(asc(users.username))
+      .all();
+    return c.json({ users: rows.map((row) => ({ username: row.username, nickname: row.nickname || row.username })) });
+  });
+
   app.get('/-/tags', (c) => {
     const viewer = requireViewer(c);
     const { rows } = listMemoRows(db, {

@@ -242,6 +242,17 @@ export function useTags(enabled = true) {
   });
 }
 
+export function useMentionable(enabled = true) {
+  return useQuery({
+    queryKey: ['mentionable'],
+    queryFn: async () =>
+      (await api<{ users: { username: string; nickname: string }[] }>('GET', '/api/v1/users/-/mentionable'))
+        .users,
+    enabled,
+    staleTime: 5 * 60_000,
+  });
+}
+
 export function useUserStats(username: string) {
   return useQuery({
     queryKey: keys.stats(username),
