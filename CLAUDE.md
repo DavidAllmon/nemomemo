@@ -98,11 +98,24 @@ from `deploy/seed-demo.mjs` and reset nightly at 09:00 UTC — demo-data changes
 editing that file and pushing. Don't commit secrets, private IPs, or credentials; this
 repo is public.
 
+### Cloud mode (`NEMOMEMO_CLOUD=1`)
+
+`server/src/cloud/` is the hosted multi-tenant layer (spec: `docs/CLOUD-PLAN.md`,
+ops: `docs/CLOUD-OPS.md`): a registry DB (`data/registry.db`) plus one full
+app+SQLite instance per reef (`data/reefs/<slug>/`), resolved by Host header, LRU-cached.
+The tenant app is cloud-unaware — cloud-only routes (`/api/v1/cloud/*`, checkout/claim/
+webhook on the app host) live in the cloud router, and billing switches on only when all
+four `STRIPE_*` env vars are set. **Ship-dark rule: cloud code must never change
+single-tenant behavior or break the existing suite**; cross-tenant isolation tests in
+`server/src/test/cloud-isolation.test.ts` are the guarantee — extend them when adding
+any cloud surface. Stripe is test-mode only until the live flip in CLOUD-OPS.md.
+
 ## Current state
 
 `docs/AUDIT-2026-08-22.md` holds the latest audit (fixed findings + a ranked
 simplification backlog); `docs/ROADMAP.md` holds the feature brainstorm organized by
 user job. Check both before proposing refactors or features. `docs/CLOUD-PLAN.md` is
-the approved spec for the paid hosted version (DB-per-reef multi-tenancy behind a
-`NEMOMEMO_CLOUD` flag — cloud code must ship dark and never change single-tenant
-behavior or break the existing test suite).
+the approved spec for the paid hosted version; phases 1–4 are implemented (tenancy,
+billing/claim, cloud UX, marketing/legal — marketing gated behind
+`NEXT_PUBLIC_CLOUD_URL`), phase 5 infra is scripted in `deploy/cloud-vm-setup.sh` +
+`deploy/backup-cloud.sh` pending the maintainer's hands.
