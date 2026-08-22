@@ -2,8 +2,8 @@
 
 **Write it down. Tag it. Share it. Or let Dory forget it.**
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Free forever](https://img.shields.io/badge/price-%240%20forever-orange.svg)](site/content/docs)
+[![License: ELv2](https://img.shields.io/badge/license-Elastic%202.0-blue.svg)](LICENSE)
+[![Self-host free](https://img.shields.io/badge/self--host-%240%20forever-orange.svg)](site/content/docs)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 NemoMemo is a cute, self-hosted memo timeline — a playful, ocean-themed recreation of the
@@ -138,14 +138,17 @@ extraction — used by both sides), `server/` (Hono + Drizzle + better-sqlite3),
 
 ## Contributing
 
-NemoMemo is **free and open source, forever** — MIT licensed, no paid tiers, no strings.
-Bug reports, docs fixes, features, and forks are all welcome: see
-[CONTRIBUTING.md](CONTRIBUTING.md) to get set up. If you'd rather take the code in your
-own direction, fork away — that's what the license is for.
+NemoMemo is **free to self-host, forever** — the full source is here under the
+[Elastic License 2.0](LICENSE): run it, read it, modify it, fork it, no paid tiers, no
+strings. The one thing the license reserves is selling NemoMemo to others as a hosted or
+managed service — that's [NemoMemo Cloud](https://trynemomemo.com/pricing), which keeps
+the lights on. Bug reports, docs fixes, features, and forks are all welcome: see
+[CONTRIBUTING.md](CONTRIBUTING.md) to get set up.
 
 ## License & credits
 
-[MIT](LICENSE) © David Allmon and NemoMemo contributors.
+[Elastic License 2.0](LICENSE) © David Allmon and NemoMemo contributors — free to
+self-host and modify; not for resale as a hosted service.
 
 Lovingly modeled on [usememos/memos](https://github.com/usememos/memos) (MIT) — go star it.
 NemoMemo is an independent recreation with a fish obsession, not an official fork.

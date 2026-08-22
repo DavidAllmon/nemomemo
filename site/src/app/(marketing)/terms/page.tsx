@@ -19,7 +19,7 @@ export default function TermsPage() {
       <h1 className="font-display text-3xl font-bold">Terms of Service</h1>
       <p className="mt-2 text-sm text-ocean-muted">
         Last updated: August 22, 2026 · These terms cover <strong>NemoMemo Cloud</strong>, the hosted
-        subscription service. The self-hosted software is separate: it&apos;s MIT-licensed, free, and
+        subscription service. The self-hosted software is separate: it&apos;s free to self-host under the Elastic License 2.0 and
         governed only by its license.
       </p>
 
@@ -27,7 +27,7 @@ export default function TermsPage() {
         <p>
           NemoMemo Cloud gives you a private, hosted NemoMemo instance (&ldquo;your reef&rdquo;) at a
           subdomain you choose, operated by Tech it Dave (doing business as NemoMemo,
-          &ldquo;we&rdquo;). You get the full feature set of the open-source software; we handle the
+          &ldquo;we&rdquo;). You get the full feature set of the self-hostable software; we handle the
           servers, updates, and nightly backups.
         </p>
       </Section>
@@ -82,7 +82,7 @@ export default function TermsPage() {
       <Section title="Your data">
         <p>
           Your memos are yours. Each reef lives in its own isolated database, backed up nightly. You
-          can export your data at any time (and the software being open source means you can always
+          can export your data at any time (and the source being freely self-hostable means you can always
           take your export to a self-hosted instance).
         </p>
       </Section>

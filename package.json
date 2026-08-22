@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "NemoMemo — a cute, self-hosted memo timeline. Just keep swimming.",
-  "license": "MIT",
+  "license": "Elastic-2.0",
   "scripts": {
     "dev": "concurrently -n server,web -c blue,magenta \"pnpm --filter @nemomemo/server dev\" \"pnpm --filter @nemomemo/web dev\"",
     "dev:site": "pnpm --filter @nemomemo/site dev",

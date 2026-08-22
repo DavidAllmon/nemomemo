@@ -51,7 +51,7 @@ const BUCKETS: { title: string; blurb: string; items: { name: string; body: stri
     items: [
       { name: 'Single container', body: 'One docker run, one data volume: SQLite + uploads.' },
       { name: 'Zero telemetry', body: 'Nothing phones home. Ever.' },
-      { name: 'MIT licensed', body: 'Read it, fork it, keep it forever.' },
+      { name: 'Source-available', body: 'Read it, fork it, self-host it free forever (ELv2).' },
       { name: 'REST API', body: 'Everything the app does is a JSON endpoint you can script.' },
     ],
   },

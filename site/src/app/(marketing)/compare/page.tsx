@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = { title: 'Compare' };
 
 const ROWS = [
-  { label: 'License', nemo: 'MIT, open source', others: 'Varies — often proprietary' },
+  { label: 'License', nemo: 'ELv2 — source-available, free to self-host', others: 'Varies — often proprietary' },
   { label: 'Where your notes live', nemo: 'Your server, one SQLite file', others: 'Their cloud' },
   { label: 'Cost', nemo: '$0 forever', others: 'Free tiers with paid ceilings' },
   { label: 'Format', nemo: 'Plain Markdown', others: 'Proprietary blocks/databases' },

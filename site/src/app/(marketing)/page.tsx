@@ -42,8 +42,8 @@ const FAQ = [
   {
     q: 'Is NemoMemo really free?',
     a: CLOUD_LIVE
-      ? 'Yes. MIT licensed, no tiers, no seats, no metering — self-hosting costs $0 forever. And if you would rather not run a server, NemoMemo Cloud hosts a private reef for you at $1.99/month.'
-      : 'Yes. MIT licensed, no tiers, no seats, no metering. You pay only for wherever you run it.',
+      ? 'Yes — free to self-host, forever: full source, no tiers, no seats, no metering (Elastic License 2.0; the one reserved right is reselling it as a hosted service). Rather not run a server? NemoMemo Cloud hosts a private reef for you at $1.99/month.'
+      : 'Yes — free to self-host, forever: full source, no tiers, no seats, no metering. You pay only for wherever you run it (Elastic License 2.0).',
   },
   {
     q: 'What happens when Dory forgets a memo?',

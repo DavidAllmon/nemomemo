@@ -10,8 +10,9 @@ direction. All of it is welcome and encouraged.
 - **Improve the docs** — they're plain markdown in [`site/content/docs/`](site/content/docs/).
 - **Fix or build something** — grab an issue (or open one to discuss an idea first if it's
   big), then send a pull request.
-- **Fork it** — genuinely fine. The MIT license means you can take NemoMemo anywhere you
-  want, no permission needed.
+- **Fork it** — genuinely fine. The [Elastic License 2.0](LICENSE) lets you take NemoMemo
+  anywhere you want for your own use, no permission needed — the one reserved right is
+  reselling it to others as a hosted service.
 
 ## Development setup
 

@@ -87,7 +87,7 @@ export function SiteFooter() {
         ))}
       </div>
       <div className="border-t border-ocean-border py-4 text-center text-xs text-ocean-muted">
-        MIT licensed · Self-hosted · Just keep swimming 🫧
+        Free to self-host (ELv2) · Just keep swimming 🫧
       </div>
     </footer>
   );

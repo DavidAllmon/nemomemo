@@ -13,7 +13,7 @@ function SelfHostCard() {
       <ul className="mt-5 flex flex-col gap-2 text-left text-sm">
         <li>✅ Unlimited memos, members, and tags</li>
         <li>✅ Every feature, including Dory</li>
-        <li>✅ The whole source code (MIT)</li>
+        <li>✅ The whole source code, free to self-host (ELv2)</li>
         <li>✅ Your data, on your hardware</li>
       </ul>
       <Link
@@ -70,8 +70,8 @@ export default function PricingPage() {
       </h1>
       <p className="mt-3 text-lg text-ocean-muted">
         {CLOUD_LIVE
-          ? 'NemoMemo is MIT-licensed software you can run yourself for $0 — or we can run a private reef for you for less than a coffee.'
-          : 'NemoMemo costs $0 — no tiers, no seats, no metered API, no "Pro" button waiting to ambush you. It is MIT-licensed software you run yourself.'}
+          ? 'NemoMemo is source-available software you can run yourself for $0 — or we can run a private reef for you for less than a coffee.'
+          : 'NemoMemo costs $0 — no tiers, no seats, no metered API, no "Pro" button waiting to ambush you. It is source-available software you run yourself.'}
       </p>
 
       <div
