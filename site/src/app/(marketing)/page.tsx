@@ -41,7 +41,9 @@ const PERSONAS = [
 const FAQ = [
   {
     q: 'Is NemoMemo really free?',
-    a: 'Yes. MIT licensed, no tiers, no seats, no metering. You pay only for wherever you run it.',
+    a: CLOUD_LIVE
+      ? 'Yes. MIT licensed, no tiers, no seats, no metering — self-hosting costs $0 forever. And if you would rather not run a server, NemoMemo Cloud hosts a private reef for you at $1.99/month.'
+      : 'Yes. MIT licensed, no tiers, no seats, no metering. You pay only for wherever you run it.',
   },
   {
     q: 'What happens when Dory forgets a memo?',
@@ -188,6 +190,43 @@ export default function HomePage() {
         </p>
       </section>
 
+      {/* NemoMemo Cloud */}
+      {CLOUD_LIVE ? (
+        <section className="border-t border-ocean-border bg-ocean-blue-soft/50 py-16">
+          <div className="mx-auto max-w-3xl px-4 text-center">
+            <p className="text-4xl">🌊</p>
+            <h2 className="mt-2 font-display text-3xl font-bold">
+              No server? New: we&apos;ll host your reef.
+            </h2>
+            <p className="mt-3 text-lg text-ocean-muted">
+              <strong className="text-ocean-ink">NemoMemo Cloud</strong> is the same software, the
+              same Dory, none of the server chores — your own private reef at{' '}
+              <code className="font-bold text-ocean-ink">your-name.trynemomemo.com</code>, updated
+              and backed up by us. Pay, pick your address, and you&apos;re writing memos about 60
+              seconds later.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Link
+                href="/pricing#cloud"
+                className="rounded-xl bg-ocean-primary px-5 py-2.5 font-bold text-white transition-opacity hover:opacity-90"
+              >
+                Get your reef — $1.99/mo
+              </Link>
+              <Link
+                href="/docs/cloud"
+                className="rounded-xl border border-ocean-border bg-ocean-card px-5 py-2.5 font-bold transition-colors hover:border-ocean-primary"
+              >
+                How Cloud works
+              </Link>
+            </div>
+            <p className="mt-3 text-xs text-ocean-muted">
+              $19/year saves you two months. Self-hosting stays free forever — this is for the
+              swimmers who&apos;d rather not carry a server.
+            </p>
+          </div>
+        </section>
+      ) : null}
+
       {/* Personas */}
       <section className="border-t border-ocean-border bg-ocean-card py-16">
         <div className="mx-auto w-full max-w-5xl px-4">
@@ -228,6 +267,14 @@ export default function HomePage() {
           >
             Install NemoMemo
           </Link>
+          {CLOUD_LIVE ? (
+            <Link
+              href="/pricing#cloud"
+              className="rounded-xl border-2 border-ocean-primary px-5 py-2.5 font-bold text-ocean-primary transition-colors hover:bg-ocean-primary hover:text-white"
+            >
+              Get NemoMemo Cloud
+            </Link>
+          ) : null}
           <a
             href={DEMO_URL}
             className="rounded-xl border border-ocean-border bg-ocean-bg px-5 py-2.5 font-bold transition-colors hover:border-ocean-primary"
