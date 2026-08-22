@@ -3,7 +3,8 @@ import { Settings as SettingsIcon } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { Visibility } from '@nemomemo/shared';
 import { Button } from '@/components/ui/button.js';
-import { Input } from '@/components/ui/misc.js';
+import { Avatar, Input } from '@/components/ui/misc.js';
+import { fileToAvatarDataUrl } from '@/lib/avatar.js';
 import { useTheme, type Theme } from '@/context/theme.js';
 import {
   keys,
@@ -46,6 +47,15 @@ function AccountSection() {
   const [email, setEmail] = useState(viewer?.email ?? '');
   const [description, setDescription] = useState(viewer?.description ?? '');
   const [password, setPassword] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState(viewer?.avatarUrl ?? '');
+
+  const pickAvatar = async (file: File) => {
+    try {
+      setAvatarUrl(await fileToAvatarDataUrl(file));
+    } catch (error) {
+      flash(error instanceof Error ? error.message : 'That image did not want to shrink');
+    }
+  };
 
   const save = async () => {
     try {
@@ -53,6 +63,7 @@ function AccountSection() {
         nickname,
         email,
         description,
+        avatarUrl,
         ...(password ? { password } : {}),
       });
       await queryClient.invalidateQueries({ queryKey: keys.viewer });
@@ -66,6 +77,30 @@ function AccountSection() {
   return (
     <SectionCard title="My account">
       <div className="flex flex-col gap-2">
+        <label className="text-xs font-semibold text-muted-foreground">Avatar</label>
+        <div className="flex items-center gap-3">
+          <Avatar name={nickname || viewer?.username || '?'} avatarUrl={avatarUrl} className="size-14 text-xl" />
+          <label className="cursor-pointer">
+            <span className="inline-flex h-8 items-center rounded-xl border border-border px-3 text-sm font-semibold hover:bg-accent">
+              Choose image…
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void pickAvatar(file);
+                event.target.value = '';
+              }}
+            />
+          </label>
+          {avatarUrl ? (
+            <Button variant="ghost" size="sm" onClick={() => setAvatarUrl('')}>
+              Remove
+            </Button>
+          ) : null}
+        </div>
         <label className="text-xs font-semibold text-muted-foreground">Nickname</label>
         <Input value={nickname} onChange={(e) => setNickname(e.target.value)} />
         <label className="text-xs font-semibold text-muted-foreground">Email (optional)</label>
