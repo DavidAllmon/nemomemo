@@ -29,6 +29,16 @@ excellent open-source [Memos](https://usememos.com) project, with one new trick:
 - 📆 **Calendar heatmap**, pin/archive, ⌘K search, list/grid layouts, and two hand-mixed
   themes: **Shallows** (light) and **Deep Sea** (dark).
 
+## Try the hosted demo
+
+Open **https://demo.trynemomemo.com** and sign in with:
+
+- **Username:** `demo`
+- **Password:** `demo`
+
+The public demo database resets every 24 hours and is automatically reloaded with sample
+memos, so you can freely create, edit, comment, react, and try Dory memos.
+
 ## Install NemoMemo (the app)
 
 This is all you need to self-host. The Docker image contains **only the app** — no

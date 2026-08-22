@@ -96,6 +96,15 @@ export default function HomePage() {
             {DEMO_LABEL}
           </a>
         </div>
+        <div className="mt-4 rounded-xl border border-ocean-blue/30 bg-ocean-blue-soft/50 px-4 py-3 text-sm text-ocean-muted">
+          <p>
+            Public demo login: <code className="font-bold text-ocean-ink">demo</code> /{' '}
+            <code className="font-bold text-ocean-ink">demo</code>
+          </p>
+          <p className="mt-1 text-xs">
+            The demo resets every 24 hours and reloads its sample memos.
+          </p>
+        </div>
       </section>
 
       {/* The idea */}
