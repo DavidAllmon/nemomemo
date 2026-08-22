@@ -10,7 +10,7 @@ import {
   type ShareDto,
 } from '@nemomemo/shared';
 import { zValidator } from '@hono/zod-validator';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, or } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import { customAlphabet } from 'nanoid';
 import type { Config } from '../config.js';
@@ -136,7 +136,7 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
       .get();
 
     if (body.attachmentUids?.length) linkAttachments(db, created.id, viewer.id, body.attachmentUids);
-    if (body.relatedMemoUids?.length) setReferenceRelations(db, created.id, body.relatedMemoUids);
+    if (body.relatedMemoUids?.length) setReferenceRelations(db, created.id, body.relatedMemoUids, viewer);
     notifyMentions(db, viewer, created, mentions);
 
     return c.json({ memo: buildMemoDtos(db, [created], viewer)[0] }, 201);
@@ -176,6 +176,9 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
       if (body.rowStatus === 'ARCHIVED' && memo.forgetAt != null) patch.forgetAt = null;
     }
     if (body.dory != null) {
+      if (getParentMemo(db, memo.id)) {
+        throw apiError('INVALID_ARGUMENT', "Comments can't be Dory memos — they live and die with their parent");
+      }
       patch.forgetAt = body.dory ? now + config.doryTtlSeconds : null;
     }
     if (body.pinned != null) patch.pinned = body.pinned;
@@ -188,7 +191,7 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
     const updated = db.update(memos).set(patch).where(eq(memos.id, memo.id)).returning().get();
 
     if (body.attachmentUids != null) linkAttachments(db, memo.id, memo.creatorId, body.attachmentUids);
-    if (body.relatedMemoUids != null) setReferenceRelations(db, memo.id, body.relatedMemoUids);
+    if (body.relatedMemoUids != null) setReferenceRelations(db, memo.id, body.relatedMemoUids, viewer);
     if (mentionsToNotify.length > 0) notifyMentions(db, viewer, updated, mentionsToNotify);
 
     return c.json({ memo: buildMemoDtos(db, [updated], viewer)[0] });
@@ -225,7 +228,13 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
         ? db
             .select()
             .from(memos)
-            .where(and(eq(memos.rowStatus, 'NORMAL'), inArray(memos.id, commentIds)))
+            .where(
+              and(
+                eq(memos.rowStatus, 'NORMAL'),
+                inArray(memos.id, commentIds),
+                or(isNull(memos.forgetAt), gt(memos.forgetAt, nowSeconds())),
+              ),
+            )
             .orderBy(asc(memos.createdTs), asc(memos.id))
             .all()
         : [];

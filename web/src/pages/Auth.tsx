@@ -31,7 +31,9 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
       });
       queryClient.setQueryData(keys.viewer, user);
       await queryClient.invalidateQueries({ queryKey: keys.instance });
-      navigate(searchParams.get('redirect') ?? '/');
+      // Only follow same-origin relative paths — never an absolute/protocol URL.
+      const redirect = searchParams.get('redirect');
+      navigate(redirect && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong under the sea');
     } finally {

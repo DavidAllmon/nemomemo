@@ -136,6 +136,8 @@ export function useInvalidateMemos() {
     void client.invalidateQueries({ queryKey: ['memos'] });
     void client.invalidateQueries({ queryKey: keys.tags });
     void client.invalidateQueries({ queryKey: ['stats'] });
+    // Share pages read through ['shares', token]; keep them in sync with edits.
+    void client.invalidateQueries({ queryKey: ['shares'] });
   };
 }
 
@@ -185,6 +187,8 @@ export function useCreateComment(parentUid: string) {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: keys.comments(parentUid) });
       void client.invalidateQueries({ queryKey: keys.memo(parentUid) });
+      // Feed cards show commentCount — refresh lists too.
+      void client.invalidateQueries({ queryKey: ['memos', 'list'] });
     },
   });
 }
@@ -200,6 +204,7 @@ export function useToggleReaction() {
       client.setQueryData(keys.memo(memo.uid), memo);
       void client.invalidateQueries({ queryKey: ['memos', 'list'] });
       void client.invalidateQueries({ queryKey: ['memos', 'comments'] });
+      void client.invalidateQueries({ queryKey: ['shares'] });
     },
   });
 }

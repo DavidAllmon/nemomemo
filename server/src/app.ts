@@ -37,5 +37,13 @@ export function makeApp(db: Db, config: Config): Hono<AppEnv> {
   app.route('/api/v1', api);
   app.route('/file', fileRoutes(db, config));
 
+  // Unknown API/file paths must 404 as JSON — never fall through to the SPA page.
+  app.all('/api/*', (c) =>
+    c.json({ error: { code: 'NOT_FOUND', message: 'No such endpoint' } }, 404),
+  );
+  app.all('/file/*', (c) =>
+    c.json({ error: { code: 'NOT_FOUND', message: 'File not found' } }, 404),
+  );
+
   return app;
 }

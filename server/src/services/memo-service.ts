@@ -22,6 +22,7 @@ import {
 } from '../db/schema.js';
 import { apiError } from '../lib/errors.js';
 import { nowSeconds } from '../lib/time.js';
+import { canGlimpseMemo } from './acl.js';
 import { compileFilterExpression } from './filter-sql.js';
 
 export const newUid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 16);
@@ -143,9 +144,12 @@ export function buildMemoDtos(db: Db, rows: MemoRow[], viewer: UserRow | null): 
         )
       : new Map<number, UserRow>();
 
+  // Relation stubs go through the same visibility rules as reading the memo —
+  // a reference must never become a window into content the viewer can't open.
+  const now = nowSeconds();
   const stub = (memoId: number): RelatedMemoStubDto | null => {
     const memo = relatedById.get(memoId);
-    if (!memo) return null;
+    if (!memo || !canGlimpseMemo(memo, viewer, now)) return null;
     const creator = relatedCreators.get(memo.creatorId);
     return {
       uid: memo.uid,
@@ -359,13 +363,15 @@ export function linkAttachments(db: Db, memoId: number, creatorId: number, attac
   }
 }
 
-export function setReferenceRelations(db: Db, memoId: number, relatedUids: string[]): void {
+export function setReferenceRelations(db: Db, memoId: number, relatedUids: string[], actor: UserRow): void {
   db.delete(memoRelations)
     .where(and(eq(memoRelations.memoId, memoId), eq(memoRelations.type, 'REFERENCE')))
     .run();
   for (const uid of relatedUids) {
     const target = db.select().from(memos).where(eq(memos.uid, uid)).get();
-    if (target && target.id !== memoId) {
+    // You can only link to memos you can actually read — otherwise a
+    // reference would leak the target's content through its stub.
+    if (target && target.id !== memoId && canGlimpseMemo(target, actor)) {
       db.insert(memoRelations)
         .values({ memoId, relatedMemoId: target.id, type: 'REFERENCE' })
         .onConflictDoNothing()

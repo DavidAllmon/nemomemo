@@ -2,9 +2,13 @@ import { eq, inArray } from 'drizzle-orm';
 import type { Db } from '../db/index.js';
 import { inboxes, users, type MemoRow, type UserRow } from '../db/schema.js';
 
-/** Notify @mentioned users (skipping self-mentions and unknown usernames). */
+/**
+ * Notify @mentioned users (skipping self-mentions and unknown usernames).
+ * A mention in a PRIVATE memo notifies nobody — the mentioned user couldn't
+ * read the memo, so even a notification would leak that it exists.
+ */
 export function notifyMentions(db: Db, sender: UserRow, memo: MemoRow, mentions: string[]): void {
-  if (mentions.length === 0) return;
+  if (mentions.length === 0 || memo.visibility === 'PRIVATE') return;
   const mentioned = db.select().from(users).where(inArray(users.username, mentions)).all();
   for (const user of mentioned) {
     if (user.id === sender.id || user.rowStatus !== 'NORMAL') continue;

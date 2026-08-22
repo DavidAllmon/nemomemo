@@ -20,6 +20,11 @@ export function authRoutes(db: Db): Hono<AppEnv> {
 
   app.post('/signup', zValidator('json', signupRequestSchema), async (c) => {
     const body = c.req.valid('json');
+    // Hash BEFORE any checks: everything after this line is synchronous
+    // SQLite, so two concurrent signups can't both observe an empty user
+    // table and both claim the first-user admin role.
+    const passwordHash = await bcrypt.hash(body.password, 12);
+
     const userCount = db.select({ count: sql<number>`count(*)` }).from(users).get()?.count ?? 0;
     const isFirstUser = userCount === 0;
 
@@ -29,7 +34,6 @@ export function authRoutes(db: Db): Hono<AppEnv> {
     const existing = db.select().from(users).where(eq(users.username, body.username)).get();
     if (existing) throw apiError('ALREADY_EXISTS', 'That username is already taken');
 
-    const passwordHash = await bcrypt.hash(body.password, 12);
     const created = db
       .insert(users)
       .values({

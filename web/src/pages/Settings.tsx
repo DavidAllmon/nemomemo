@@ -173,6 +173,7 @@ function PreferencesSection() {
 
 function MembersSection() {
   const { data } = useMembers(true);
+  const { data: viewer } = useViewer();
   const queryClient = useQueryClient();
   const { status, flash } = useStatus();
   const [username, setUsername] = useState('');
@@ -227,21 +228,23 @@ function MembersSection() {
                 {user.rowStatus === 'ARCHIVED' ? ' · archived' : ''}
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                void act(
-                  () =>
-                    api('PATCH', `/api/v1/users/${user.username}/admin`, {
-                      rowStatus: user.rowStatus === 'ARCHIVED' ? 'NORMAL' : 'ARCHIVED',
-                    }),
-                  user.rowStatus === 'ARCHIVED' ? 'Member restored' : 'Member archived',
-                )
-              }
-            >
-              {user.rowStatus === 'ARCHIVED' ? 'Restore' : 'Archive'}
-            </Button>
+            {user.username !== viewer?.username ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  void act(
+                    () =>
+                      api('PATCH', `/api/v1/users/${user.username}/admin`, {
+                        rowStatus: user.rowStatus === 'ARCHIVED' ? 'NORMAL' : 'ARCHIVED',
+                      }),
+                    user.rowStatus === 'ARCHIVED' ? 'Member restored' : 'Member archived',
+                  )
+                }
+              >
+                {user.rowStatus === 'ARCHIVED' ? 'Restore' : 'Archive'}
+              </Button>
+            ) : null}
           </div>
         ))}
       </div>

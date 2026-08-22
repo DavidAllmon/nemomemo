@@ -48,11 +48,16 @@ export function chipsToExpression(chips: FilterChip[]): string | undefined {
   for (const chip of chips) {
     switch (chip.type) {
       case 'tagSearch':
-        clauses.push(`"${chip.value.replaceAll('"', '')}" in tags`);
+        // Tags can't contain quotes/backslashes; strip rather than escape.
+        clauses.push(`"${chip.value.replace(/["\\]/g, '')}" in tags`);
         break;
-      case 'contentSearch':
-        clauses.push(`content.contains("${chip.value.replaceAll('"', '\\"')}")`);
+      case 'contentSearch': {
+        // Escape backslashes FIRST, then quotes — a trailing `\` would
+        // otherwise swallow the closing quote and break the whole filter.
+        const escaped = chip.value.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+        clauses.push(`content.contains("${escaped}")`);
         break;
+      }
       case 'displayTime': {
         const [y, m, d] = chip.value.split('-').map(Number);
         const start = Math.floor(new Date(y!, m! - 1, d!).getTime() / 1000);

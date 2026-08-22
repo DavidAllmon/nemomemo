@@ -160,7 +160,9 @@ export function MemoActionMenu({ memo, onEdit }: { memo: MemoDto; onEdit?: () =>
                 remove.mutate(memo.uid, {
                   onSuccess: () => {
                     setConfirmDelete(false);
-                    if (location.pathname === `/memos/${memo.uid}`) navigate('/');
+                    // Leave any page that was showing this memo full-screen
+                    // (detail page AND share pages).
+                    if (location.pathname.startsWith('/memos/')) navigate('/');
                   },
                 });
               }}

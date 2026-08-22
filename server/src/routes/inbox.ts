@@ -6,6 +6,7 @@ import type { Db } from '../db/index.js';
 import { inboxes, memos, users } from '../db/schema.js';
 import { apiError } from '../lib/errors.js';
 import { requireViewer, type AppEnv } from '../middleware/auth.js';
+import { canGlimpseMemo } from '../services/acl.js';
 import { snippet, userToDto } from '../services/memo-service.js';
 
 export function inboxRoutes(db: Db): Hono<AppEnv> {
@@ -34,14 +35,17 @@ export function inboxRoutes(db: Db): Hono<AppEnv> {
     const items: InboxDto[] = rows.map((row) => {
       const sender = senders.get(row.senderId);
       const memo = row.memoId != null ? memoRows.get(row.memoId) : undefined;
+      // Visibility can change after the notification was created — re-check at
+      // read time so a now-private/expired memo never leaks through its snippet.
+      const readable = memo != null && canGlimpseMemo(memo, viewer);
       return {
         id: row.id,
         createdTs: row.createdTs,
         status: row.status,
         type: row.type,
         sender: sender ? userToDto(sender) : null,
-        memoUid: memo?.uid ?? null,
-        memoSnippet: memo ? snippet(memo.content) : null,
+        memoUid: readable ? memo.uid : null,
+        memoSnippet: readable ? snippet(memo.content) : null,
       };
     });
 
