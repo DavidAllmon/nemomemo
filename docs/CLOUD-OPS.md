@@ -84,3 +84,30 @@ HEAD == origin/main and exited silently — deploys wedged with no log line.
 
 Old script kept at `update.sh.bak-predisk`. Still open (roadmap): post-deploy
 smoke test + alerting; uptime monitoring will catch a stuck version externally.
+
+
+## Monitoring setup (the two free accounts)
+
+Two accounts, both free tier, both needing the maintainer's hands (sign-up):
+
+**1. UptimeRobot** (uptimerobot.com — free: 50 monitors, 5-min checks).
+Create four HTTP(S) monitors, alerts to the maintainer's email:
+- `https://app.trynemomemo.com/healthz`  (cloud portal + tenant supervisor)
+- `https://demo.trynemomemo.com/healthz` (demo app; also proves the app image)
+- `https://trynemomemo.com`              (marketing site)
+- `https://david.trynemomemo.com/healthz` (a real reef → proves the wildcard
+  tunnel + host routing path paying customers use)
+Optional keyword monitor: `https://demo.trynemomemo.com/api/v1/instance/profile`
+containing the expected `"version"` after releases (catches a wedged deploy —
+see the 2026-08-22 incident above).
+
+**2. Healthchecks.io** (healthchecks.io — free: 20 checks). Dead-man switches
+for cron jobs — alerts when an expected ping DOESN'T arrive:
+- Check "nemomemo-backup", period 1 day, grace 3 h. Put its ping URL in
+  `/opt/nemomemo-deploy/backup.env` as `HEALTHCHECK_URL=…` —
+  `deploy/backup-cloud.sh` already pings it on success (line ~42).
+- Optional: check "demo-reset", period 1 day, grace 2 h; append a
+  `curl -fsS -m 10 --retry 3 <ping-url>` to `/opt/nemomemo-deploy/reset-demo.sh`.
+
+Once the accounts exist, hand the two ping URLs to the assistant/session with
+VM access and it can wire them in.
