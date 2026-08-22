@@ -36,7 +36,7 @@ jobs:
           labels: |
             org.opencontainers.image.title=NemoMemo
             org.opencontainers.image.description=A cute, self-hosted memo timeline with Dory memos that forget themselves in 24 hours.
-            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.licenses=Elastic-2.0
 
       - uses: docker/build-push-action@v6
         with:

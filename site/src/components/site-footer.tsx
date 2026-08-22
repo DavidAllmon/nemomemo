@@ -11,6 +11,7 @@ const GROUPS: { title: string; links: { label: string; href: string; external?: 
       { label: 'Use cases', href: '/use-cases' },
       { label: 'Compare', href: '/compare' },
       { label: 'Pricing', href: '/pricing' },
+      { label: 'Changelog', href: '/changelog' },
     ],
   },
   {

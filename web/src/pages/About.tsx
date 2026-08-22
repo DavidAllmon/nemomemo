@@ -1,3 +1,4 @@
+import { NEMOMEMO_VERSION } from '@nemomemo/shared';
 import { NemoLogo, Wordmark } from '@/components/NemoLogo.js';
 
 export function AboutPage({ version }: { version?: string }) {
@@ -10,7 +11,18 @@ export function AboutPage({ version }: { version?: string }) {
         needs to live for a day, give it to Dory. She'll forget it in 24 hours. 🐟
       </p>
       <p className="text-xs text-muted-foreground">
-        Version {version ?? '0.1.0'} · Inspired by the excellent open-source{' '}
+        Version {version ?? NEMOMEMO_VERSION} ·{' '}
+        <a
+          href="https://trynemomemo.com/changelog"
+          target="_blank"
+          rel="noreferrer"
+          className="text-ocean underline"
+        >
+          What&apos;s new →
+        </a>
+      </p>
+      <p className="text-xs text-muted-foreground">
+        Inspired by the excellent open-source{' '}
         <a href="https://usememos.com" target="_blank" rel="noreferrer" className="text-ocean underline">
           Memos
         </a>{' '}

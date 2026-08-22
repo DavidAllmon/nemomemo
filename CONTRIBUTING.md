@@ -22,6 +22,7 @@ You need Node 22+ and pnpm.
 git clone https://github.com/<you>/nemomemo
 cd nemomemo
 pnpm install
+git config core.hooksPath scripts/hooks   # release guard (maintainers)
 pnpm dev        # API on :5230, web app on :5173
 ```
 

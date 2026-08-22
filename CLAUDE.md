@@ -89,6 +89,20 @@ User-facing copy stays in the reef voice — playful, never at the expense of cl
 "This memo swam away" (404), "Just keep swimming" (empty states), Dory phrasing for
 ephemerality. Error messages say what happened and what to do next, then the fish.
 
+## Versioning & changelog
+
+Canonical version = root `package.json`, mirrored into `shared/src/version.ts`
+(`NEMOMEMO_VERSION`, generated — never hand-edit) by `pnpm release [patch|minor|major]`.
+**Every push to main that touches app code (`shared/`, `server/`, `web/`, `Dockerfile`)
+must go through `pnpm release`** — it scaffolds `docs/changelog/vX.Y.Z.md` on first run,
+then (once filled) bumps, commits `release: vX.Y.Z`, and tags; push with
+`git push --follow-tags`. A pre-push hook (`git config core.hooksPath scripts/hooks`)
+enforces this; site/docs-only pushes are exempt. Changelog entries need BOTH sections:
+"What's new" in plain everyday language (no jargon — see `docs/changelog/README.md`)
+and "Technical notes" for developers. The marketing site renders only "What's new" at
+/changelog (build reads `docs/changelog/`, copied in by `Dockerfile.site`); the app's
+About page links there.
+
 ## Deployment reality
 
 Pushing to `main` auto-deploys the maintainer's self-hosted instance (a poller pulls

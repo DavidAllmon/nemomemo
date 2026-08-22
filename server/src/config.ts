@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { DORY_TTL_SECONDS } from '@nemomemo/shared';
+import { DORY_TTL_SECONDS, NEMOMEMO_VERSION } from '@nemomemo/shared';
 
 export interface Config {
   port: number;
@@ -25,7 +25,7 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
     doryTtlSeconds:
       overrides.doryTtlSeconds ??
       (process.env.DORY_TTL_SECONDS ? Number(process.env.DORY_TTL_SECONDS) : DORY_TTL_SECONDS),
-    version: overrides.version ?? '0.1.0',
+    version: overrides.version ?? NEMOMEMO_VERSION,
     webDistDir: overrides.webDistDir ?? process.env.NEMOMEMO_WEB_DIST ?? null,
     cloudLimits: overrides.cloudLimits ?? null,
   };

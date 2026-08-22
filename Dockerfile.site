@@ -6,6 +6,8 @@ RUN node -e "const fs=require('fs'); const p=require('./package.json'); p.packag
 COPY site/package.json site/
 RUN pnpm install --frozen-lockfile --filter @nemomemo/site
 COPY site/ site/
+# The changelog page reads release notes from the repo's docs at build time.
+COPY docs/changelog/ docs/changelog/
 WORKDIR /app/site
 ARG NEXT_PUBLIC_DEMO_URL
 ENV NEXT_PUBLIC_DEMO_URL=$NEXT_PUBLIC_DEMO_URL
