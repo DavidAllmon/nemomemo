@@ -15,7 +15,7 @@ import {
 } from '../middleware/auth.js';
 import { makeRateLimiter } from '../middleware/rate-limit.js';
 import { consumeAuthToken, createAuthToken } from '../services/auth-tokens.js';
-import { trySend, verifyEmailMessage, type Mailer } from '../services/email.js';
+import { trySend, verifyEmailMessage, welcomeMessage, type Mailer } from '../services/email.js';
 import { userToDto } from '../services/memo-service.js';
 import { getInstanceGeneral } from '../services/settings.js';
 import { randomBytes } from 'node:crypto';
@@ -45,12 +45,18 @@ export function sendVerificationEmail(
   mailer: Mailer | null,
   c: Context,
   user: typeof users.$inferSelect,
+  opts: { welcome?: boolean } = {},
 ): void {
   if (!mailer || !user.email) return;
   const token = createAuthToken(db, user.id, 'EMAIL_VERIFY', VERIFY_TTL_SECONDS);
   const link = `${requestOrigin(c)}/auth/verify?token=${token}`;
   const instanceName = getInstanceGeneral(db).name;
-  trySend(mailer, { to: user.email, ...verifyEmailMessage(instanceName, user.username, link) });
+  // New accounts get ONE email — a welcome carrying the verify link — instead
+  // of a welcome + a verification landing at the same moment.
+  const message = opts.welcome
+    ? welcomeMessage(instanceName, user.username, link)
+    : verifyEmailMessage(instanceName, user.username, link);
+  trySend(mailer, { to: user.email, ...message });
 }
 
 // A real bcrypt hash of an unguessable value, computed once per process: signin
@@ -99,7 +105,7 @@ export function authRoutes(db: Db, config: Config, mailer: Mailer | null): Hono<
       .returning()
       .get();
 
-    sendVerificationEmail(db, mailer, c, created);
+    sendVerificationEmail(db, mailer, c, created, { welcome: true });
     createSession(db, c, created.id);
     return c.json({ user: userToDto(created, { includeEmail: true }) });
   });

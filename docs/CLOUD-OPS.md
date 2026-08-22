@@ -86,28 +86,27 @@ Old script kept at `update.sh.bak-predisk`. Still open (roadmap): post-deploy
 smoke test + alerting; uptime monitoring will catch a stuck version externally.
 
 
-## Monitoring setup (the two free accounts)
+## Monitoring setup (one account: Better Stack)
 
-Two accounts, both free tier, both needing the maintainer's hands (sign-up):
+One free Better Stack account (betterstack.com — free tier: 10 monitors + 10
+heartbeats, 3-minute checks, email/push alerts, status page) covers both kinds
+of monitoring. Maintainer signs up, then creates:
 
-**1. UptimeRobot** (uptimerobot.com — free: 50 monitors, 5-min checks).
-Create four HTTP(S) monitors, alerts to the maintainer's email:
-- `https://app.trynemomemo.com/healthz`  (cloud portal + tenant supervisor)
-- `https://demo.trynemomemo.com/healthz` (demo app; also proves the app image)
-- `https://trynemomemo.com`              (marketing site)
-- `https://david.trynemomemo.com/healthz` (a real reef → proves the wildcard
-  tunnel + host routing path paying customers use)
-Optional keyword monitor: `https://demo.trynemomemo.com/api/v1/instance/profile`
-containing the expected `"version"` after releases (catches a wedged deploy —
-see the 2026-08-22 incident above).
+**Uptime monitors** (alert when a probe FAILS):
+- `https://app.trynemomemo.com/healthz`   (cloud portal + tenant supervisor)
+- `https://demo.trynemomemo.com/healthz`  (demo app / app image)
+- `https://trynemomemo.com`               (marketing site)
+- `https://david.trynemomemo.com/healthz` (a real reef → wildcard tunnel path)
+- Optional: keyword monitor on `https://demo.trynemomemo.com/api/v1/instance/profile`
+  expecting the released `"version"` (catches a wedged deploy — 2026-08-22 incident).
 
-**2. Healthchecks.io** (healthchecks.io — free: 20 checks). Dead-man switches
-for cron jobs — alerts when an expected ping DOESN'T arrive:
-- Check "nemomemo-backup", period 1 day, grace 3 h. Put its ping URL in
-  `/opt/nemomemo-deploy/backup.env` as `HEALTHCHECK_URL=…` —
-  `deploy/backup-cloud.sh` already pings it on success (line ~42).
-- Optional: check "demo-reset", period 1 day, grace 2 h; append a
-  `curl -fsS -m 10 --retry 3 <ping-url>` to `/opt/nemomemo-deploy/reset-demo.sh`.
+**Heartbeats** (alert when an expected ping DOESN'T arrive):
+- "nemomemo-backup", period 1 day, grace 3 h → put the heartbeat URL in
+  `/opt/nemomemo-deploy/backup.env` as `HEALTHCHECK_URL=…` (backup-cloud.sh
+  already pings it on success).
+- Optional: "demo-reset", period 1 day, grace 2 h → append
+  `curl -fsS -m 10 --retry 3 <heartbeat-url>` to reset-demo.sh.
 
-Once the accounts exist, hand the two ping URLs to the assistant/session with
-VM access and it can wire them in.
+(UptimeRobot + healthchecks.io remain a fine two-account alternative if Better
+Stack's free limits ever pinch.) Once the account exists, hand the heartbeat
+URLs to the assistant/session with VM access and it wires them in.

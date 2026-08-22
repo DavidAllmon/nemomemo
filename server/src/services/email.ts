@@ -38,6 +38,23 @@ export function trySend(mailer: Mailer | null, message: MailMessage): void {
   });
 }
 
+export function welcomeMessage(instanceName: string, username: string, link: string): Omit<MailMessage, 'to'> {
+  return {
+    subject: `Welcome to ${instanceName}! 🐠`,
+    text: `Hi ${username} — welcome to the reef!
+
+Your ${instanceName} account is ready: jot thoughts, tag them, share them with your reef-mates, and hand the fleeting ones to Dory (she forgets them in 24 hours, it's her whole thing).
+
+One little bubble to pop first — confirm your email so your account can always find its way back to you:
+
+${link}
+
+The link works for 7 days. If you didn't create this account, ignore this email and nothing happens.
+
+Just keep swimming 🐠`,
+  };
+}
+
 export function verifyEmailMessage(instanceName: string, username: string, link: string): Omit<MailMessage, 'to'> {
   return {
     subject: `Verify your email on ${instanceName}`,

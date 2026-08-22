@@ -83,6 +83,8 @@ describe('email verification', () => {
     const cookie = await signup(app, 'coral');
     expect(sentMail).toHaveLength(1);
     expect(sentMail[0]!.to).toBe('coral@test.reef');
+    // Signing up gets ONE email: a welcome that carries the verify link.
+    expect(sentMail[0]!.subject).toMatch(/Welcome/);
     const token = /token=([A-Za-z0-9_-]+)/.exec(sentMail[0]!.text)?.[1];
     expect(token).toBeTruthy();
 
@@ -103,6 +105,8 @@ describe('email verification', () => {
     const resend = await jsonRequest(app, 'POST', '/api/v1/auth/verify/resend', {}, cookie);
     expect(resend.status).toBe(200);
     expect(sentMail).toHaveLength(2);
+    // Resends are plain verification copy, not another welcome.
+    expect(sentMail[1]!.subject).toMatch(/Verify/);
   });
 
   it('changing the email un-verifies and re-sends', async () => {
