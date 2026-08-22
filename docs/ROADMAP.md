@@ -15,7 +15,7 @@ Priority: **P0** do before anything else · **P1** next milestone · **P2** feat
 
 | Item | Why | Effort |
 | --- | --- | --- |
-| **Off-VM nightly backups** ⚠️ | THE outstanding launch rule — customer reefs live on one homelab disk. `deploy/backup-cloud.sh` is ready; needs a restic destination (free Backblaze B2 tier fits) + cron + one restore drill. | S |
+| ~~**Off-VM nightly backups**~~ ✅ DONE 2026-08-22 | restic → Cloudflare R2 (`nemomemo-cloud-backups`, free tier), consistent SQLite snapshots nightly at 07:17 UTC, 14 daily + 8 weekly retention, restore drill verified. | — |
 | **Uptime monitoring** | External monitor (UptimeRobot/healthchecks.io free tier) on app host, a reef, demo, site — plus the backup script's success ping. | S |
 | **Security fix PR** (audit F1, F4, F5, F7) | Attachment serving headers (SVG/HTML stored-XSS within a reef), `Secure` cookie flag, security-header middleware, sign-in timing dummy-hash. All small, all testable, one PR. | M |
 | **Rate limiting** (audit F3) | Unlimited password guessing on sign-in doubles as a CPU DoS (bcryptjs on the event loop, one process serves all reefs). Per-IP + per-username limiter honoring `CF-Connecting-IP`; swap bcryptjs → native bcrypt/argon2 while there. | M |
