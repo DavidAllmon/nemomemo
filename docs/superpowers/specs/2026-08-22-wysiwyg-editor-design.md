@@ -1,6 +1,6 @@
 # WYSIWYG editor over markdown storage — design
 
-Date: 2026-08-22 · Status: approved (David, in-chat) · Target: web package only
+Date: 2026-08-22 · Status: SHIPPED in v1.6.0 · Target: web package only
 
 ## Problem
 
