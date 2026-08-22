@@ -102,4 +102,7 @@ repo is public.
 
 `docs/AUDIT-2026-08-22.md` holds the latest audit (fixed findings + a ranked
 simplification backlog); `docs/ROADMAP.md` holds the feature brainstorm organized by
-user job. Check both before proposing refactors or features.
+user job. Check both before proposing refactors or features. `docs/CLOUD-PLAN.md` is
+the approved spec for the paid hosted version (DB-per-reef multi-tenancy behind a
+`NEMOMEMO_CLOUD` flag — cloud code must ship dark and never change single-tenant
+behavior or break the existing test suite).

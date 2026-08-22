@@ -82,11 +82,14 @@ cross reefs), per-reef backup/export is `cp`, and deleting a churned customer is
 
 ## What I need from you (blocking items)
 
-1. **Stripe access**: the Stripe MCP plugin in my session requires an interactive
-   OAuth — run `/mcp` in your Claude Code session and authorize the Stripe plugin
-   (Tech at Dave account). Alternative: create a **restricted API key** (test mode) in
-   the Stripe dashboard and give it to me. I also need you to confirm the business
-   display name ("NemoMemo") on the Stripe account's public details.
+> Plan approved 2026-08-22; execution begins in a follow-up session. To clarify one
+> line below: "Stripe Tax off" refers to Stripe's optional automatic *sales-tax
+> collection* feature — Stripe payments/subscriptions themselves are of course on.
+
+1. **Stripe access**: ✅ RESOLVED — the Stripe MCP is authorized in test mode (three
+   same-named accounts were authorized; execution starts by confirming which is the
+   primary). Still to confirm on that account: the public business display name
+   ("NemoMemo") customers see on receipts.
 2. **Wildcard DNS + tunnel**: one-time in Cloudflare — add a wildcard hostname
    (`*.trynemomemo.com`) to the existing tunnel pointing at the VM's app port. I'll
    give you the exact clicks (or do it myself if you add my SSH key's reach to a box
