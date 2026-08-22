@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { NemoMark } from '@/components/nemo-mark';
-import { DEMO_LABEL, DEMO_URL } from '@/lib/demo-url';
+import { CLOUD_LIVE, DEMO_LABEL, DEMO_URL } from '@/lib/demo-url';
 
 const PRODUCT_CARDS = [
   {
@@ -89,6 +89,14 @@ export default function HomePage() {
           >
             Install NemoMemo
           </Link>
+          {CLOUD_LIVE ? (
+            <Link
+              href="/pricing#cloud"
+              className="rounded-xl border-2 border-ocean-primary px-5 py-2.5 font-bold text-ocean-primary transition-colors hover:bg-ocean-primary hover:text-white"
+            >
+              Get NemoMemo Cloud
+            </Link>
+          ) : null}
           <a
             href={DEMO_URL}
             className="rounded-xl border border-ocean-border bg-ocean-card px-5 py-2.5 font-bold transition-colors hover:border-ocean-primary"

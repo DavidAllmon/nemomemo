@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { NemoMark } from '@/components/nemo-mark';
-import { DEMO_LABEL, DEMO_URL } from '@/lib/demo-url';
+import { CLOUD_LIVE, DEMO_LABEL, DEMO_URL } from '@/lib/demo-url';
 
 const NAV = [
   { label: 'Features', href: '/features' },
@@ -33,6 +33,14 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-2">
+          {CLOUD_LIVE ? (
+            <Link
+              href="/pricing#cloud"
+              className="hidden rounded-xl border border-ocean-primary px-3.5 py-1.5 text-sm font-bold text-ocean-primary transition-colors hover:bg-ocean-primary hover:text-white sm:inline-block"
+            >
+              Get Cloud
+            </Link>
+          ) : null}
           <a
             href={DEMO_URL}
             className="rounded-xl bg-ocean-primary px-3.5 py-1.5 text-sm font-bold text-white transition-opacity hover:opacity-90"

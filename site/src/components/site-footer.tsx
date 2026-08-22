@@ -34,6 +34,8 @@ const GROUPS: { title: string; links: { label: string; href: string; external?: 
       { label: 'API reference', href: '/docs/api' },
       { label: 'GitHub', href: REPO_URL, external: true },
       { label: 'Inspired by Memos', href: MEMOS_URL, external: true },
+      { label: 'Terms of Service', href: '/terms' },
+      { label: 'Privacy Policy', href: '/privacy' },
     ],
   },
 ];
