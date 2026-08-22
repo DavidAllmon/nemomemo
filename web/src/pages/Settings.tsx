@@ -363,12 +363,13 @@ function BackupsSection({ isCloud }: { isCloud: boolean }) {
         return;
       }
       setRestoreState('restarting');
-      // The server exits to swap databases; poll until it's back, then reload.
+      // The server exits to swap databases; poll an API route (proxied in dev,
+      // same-origin in prod) until it answers again, then reload.
       const poll = async () => {
+        await new Promise((r) => setTimeout(r, 2500));
         for (let attempt = 0; attempt < 60; attempt++) {
-          await new Promise((r) => setTimeout(r, 2000));
           try {
-            const health = await fetch('/healthz');
+            const health = await fetch('/api/v1/instance/profile', { cache: 'no-store' });
             if (health.ok) {
               window.location.reload();
               return;
@@ -376,9 +377,12 @@ function BackupsSection({ isCloud }: { isCloud: boolean }) {
           } catch {
             // still restarting
           }
+          await new Promise((r) => setTimeout(r, 2000));
         }
         setRestoreState('idle');
-        setRestoreError("The reef is taking longer than expected to come back — refresh in a minute.");
+        setRestoreError(
+          'The backup is restored, but the server has not come back on its own — if you run it by hand (no Docker restart policy), start it again and refresh this page.',
+        );
       };
       void poll();
     } catch (error) {
