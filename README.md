@@ -34,10 +34,11 @@ excellent open-source [Memos](https://usememos.com) project, with one new trick:
 Open **https://demo.trynemomemo.com** and sign in with:
 
 - **Username:** `demo`
-- **Password:** `demo`
+- **Password:** `justkeepswimming`
 
-The public demo database resets every 24 hours and is automatically reloaded with sample
-memos, so you can freely create, edit, comment, react, and try Dory memos.
+The public demo resets every 24 hours and reloads a full sample reef — shared lists,
+notes between accounts, live Dory memos, an inbox with mentions waiting for you — so you
+can freely create, edit, comment, react, and let Dory forget things.
 
 ## Install NemoMemo (the app)
 

@@ -2,7 +2,7 @@
  * Demo seed for the public NemoMemo demo instance.
  *
  * Creates a small, believable reef: an admin, four personas who leave notes for
- * themselves and each other, and a `guest` account (password below) that
+ * themselves and each other, and a `demo` account (password below) that
  * visitors are invited to sign in with — pre-furnished with private memos, a
  * saved view, and inbox notifications so their Home screen feels lived-in.
  *
@@ -68,7 +68,7 @@ const marlin = await user('marlin', PERSONA_PASSWORD, {
   nickname: 'Marlin',
   description: 'Dad, worrier, homelab tinkerer. Practicing one (1) joke.',
 });
-const guest = await user('guest', PERSONA_PASSWORD, {
+const guest = await user('demo', PERSONA_PASSWORD, {
   nickname: 'Demo Visitor',
   description: "That's you! This account belongs to everyone trying the demo. 👋",
 });
@@ -86,7 +86,7 @@ const welcome = await mk(admin ?? coral, `# Welcome to the NemoMemo demo! 🪸
 
 This is a live, shared playground — poke everything. It resets to this state every day at 09:00 UTC, so nothing you do here can break anything.
 
-**Want the full experience?** Sign in as \`guest\` / \`justkeepswimming\` — that account has its own notes, a saved view, and an inbox waiting for you. Then try:
+**Want the full experience?** Sign in as \`demo\` / \`justkeepswimming\` — that account has its own notes, a saved view, and an inbox waiting for you. Then try:
 
 - [ ] Write a memo with **Markdown** and a #tag (nested ones like #reef/tour work too)
 - [ ] Tick a checkbox right here in the timeline — the memo updates itself
@@ -152,7 +152,7 @@ const trip = await mk(coral, `Sydney trip planning 🗺️ #trips/sydney
 - [ ] Tell the school Nemo's out Friday
 - [ ] @dory please do NOT lose the itinerary this time 💙`, { visibility: 'PROTECTED' });
 
-await mk(coral, `New here? @guest this reef is yours to play with — you have notes waiting in your account and a bell 🔔 with your name on it. Say hi in the comments somewhere!`, { visibility: 'PROTECTED' });
+await mk(coral, `New here? @demo this reef is yours to play with — you have notes waiting in your account and a bell 🔔 with your name on it. Say hi in the comments somewhere!`, { visibility: 'PROTECTED' });
 
 // ---------- Nemo: student + budding developer ----------
 
@@ -240,7 +240,7 @@ Delivery notes: pause BEFORE "fronds". Do not laugh at your own setup. Do not ex
 
 await mk(guest, `My demo scratchpad — things to try ✅ #getting-started
 
-- [x] Sign in as guest
+- [x] Sign in as demo
 - [x] Read the welcome memo
 - [ ] Write my own memo
 - [ ] Make a Dory memo and watch the countdown

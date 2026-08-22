@@ -99,10 +99,10 @@ export default function HomePage() {
         <div className="mt-4 rounded-xl border border-ocean-blue/30 bg-ocean-blue-soft/50 px-4 py-3 text-sm text-ocean-muted">
           <p>
             Public demo login: <code className="font-bold text-ocean-ink">demo</code> /{' '}
-            <code className="font-bold text-ocean-ink">demo</code>
+            <code className="font-bold text-ocean-ink">justkeepswimming</code>
           </p>
           <p className="mt-1 text-xs">
-            The demo resets every 24 hours and reloads its sample memos.
+            The demo resets every 24 hours and reloads its sample reef.
           </p>
         </div>
       </section>
