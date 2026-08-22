@@ -59,6 +59,9 @@ interface UploadedFile {
 
 export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => void }) {
   const isEdit = !!memo;
+  // Comments inherit the parent's visibility and can't be Dory memos — editing
+  // one shows neither control and never patches those fields.
+  const isComment = memo?.parentUid != null;
   const { data: viewer } = useViewer();
   const { data: settings } = useUserSettings(!!viewer);
   const create = useCreateMemo();
@@ -188,9 +191,8 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
         {
           uid: memo.uid,
           content,
-          visibility: effectiveVisibility,
-          dory,
           attachmentUids: attachments.map((a) => a.uid),
+          ...(isComment ? {} : { visibility: effectiveVisibility, dory }),
         },
         { onSuccess: () => onDone?.() },
       );
@@ -309,6 +311,7 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
       </div>
 
       <div className="flex items-center gap-2">
+        {isComment ? null : (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" aria-label="Visibility">
@@ -329,7 +332,9 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+        )}
 
+        {isComment ? null : (
         <Tip
           label={
             memo?.pinned
@@ -356,6 +361,7 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
             Dory
           </button>
         </Tip>
+        )}
 
         <span className="ml-auto" />
         {isEdit ? (

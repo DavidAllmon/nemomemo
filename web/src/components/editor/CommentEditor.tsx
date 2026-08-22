@@ -13,12 +13,20 @@ import { useCreateComment } from '@/hooks/queries.js';
  * The comment composer: same markdown + @member/#tag autocomplete as the memo
  * editor, without the memo-only chrome (visibility, Dory, attachments).
  */
+export interface CommentPrefill {
+  text: string;
+  nonce: number;
+}
+
 export function CommentEditor({
   memoUid,
   parentVisibility,
+  prefill,
 }: {
   memoUid: string;
   parentVisibility: Visibility;
+  /** Bump `nonce` to append `text` to the draft and focus (used by Reply). */
+  prefill?: CommentPrefill;
 }) {
   const createComment = useCreateComment(memoUid);
   const completions = useMemberTagCompletions();
@@ -63,6 +71,18 @@ export function CommentEditor({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || !prefill || !prefill.text) return;
+    const end = view.state.doc.length;
+    const needsSpace = end > 0 && !view.state.sliceDoc(end - 1, end).match(/\s/);
+    const insert = (needsSpace ? ' ' : '') + prefill.text;
+    view.dispatch({ changes: { from: end, insert }, selection: { anchor: end + insert.length } });
+    view.focus();
+    view.dom.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill?.nonce]);
 
   const submit = () => {
     const view = viewRef.current;

@@ -1,4 +1,4 @@
-import { Earth, Link2, Lock, MessageCircle, Paperclip, Pin, Users } from 'lucide-react';
+import { Earth, Link2, Lock, MessageCircle, Paperclip, Pin, Reply, Users } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { MemoDto } from '@nemomemo/shared';
@@ -112,11 +112,14 @@ export function MemoCard({
   showCommentsLink = true,
   shareToken,
   compact,
+  onReply,
 }: {
   memo: MemoDto;
   showCommentsLink?: boolean;
   shareToken?: string;
   compact?: boolean;
+  /** When set, the footer shows a Reply button (used on comment cards). */
+  onReply?: () => void;
 }) {
   const { data: viewer } = useViewer();
   const update = useUpdateMemo();
@@ -177,6 +180,15 @@ export function MemoCard({
 
       <footer className="flex items-center gap-2">
         <ReactionBar memo={memo} />
+        {onReply ? (
+          <button
+            onClick={onReply}
+            className="ml-auto flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
+          >
+            <Reply className="size-3.5" />
+            Reply
+          </button>
+        ) : null}
         {showCommentsLink ? (
           <Link
             to={`/memos/${memo.uid}#comments`}
