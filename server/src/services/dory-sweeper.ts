@@ -15,11 +15,20 @@ export function sweepDoryMemos(db: Db, uploadsDir: string): number {
 
   const sweep = sqlite.transaction(() => {
     const expired = sqlite
-      .prepare('SELECT id FROM memo WHERE forget_at IS NOT NULL AND forget_at <= ?')
-      .all(now) as { id: number }[];
+      .prepare('SELECT id, creator_id FROM memo WHERE forget_at IS NOT NULL AND forget_at <= ?')
+      .all(now) as { id: number; creator_id: number }[];
     if (expired.length === 0) return 0;
     const ids = expired.map((row) => row.id);
     const placeholders = ids.map(() => '?').join(',');
+
+    // "Dory has forgotten N memos for you" — count the directly-expired memos
+    // per creator (cascaded comments belong to other stories).
+    const byCreator = new Map<number, number>();
+    for (const row of expired) byCreator.set(row.creator_id, (byCreator.get(row.creator_id) ?? 0) + 1);
+    const bump = sqlite.prepare(
+      'UPDATE user SET dory_forgotten_count = dory_forgotten_count + ? WHERE id = ?',
+    );
+    for (const [creatorId, count] of byCreator) bump.run(count, creatorId);
 
     // Comment memos hanging off the expired memos (their COMMENT relation rows
     // will cascade away, which would orphan the comment memo itself).
@@ -63,15 +72,3 @@ export function sweepDoryMemos(db: Db, uploadsDir: string): number {
   return result.count;
 }
 
-export function startDorySweeper(db: Db, uploadsDir: string, intervalMs = 60_000): NodeJS.Timeout {
-  sweepDoryMemos(db, uploadsDir);
-  const timer = setInterval(() => {
-    try {
-      sweepDoryMemos(db, uploadsDir);
-    } catch (error) {
-      console.error('[dory] sweep failed:', error);
-    }
-  }, intervalMs);
-  timer.unref();
-  return timer;
-}

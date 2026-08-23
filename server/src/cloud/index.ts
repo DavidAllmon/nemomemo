@@ -1,7 +1,7 @@
 import { serve } from '@hono/node-server';
 import path from 'node:path';
 import { loadConfig } from '../config.js';
-import { sweepDoryMemos } from '../services/dory-sweeper.js';
+import { runSchedulerTick } from '../services/scheduler.js';
 import { makeCloudApp, type CloudSettings } from './app.js';
 import type { BillingDeps } from './billing.js';
 import { makeSmtpMailer } from '../services/email.js';
@@ -87,14 +87,16 @@ export function startCloud(): void {
   const restoreTimer = setInterval(restoreSweep, 10_000);
   restoreTimer.unref?.();
 
-  // Dory sweeps run per open reef; a closed reef is swept on its next open,
-  // and every read path already refuses expired memos regardless.
+  // The scheduler tick (bottles, reminders, dory warnings + sweep) runs per
+  // open reef; a closed reef catches up on its next open, and every read path
+  // already refuses expired/at-sea memos regardless.
+  const tickMailer = base.smtp ? makeSmtpMailer(base.smtp) : null;
   const timer = setInterval(() => {
     for (const handle of fleet.openHandles()) {
       try {
-        sweepDoryMemos(handle.db, handle.config.uploadsDir);
+        runSchedulerTick(handle.db, { uploadsDir: handle.config.uploadsDir, mailer: tickMailer });
       } catch (error) {
-        console.error(`[dory] cloud sweep failed for reef ${handle.slug}:`, error);
+        console.error(`[scheduler] cloud tick failed for reef ${handle.slug}:`, error);
       }
     }
   }, 60_000);

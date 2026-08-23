@@ -5,7 +5,8 @@ import path from 'node:path';
 import { makeApp } from './app.js';
 import { loadConfig } from './config.js';
 import { createDb } from './db/index.js';
-import { startDorySweeper } from './services/dory-sweeper.js';
+import { makeSmtpMailer } from './services/email.js';
+import { startScheduler } from './services/scheduler.js';
 
 // Cloud mode (NEMOMEMO_CLOUD=1) is the hosted multi-reef service; everything
 // below the branch is the unchanged single-tenant self-host path.
@@ -20,7 +21,10 @@ if (process.env.NEMOMEMO_CLOUD === '1') {
   const db = createDb(config.dbPath);
   const app = makeApp(db, config);
 
-  startDorySweeper(db, config.uploadsDir);
+  startScheduler(db, {
+    uploadsDir: config.uploadsDir,
+    mailer: config.smtp ? makeSmtpMailer(config.smtp) : null,
+  });
 
   // In production the built SPA sits next to the server; serve it with an SPA fallback.
   const webDist = config.webDistDir ?? path.resolve('web-dist');

@@ -105,6 +105,21 @@ Just keep swimming 🐠`,
   };
 }
 
+export function reminderMessage(instanceName: string, username: string, memoSnippet: string): Omit<MailMessage, 'to'> {
+  return {
+    subject: 'A nudge from your reef 🐠',
+    text: `Hi ${username}!
+
+You asked ${instanceName} to nudge you about this memo:
+
+> ${memoSnippet}
+
+Swim over to your reef's inbox to see it.
+
+Just keep swimming 🐠`,
+  };
+}
+
 export function passwordChangedMessage(instanceName: string, username: string): Omit<MailMessage, 'to'> {
   return {
     subject: `Your ${instanceName} password was changed`,

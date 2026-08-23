@@ -72,6 +72,8 @@ export function renderMemoMarkdown(
   if (row.pinned) lines.push('pinned: true');
   if (row.rowStatus === 'ARCHIVED') lines.push('archived: true');
   if (row.forgetAt != null) lines.push(`forgets: ${isoSeconds(row.forgetAt)}`);
+  if (row.surfaceAt != null) lines.push(`surfaces: ${isoSeconds(row.surfaceAt)}`);
+  if (row.remindAt != null) lines.push(`reminds: ${isoSeconds(row.remindAt)}`);
   if (parent) lines.push(`comment_on: ${parent.uid}`);
   const tags = parsePayload(row.payload).tags ?? [];
   if (tags.length > 0) {

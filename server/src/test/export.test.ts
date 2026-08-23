@@ -52,6 +52,20 @@ describe('markdown export service', () => {
     expect(result.documents[0]!.markdown).toContain('forgets: ');
   });
 
+  it('stamps bottles and reminders in frontmatter (the owner exports their own pending bottles)', async () => {
+    const ctx = makeTestApp();
+    const cookie = await signup(ctx.app, 'finn');
+    const future = Math.floor(Date.now() / 1000) + 3600;
+    const bottle = await createMemo(ctx.app, cookie, { content: 'sealed for later', surfaceAt: future });
+    ctx.db.update(memos).set({ remindAt: future }).where(eq(memos.uid, bottle.uid)).run();
+
+    const result = buildMarkdownExport(ctx.db, ctx.config, userRow(ctx, 'finn'));
+
+    expect(result.documents).toHaveLength(1);
+    expect(result.documents[0]!.markdown).toContain('surfaces: ');
+    expect(result.documents[0]!.markdown).toContain('reminds: ');
+  });
+
   it('exports comments under comments/ pointing at the parent memo', async () => {
     const ctx = makeTestApp();
     const cookie = await signup(ctx.app, 'finn');
