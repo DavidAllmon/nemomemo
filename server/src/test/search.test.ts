@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Db } from '../db/index.js';
+import { toFtsMatchQuery } from '../services/filter-sql.js';
 import { createMemo, jsonRequest, makeTestApp, signup } from './helpers.js';
 
 function ftsIds(db: Db, match: string): number[] {
@@ -9,6 +10,26 @@ function ftsIds(db: Db, match: string): number[] {
     }[]
   ).map((row) => row.rowid);
 }
+
+describe('toFtsMatchQuery', () => {
+  it('quotes a single word with prefix', () => {
+    expect(toFtsMatchQuery('reef')).toBe('"reef"*');
+  });
+
+  it('keeps multi-word input as one phrase with trailing prefix', () => {
+    expect(toFtsMatchQuery('coral reef')).toBe('"coral reef"*');
+  });
+
+  it('strips FTS syntax and punctuation down to tokens', () => {
+    expect(toFtsMatchQuery('reef AND (kelp) OR "x"')).toBe('"reef AND kelp OR x"*');
+  });
+
+  it('returns null when nothing is indexable', () => {
+    expect(toFtsMatchQuery('!!! ???')).toBeNull();
+    expect(toFtsMatchQuery('🐠')).toBeNull();
+    expect(toFtsMatchQuery('')).toBeNull();
+  });
+});
 
 describe('memo_fts stays in sync via triggers', () => {
   it('indexes new memos via the insert trigger', async () => {

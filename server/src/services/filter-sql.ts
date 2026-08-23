@@ -1,5 +1,16 @@
 import { parseFilter, type FilterNode, type TimeValue } from '@nemomemo/shared';
 
+/**
+ * Turn raw user search text into a safe FTS5 phrase-prefix query
+ * (`"coral reef"*`), or null when the input has no indexable tokens
+ * (punctuation/emoji only — the caller falls back to LIKE).
+ */
+export function toFtsMatchQuery(value: string): string | null {
+  const tokens = value.match(/[\p{L}\p{N}_]+/gu);
+  if (!tokens || tokens.length === 0) return null;
+  return `"${tokens.join(' ')}"*`;
+}
+
 export interface CompiledFilter {
   /** SQL fragment referencing the `memo` table; safe to AND with other clauses. */
   sql: string;
