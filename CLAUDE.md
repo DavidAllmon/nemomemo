@@ -95,6 +95,11 @@ Four workspace packages; `shared` is the keystone:
 
 ### Voice
 
+**Any change a self-hoster must set up or configure (env vars, migrations with
+manual steps, new admin flows) MUST update the public docs in `site/content/docs/`
+in the same release** — David's standing rule (2026-08-23). Check `deploy.mdx`
+(config), `admin.mdx` (admin flows), `getting-started.mdx` (first-run copy).
+
 User-facing copy stays in the reef voice — playful, never at the expense of clarity:
 "This memo swam away" (404), "Just keep swimming" (empty states), Dory phrasing for
 ephemerality. Error messages say what happened and what to do next, then the fish.

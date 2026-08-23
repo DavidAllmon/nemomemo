@@ -88,6 +88,33 @@ app — never the marketing/docs site).
 | `NEMOMEMO_DATA` | `./data` | Data directory |
 | `DORY_TTL_SECONDS` | `86400` | How long Dory remembers |
 | `NEMOMEMO_WEB_DIST` | — | Path to the built SPA (source installs) |
+| `NEMOMEMO_SMTP_HOST` | — | SMTP server for outbound email (optional — see below) |
+| `NEMOMEMO_SMTP_PORT` | `587` | SMTP port (`465` switches to implicit TLS) |
+| `NEMOMEMO_SMTP_USER` | — | SMTP login |
+| `NEMOMEMO_SMTP_PASS` | — | SMTP password / API key |
+| `NEMOMEMO_SMTP_FROM` | — | From address, e.g. `"NemoMemo <no-reply@your.domain>"` |
+
+## Email (optional, recommended)
+
+Set all five `NEMOMEMO_SMTP_*` variables and your reef can send email — any SMTP
+provider works (Brevo and Postmark have friendly free tiers, or your own relay):
+
+```bash
+NEMOMEMO_SMTP_HOST=smtp-relay.example.com
+NEMOMEMO_SMTP_PORT=587
+NEMOMEMO_SMTP_USER=you@example.com
+NEMOMEMO_SMTP_PASS=your-smtp-key
+NEMOMEMO_SMTP_FROM="NemoMemo <no-reply@example.com>"
+```
+
+With email on, your reef gets: welcome + verification emails for new members,
+**self-serve password reset** ("Forgot your password?" on the sign-in page),
+member **invites** (add someone by email and they pick their own password), and
+security heads-ups when a password or email changes.
+
+Without it, everything still works: accounts still sign up with an email address
+(it's part of every account since v1.8), but nothing sends — members who forget a
+password ask their reefkeeper, who can set a new one in **Settings → Members**.
 
 ## Exposing it to the internet
 

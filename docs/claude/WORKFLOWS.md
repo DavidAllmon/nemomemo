@@ -64,6 +64,11 @@ per clone). Site/docs-only pushes are exempt.
 
 ## Docs & roadmap hygiene
 
+- **Self-hoster-facing changes update `site/content/docs/` in the same release**
+  (standing rule): new env vars → `deploy.mdx`, admin flows → `admin.mdx`,
+  first-run behavior → `getting-started.mdx`. The changelog "What's new" is not
+  a substitute for the docs page.
+
 - `docs/ROADMAP.md` is the authoritative prioritized to-do list — mark items ✅ when
   they ship, add new findings to the right priority band.
 - Feature work should check ROADMAP.md and `docs/AUDIT-2026-08-22.md` first — the
