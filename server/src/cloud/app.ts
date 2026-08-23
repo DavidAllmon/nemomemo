@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { billingRoutes, handleReefCloudApi, type BillingDeps } from './billing.js';
+import { handleSnapshotApi } from './snapshots.js';
 import { REEF_SLUG_RE, type Registry } from './registry.js';
 import type { ReefFleet } from './tenants.js';
 
@@ -47,6 +48,7 @@ export function makeCloudApp(
   registry: Registry,
   fleet: ReefFleet,
   settings: CloudSettings,
+  dataDir: string,
   billing?: BillingDeps,
 ): Hono {
   const portal = makePortalApp(billing ? billingRoutes(billing) : undefined);
@@ -93,7 +95,13 @@ export function makeCloudApp(
       return reefError(c, 403, 'REEF_SUSPENDED', 'This reef is taking a nap');
     }
     const handle = fleet.get(slug);
-    if (billing && new URL(c.req.url).pathname.startsWith('/api/v1/cloud/')) {
+    const pathname = new URL(c.req.url).pathname;
+    // Snapshots are a backup feature, not a billing one — available even
+    // when Stripe env is absent (local poking, pre-billing rollouts).
+    if (pathname.startsWith('/api/v1/cloud/snapshots')) {
+      return handleSnapshotApi(dataDir, slug, handle, c);
+    }
+    if (billing && pathname.startsWith('/api/v1/cloud/')) {
       return handleReefCloudApi(billing, reef, handle, c);
     }
     return handle.app.fetch(c.req.raw);

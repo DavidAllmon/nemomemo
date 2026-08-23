@@ -56,7 +56,7 @@ export function startCloud(): void {
   } else {
     console.log('[cloud] Stripe env incomplete — billing routes disabled');
   }
-  const app = makeCloudApp(registry, fleet, settings, billing);
+  const app = makeCloudApp(registry, fleet, settings, base.dataDir, billing);
 
   // ToS 90-day promise: delete reefs suspended past the grace window, daily.
   const reefsDir = path.join(base.dataDir, 'reefs');

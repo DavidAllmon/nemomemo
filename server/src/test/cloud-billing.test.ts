@@ -92,7 +92,7 @@ function makeBillingTestContext(): BillingTestContext {
   });
   const stripe = new FakeStripe();
   const sentMail: { to: string; subject: string; text: string }[] = [];
-  const app = makeCloudApp(registry, fleet, { baseDomain: BASE_DOMAIN, appHost: APP_HOST }, {
+  const app = makeCloudApp(registry, fleet, { baseDomain: BASE_DOMAIN, appHost: APP_HOST }, scratch, {
     registry,
     fleet,
     gateway: stripe,

@@ -1,6 +1,10 @@
+import type { Context } from 'hono';
+import { getCookie } from 'hono/cookie';
 import fs from 'node:fs';
 import path from 'node:path';
 import { nowSeconds } from '../lib/time.js';
+import { resolveSessionViewer, SESSION_COOKIE } from '../middleware/auth.js';
+import type { ReefHandle } from './tenants.js';
 
 /** One nightly restic snapshot as recorded by the host's backup script.
  *  `reefs` is the list of reef slugs staged that night; null = predates the
@@ -96,4 +100,62 @@ export function enqueueRestore(
   fs.writeFileSync(`${file}.app-tmp`, JSON.stringify({ slug, ...req, requestedTs: now }));
   fs.renameSync(`${file}.app-tmp`, file);
   return status;
+}
+
+const PENDING_STATES: RestoreState[] = ['queued', 'restoring', 'staged'];
+
+/** Reefkeeper-only snapshot browsing + restore requests. Works with or
+ *  without Stripe billing — backups are not a billing feature. */
+export async function handleSnapshotApi(
+  dataDir: string,
+  slug: string,
+  handle: ReefHandle,
+  c: Context,
+): Promise<Response> {
+  const token = getCookie(c, SESSION_COOKIE);
+  const viewer = token ? resolveSessionViewer(handle.db, token) : null;
+  if (!viewer || viewer.user.role !== 'ADMIN') {
+    return c.json({ error: { code: 'FORBIDDEN', message: 'Reefkeeper access required' } }, 403);
+  }
+
+  const pathname = new URL(c.req.url).pathname;
+
+  if (c.req.method === 'GET' && pathname === '/api/v1/cloud/snapshots') {
+    return c.json({
+      snapshots: snapshotsForReef(dataDir, slug).map(({ id, time }) => ({ id, time })),
+      restore: readRestoreStatus(dataDir, slug),
+    });
+  }
+
+  if (c.req.method === 'POST' && pathname === '/api/v1/cloud/snapshots/restore') {
+    let snapshotId = '';
+    try {
+      snapshotId = String(((await c.req.json()) as { snapshotId?: unknown }).snapshotId ?? '');
+    } catch {
+      // fall through to the not-found reply below
+    }
+    const entry = snapshotsForReef(dataDir, slug).find((s) => s.id === snapshotId);
+    if (!entry) {
+      return c.json(
+        {
+          error: {
+            code: 'NOT_FOUND',
+            message: 'No snapshot of this reef on that date — it may predate the reef. Just keep swimming',
+          },
+        },
+        404,
+      );
+    }
+    const current = readRestoreStatus(dataDir, slug);
+    if (current && PENDING_STATES.includes(current.state)) {
+      return c.json(
+        { error: { code: 'FAILED_PRECONDITION', message: 'A restore is already in progress — one wave at a time 🌊' } },
+        409,
+      );
+    }
+    const restore = enqueueRestore(dataDir, slug, { snapshotId, requestedBy: viewer.user.username });
+    return c.json({ restore }, 202);
+  }
+
+  return c.json({ error: { code: 'NOT_FOUND', message: 'No such endpoint' } }, 404);
 }

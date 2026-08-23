@@ -23,7 +23,7 @@ function makeCloudTestContext(maxOpen = 64): CloudTestContext {
   const base = loadConfig({ dataDir: scratch, webDistDir: null });
   const registry = new Registry(path.join(scratch, 'registry.db'));
   const fleet = new ReefFleet(base, path.join(scratch, 'reefs'), maxOpen);
-  const app = makeCloudApp(registry, fleet, { baseDomain: BASE_DOMAIN, appHost: APP_HOST });
+  const app = makeCloudApp(registry, fleet, { baseDomain: BASE_DOMAIN, appHost: APP_HOST }, scratch);
   return { app, registry, fleet, scratch };
 }
 
@@ -296,6 +296,40 @@ describe('cloud cross-tenant isolation', () => {
 
     const api = await reefRequest(ctx.app, 'GET', APP_HOST, '/api/v1/instance/profile');
     expect(api.status).toBe(404);
+  });
+
+  it("snapshot browsing is reef-scoped: a keeper never sees another reef's snapshots or restores to them", async () => {
+    fs.writeFileSync(
+      path.join(ctx.scratch, 'snapshots.json'),
+      JSON.stringify([
+        { id: 'aaaa1111', time: '2026-08-22T07:17:01Z', reefs: ['coral', 'shell'] },
+        { id: 'bbbb2222', time: '2026-08-21T07:17:01Z', reefs: ['shell'] },
+      ]),
+    );
+    const keeper = await reefSignup(ctx.app, `coral.${BASE_DOMAIN}`, 'keeper');
+    const listed = await reefRequest(ctx.app, 'GET', `coral.${BASE_DOMAIN}`, '/api/v1/cloud/snapshots', undefined, keeper);
+    expect(listed.status).toBe(200);
+    const body = (await listed.json()) as { snapshots: { id: string }[] };
+    expect(body.snapshots.map((s) => s.id)).toEqual(['aaaa1111']); // never bbbb2222
+
+    // Coral's keeper cannot restore to a snapshot that only holds shell.
+    const cross = await reefRequest(
+      ctx.app,
+      'POST',
+      `coral.${BASE_DOMAIN}`,
+      '/api/v1/cloud/snapshots/restore',
+      { snapshotId: 'bbbb2222' },
+      keeper,
+    );
+    expect(cross.status).toBe(404);
+  });
+
+  it('the snapshot routes do not exist on a single-tenant reef', async () => {
+    const { makeTestApp, signup, jsonRequest } = await import('./helpers.js');
+    const single = makeTestApp();
+    const cookie = await signup(single.app, 'reefkeeper');
+    const response = await jsonRequest(single.app, 'GET', '/api/v1/cloud/snapshots', undefined, cookie);
+    expect(response.status).toBe(404);
   });
 
   it('the registry refuses invalid and reserved slugs', () => {
