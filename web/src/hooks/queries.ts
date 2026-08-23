@@ -404,13 +404,18 @@ export function useReadAllInbox() {
 
 // ---------- Attachments ----------
 
-export function useAttachments(params: { type?: string; unlinked?: boolean }) {
+export function useAttachments(params: { type?: string; unlinked?: boolean; tag?: string }) {
   return useQuery({
-    queryKey: keys.attachments({ type: params.type, unlinked: params.unlinked ? 'true' : undefined }),
+    queryKey: keys.attachments({
+      type: params.type,
+      unlinked: params.unlinked ? 'true' : undefined,
+      tag: params.tag,
+    }),
     queryFn: () => {
       const search = new URLSearchParams();
       if (params.type) search.set('type', params.type);
       if (params.unlinked) search.set('unlinked', 'true');
+      if (params.tag) search.set('tag', params.tag);
       return api<{ attachments: AttachmentDto[] }>('GET', `/api/v1/attachments?${search}`);
     },
   });

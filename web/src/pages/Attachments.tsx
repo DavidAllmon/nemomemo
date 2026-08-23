@@ -9,6 +9,7 @@ import {
   useAttachments,
   useDeleteAttachment,
   useDeleteUnusedAttachments,
+  useTags,
 } from '@/hooks/queries.js';
 import { fileUrl } from '@/lib/api.js';
 import { cn, formatBytes, relativeTime } from '@/lib/utils.js';
@@ -22,12 +23,15 @@ const TABS = [
 
 export function AttachmentsPage() {
   const [tab, setTab] = useState('');
-  const { data, isLoading } = useAttachments({ type: tab || undefined });
+  const [tag, setTag] = useState('');
+  const { data, isLoading } = useAttachments({ type: tab || undefined, tag: tag || undefined });
+  const { data: tagCounts } = useTags();
   const deleteAttachment = useDeleteAttachment();
   const deleteUnused = useDeleteUnusedAttachments();
 
   const attachments = data?.attachments ?? [];
   const unusedCount = attachments.filter((a) => a.memoUid == null).length;
+  const tagOptions = Object.keys(tagCounts ?? {}).sort();
 
   return (
     <div className="flex flex-col gap-4">
@@ -53,27 +57,51 @@ export function AttachmentsPage() {
         ) : null}
       </header>
 
-      <Tabs.Root value={tab} onValueChange={setTab}>
-        <Tabs.List className="flex gap-1 rounded-xl bg-muted p-0.5" aria-label="Attachment types">
-          {TABS.map((entry) => (
-            <Tabs.Trigger
-              key={entry.value}
-              value={entry.value}
-              className={cn(
-                'flex-1 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground',
-                'data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm',
-              )}
-            >
-              {entry.label}
-            </Tabs.Trigger>
-          ))}
-        </Tabs.List>
-      </Tabs.Root>
+      <div className="flex items-center gap-2">
+        <Tabs.Root value={tab} onValueChange={setTab} className="flex-1">
+          <Tabs.List className="flex gap-1 rounded-xl bg-muted p-0.5" aria-label="Attachment types">
+            {TABS.map((entry) => (
+              <Tabs.Trigger
+                key={entry.value}
+                value={entry.value}
+                className={cn(
+                  'flex-1 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground',
+                  'data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm',
+                )}
+              >
+                {entry.label}
+              </Tabs.Trigger>
+            ))}
+          </Tabs.List>
+        </Tabs.Root>
+        {tagOptions.length > 0 ? (
+          <select
+            aria-label="Filter by tag"
+            value={tag}
+            onChange={(event) => setTag(event.target.value)}
+            className="rounded-xl border border-border bg-card px-2 py-1 text-xs font-semibold text-muted-foreground"
+          >
+            <option value="">All tags</option>
+            {tagOptions.map((option) => (
+              <option key={option} value={option}>
+                #{option}
+              </option>
+            ))}
+          </select>
+        ) : null}
+      </div>
 
       {isLoading ? (
         <LoadingState />
       ) : attachments.length === 0 ? (
-        <EmptyState title="No attachments yet" hint="Drop a file into the memo editor to start." />
+        tag ? (
+          <EmptyState
+            title={`Nothing under #${tag}`}
+            hint="No attachments swim with that tag — try another, or clear the filter."
+          />
+        ) : (
+          <EmptyState title="No attachments yet" hint="Drop a file into the memo editor to start." />
+        )
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {attachments.map((attachment) => (

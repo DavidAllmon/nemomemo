@@ -76,16 +76,48 @@ export function attachmentRoutes(db: Db, config: Config): Hono<AppEnv> {
     const viewer = requireViewer(c);
     const kind = c.req.query('type');
     const unlinkedOnly = c.req.query('unlinked') === 'true';
-    let rows = db
-      .select()
-      .from(attachments)
-      .where(
-        unlinkedOnly
-          ? and(eq(attachments.creatorId, viewer.id), isNull(attachments.memoId))
-          : eq(attachments.creatorId, viewer.id),
-      )
-      .orderBy(desc(attachments.createdTs), desc(attachments.id))
-      .all();
+    const tag = c.req.query('tag');
+    let rows: (typeof attachments.$inferSelect)[];
+    if (tag) {
+      // Gallery filter: attachments whose memo carries the tag (implied
+      // ancestors are in the payload, so filtering by a parent tag works).
+      // Both time guards apply — a pending bottle's photo must not surface
+      // through the gallery before the memo itself does.
+      const now = Math.floor(Date.now() / 1000);
+      const raw = db.$client
+        .prepare(
+          `SELECT attachment.* FROM attachment
+            JOIN memo ON memo.id = attachment.memo_id
+            WHERE attachment.creator_id = ?
+              AND (memo.forget_at IS NULL OR memo.forget_at > ?)
+              AND (memo.surface_at IS NULL OR memo.surface_at <= ?)
+              AND EXISTS (SELECT 1 FROM json_each(memo.payload, '$.tags') WHERE json_each.value = ?)
+            ORDER BY attachment.created_ts DESC, attachment.id DESC`,
+        )
+        .all(viewer.id, now, now, tag) as Record<string, unknown>[];
+      rows = raw.map((row) => ({
+        id: row.id as number,
+        uid: row.uid as string,
+        creatorId: row.creator_id as number,
+        createdTs: row.created_ts as number,
+        filename: row.filename as string,
+        type: row.type as string,
+        size: row.size as number,
+        memoId: (row.memo_id as number | null) ?? null,
+        storagePath: row.storage_path as string,
+      }));
+    } else {
+      rows = db
+        .select()
+        .from(attachments)
+        .where(
+          unlinkedOnly
+            ? and(eq(attachments.creatorId, viewer.id), isNull(attachments.memoId))
+            : eq(attachments.creatorId, viewer.id),
+        )
+        .orderBy(desc(attachments.createdTs), desc(attachments.id))
+        .all();
+    }
     if (kind === 'media') rows = rows.filter((r) => r.type.startsWith('image/') || r.type.startsWith('video/'));
     if (kind === 'audio') rows = rows.filter((r) => r.type.startsWith('audio/'));
     if (kind === 'document')
