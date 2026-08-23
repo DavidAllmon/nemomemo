@@ -1,4 +1,5 @@
 import {
+  DORY_WINDOW_SECONDS,
   FilterParseError,
   SHARE_EXPIRY_PRESETS,
   createCommentRequestSchema,
@@ -33,7 +34,7 @@ import { checkMemoRead } from '../services/acl.js';
 import { buildMarkdownExport, markdownFilename, renderMemoMarkdown } from '../services/export-service.js';
 import { notifyComment, notifyMentions, notifyThreadParticipants } from '../services/inbox-service.js';
 import {
-  assertDoryRules,
+  assertTimeRules,
   buildMemoDtos,
   buildPayload,
   getMemoByUid,
@@ -41,6 +42,7 @@ import {
   linkAttachments,
   listMemoRows,
   newUid,
+  rawToMemoRow,
   setReferenceRelations,
 } from '../services/memo-service.js';
 import { getInstanceGeneral, getInstanceMemoSetting } from '../services/settings.js';
@@ -140,6 +142,31 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
     });
   });
 
+  // ---------- Dory's Memory ----------
+  // Everything currently fading (soonest first) + bottles still at sea.
+  // Static path: MUST stay registered before '/:uid'.
+  app.get('/dory', (c) => {
+    const viewer = requireViewer(c);
+    const now = nowSeconds();
+    const fading = db.$client
+      .prepare(
+        `SELECT * FROM memo WHERE creator_id = ? AND row_status = 'NORMAL'
+         AND forget_at IS NOT NULL AND forget_at > ? ORDER BY forget_at ASC LIMIT 200`,
+      )
+      .all(viewer.id, now) as Record<string, unknown>[];
+    const bottles = db.$client
+      .prepare(
+        `SELECT * FROM memo WHERE creator_id = ? AND row_status = 'NORMAL'
+         AND surface_at IS NOT NULL AND surface_at > ? ORDER BY surface_at ASC LIMIT 200`,
+      )
+      .all(viewer.id, now) as Record<string, unknown>[];
+    return c.json({
+      fading: buildMemoDtos(db, fading.map(rawToMemoRow), viewer),
+      bottles: buildMemoDtos(db, bottles.map(rawToMemoRow), viewer),
+      forgottenCount: viewer.doryForgottenCount,
+    });
+  });
+
   // ---------- Create ----------
   app.post('/', zValidator('json', createMemoRequestSchema), (c) => {
     const viewer = requireViewer(c);
@@ -150,7 +177,14 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
     }
     const { payload, mentions } = buildPayload(body.content);
     const now = nowSeconds();
-    const forgetAt = body.dory ? now + config.doryTtlSeconds : null;
+    const forgetAt = body.dory
+      ? now + (body.doryWindow ? DORY_WINDOW_SECONDS[body.doryWindow] : config.doryTtlSeconds)
+      : null;
+    const surfaceAt = body.surfaceAt ?? null;
+    if (surfaceAt != null && surfaceAt <= now) {
+      throw apiError('INVALID_ARGUMENT', "A bottle needs a future date — pick a day that hasn't happened yet.");
+    }
+    assertTimeRules(false, forgetAt, surfaceAt);
 
     const created = db
       .insert(memos)
@@ -161,6 +195,7 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
         visibility: body.visibility ?? 'PRIVATE',
         payload,
         forgetAt,
+        surfaceAt,
       })
       .returning()
       .get();
@@ -202,6 +237,10 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
       body.content != null ||
       body.visibility != null ||
       body.dory != null ||
+      body.doryWindow != null ||
+      body.surfaceAt !== undefined ||
+      body.remindAt !== undefined ||
+      body.remindEvery !== undefined ||
       body.pinned != null ||
       body.attachmentUids != null ||
       body.relatedMemoUids != null;
@@ -237,13 +276,39 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
       if (getParentMemo(db, memo.id)) {
         throw apiError('INVALID_ARGUMENT', "Comments can't be Dory memos — they live and die with their parent");
       }
-      patch.forgetAt = body.dory ? now + config.doryTtlSeconds : null;
+      patch.forgetAt = body.dory
+        ? now + (body.doryWindow ? DORY_WINDOW_SECONDS[body.doryWindow] : config.doryTtlSeconds)
+        : null;
+    }
+    if (body.surfaceAt !== undefined) {
+      if (getParentMemo(db, memo.id)) {
+        throw apiError('INVALID_ARGUMENT', "Comments can't be bottles — they live on their parent's shore");
+      }
+      if (body.surfaceAt != null && body.surfaceAt <= now) {
+        throw apiError('INVALID_ARGUMENT', "A bottle needs a future date — pick a day that hasn't happened yet.");
+      }
+      patch.surfaceAt = body.surfaceAt;
+    }
+    if (body.remindAt !== undefined) {
+      if (body.remindAt != null && body.remindAt <= now) {
+        throw apiError('INVALID_ARGUMENT', 'That moment already swam by — pick a future time for the nudge.');
+      }
+      patch.remindAt = body.remindAt;
+      if (body.remindAt == null) patch.remindEvery = null;
+    }
+    if (body.remindEvery !== undefined) {
+      const nextRemindAt = body.remindAt !== undefined ? body.remindAt : memo.remindAt;
+      if (body.remindEvery != null && nextRemindAt == null) {
+        throw apiError('INVALID_ARGUMENT', 'A repeat needs a first nudge — set a reminder time too.');
+      }
+      patch.remindEvery = body.remindEvery;
     }
     if (body.pinned != null) patch.pinned = body.pinned;
 
     const nextPinned = patch.pinned ?? memo.pinned;
     const nextForgetAt = 'forgetAt' in patch ? (patch.forgetAt ?? null) : memo.forgetAt;
-    assertDoryRules(nextPinned, nextForgetAt);
+    const nextSurfaceAt = 'surfaceAt' in patch ? (patch.surfaceAt ?? null) : memo.surfaceAt;
+    assertTimeRules(nextPinned, nextForgetAt, nextSurfaceAt);
 
     const updated =
       Object.keys(patch).length > 0

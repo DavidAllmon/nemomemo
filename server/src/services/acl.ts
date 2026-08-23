@@ -36,6 +36,15 @@ export function checkMemoRead(
     return 'NOT_FOUND';
   }
 
+  // A bottle at sea (future surface_at) is the creator's secret until its day
+  // arrives — invisible to everyone else, share tokens included.
+  if (
+    (memo.surfaceAt != null && memo.surfaceAt > now) ||
+    (effective.surfaceAt != null && effective.surfaceAt > now)
+  ) {
+    return viewer?.id === memo.creatorId ? null : 'NOT_FOUND';
+  }
+
   // A share token grants access to exactly the memo it names (and, for
   // attachments, that memo's files) regardless of visibility.
   if (ctx.sharedMemoId != null && (memo.id === ctx.sharedMemoId || effective.id === ctx.sharedMemoId)) {
@@ -66,6 +75,7 @@ export function checkMemoRead(
 export function canGlimpseMemo(memo: MemoRow, viewer: UserRow | null, nowEpoch?: number): boolean {
   const now = nowEpoch ?? Math.floor(Date.now() / 1000);
   if (memo.forgetAt != null && memo.forgetAt <= now) return false;
+  if (memo.surfaceAt != null && memo.surfaceAt > now) return viewer?.id === memo.creatorId;
   if (memo.rowStatus === 'ARCHIVED') return viewer?.id === memo.creatorId;
   switch (memo.visibility) {
     case 'PRIVATE':

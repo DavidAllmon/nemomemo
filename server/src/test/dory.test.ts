@@ -71,4 +71,38 @@ describe('dory memos', () => {
     // The comment memo went with the parent.
     expect(db.select().from(memos).all()).toHaveLength(0);
   });
+
+  it('honors a per-memo forget window', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'dory');
+    const memo = (await createMemo(app, cookie, {
+      content: 'week-long thought',
+      dory: true,
+      doryWindow: '7d',
+    })) as unknown as MemoDto;
+    expect(memo.forgetAt).toBeGreaterThan(Math.floor(Date.now() / 1000) + 6 * 24 * 3600);
+    const shortened = await jsonRequest(
+      app,
+      'PATCH',
+      `/api/v1/memos/${memo.uid}`,
+      { dory: true, doryWindow: '1h' },
+      cookie,
+    );
+    const dto = ((await shortened.json()) as { memo: MemoDto }).memo;
+    expect(dto.forgetAt).toBeLessThan(Math.floor(Date.now() / 1000) + 2 * 3600);
+  });
+
+  it("Dory's Memory lists fading memos and bottles at sea", async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'dory');
+    await createMemo(app, cookie, { content: 'fading soon', dory: true, doryWindow: '1h' });
+    await createMemo(app, cookie, { content: 'fading later', dory: true, doryWindow: '7d' });
+    await createMemo(app, cookie, { content: 'at sea', surfaceAt: Math.floor(Date.now() / 1000) + 3600 });
+    const page = (await (
+      await jsonRequest(app, 'GET', '/api/v1/memos/dory', undefined, cookie)
+    ).json()) as { fading: MemoDto[]; bottles: MemoDto[]; forgottenCount: number };
+    expect(page.fading.map((m) => m.content)).toEqual(['fading soon', 'fading later']);
+    expect(page.bottles).toHaveLength(1);
+    expect(page.forgottenCount).toBe(0);
+  });
 });

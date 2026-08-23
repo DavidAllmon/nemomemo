@@ -5,7 +5,8 @@ import { memoShares, memos } from '../db/schema.js';
 import { apiError } from '../lib/errors.js';
 import { nowSeconds } from '../lib/time.js';
 import { requireViewer, type AppEnv } from '../middleware/auth.js';
-import { buildMemoDtos } from '../services/memo-service.js';
+import { checkMemoRead } from '../services/acl.js';
+import { buildMemoDtos, getParentMemo } from '../services/memo-service.js';
 
 export function shareRoutes(db: Db): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
@@ -22,7 +23,17 @@ export function shareRoutes(db: Db): Hono<AppEnv> {
       throw apiError('NOT_FOUND', 'This link is invalid or has expired');
     }
     const memo = db.select().from(memos).where(eq(memos.id, share.memoId)).get();
-    if (!memo || (memo.forgetAt != null && memo.forgetAt <= now)) {
+    // Through the ACL chokepoint (not inline checks): the token overrides
+    // visibility, but Dory expiry and bottles-at-sea still apply.
+    const denial =
+      memo == null
+        ? 'NOT_FOUND'
+        : checkMemoRead(memo, getParentMemo(db, memo.id), c.get('viewer'), {
+            allowAnonymous: true,
+            sharedMemoId: memo.id,
+            nowEpoch: now,
+          });
+    if (!memo || denial != null) {
       throw apiError('NOT_FOUND', 'This memo swam away');
     }
     const dto = buildMemoDtos(db, [memo], c.get('viewer'))[0]!;

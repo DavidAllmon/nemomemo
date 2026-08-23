@@ -250,6 +250,11 @@ export function listMemoRows(db: Db, opts: ListMemosOptions): { rows: MemoRow[];
   where.push('(memo.forget_at IS NULL OR memo.forget_at > ?)');
   params.push(now);
 
+  // Bottles at sea: a memo with a future surface_at is hidden from every feed
+  // (even the owner's — that's the point) until its day arrives.
+  where.push('(memo.surface_at IS NULL OR memo.surface_at <= ?)');
+  params.push(now);
+
   if (!opts.includeComments) {
     where.push(
       `NOT EXISTS (SELECT 1 FROM memo_relation r WHERE r.memo_id = memo.id AND r.type = 'COMMENT')`,
@@ -323,7 +328,7 @@ export function listMemoRows(db: Db, opts: ListMemosOptions): { rows: MemoRow[];
   return { rows: rows.slice(0, opts.limit), hasMore };
 }
 
-function rawToMemoRow(raw: Record<string, unknown>): MemoRow {
+export function rawToMemoRow(raw: Record<string, unknown>): MemoRow {
   return {
     id: raw.id as number,
     uid: raw.uid as string,
@@ -388,11 +393,23 @@ export function setReferenceRelations(db: Db, memoId: number, relatedUids: strin
   }
 }
 
-export function assertDoryRules(pinned: boolean, forgetAt: number | null): void {
+export function assertTimeRules(pinned: boolean, forgetAt: number | null, surfaceAt: number | null): void {
   if (pinned && forgetAt != null) {
     throw apiError(
       'INVALID_ARGUMENT',
       "A memo can't be pinned and a Dory memo at once — Dory would forget something important!",
+    );
+  }
+  if (pinned && surfaceAt != null) {
+    throw apiError(
+      'INVALID_ARGUMENT',
+      "A memo can't be pinned while it's at sea — surface it first, then pin it.",
+    );
+  }
+  if (forgetAt != null && surfaceAt != null && forgetAt <= surfaceAt) {
+    throw apiError(
+      'INVALID_ARGUMENT',
+      'Dory would forget this bottle before it washes ashore — give it a longer forget window or an earlier surface date.',
     );
   }
 }
