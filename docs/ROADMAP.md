@@ -33,8 +33,8 @@ Priority: **P0** do before anything else · **P1** next milestone · **P2** feat
 | ~~→ **Email verification**~~ ✅ v1.8.0 (required-at-signup identity per spec; verification when SMTP on) | Anchor accounts for recovery. | — |
 | ~~**Suspended-reef self-rescue**~~ ✅ v1.10.0 ("Wake it up" → checkout on the existing customer; webhook revives the same reef) | The nap page dead-ended. | — |
 | ~~**90-day deletion job**~~ ✅ v1.10.0 (daily registry sweep; registry migration 0002 status_changed_ts) | ToS promise, now automatic. | — |
-| ~~**Self-serve reef export**~~ ✅ v1.1.0 (zip) + restore-by-upload for self-host in v1.2.0; Markdown-format export still open | Settings → Backups. | M |
-| **Cloud snapshot browser + one-click rollback** | David's vision: the Backups tab lists every nightly snapshot; pick a date, restore the reef to it. Needs a host-side backup agent the app can query (restic creds stay off the containers) + per-reef restore via fleet evict/replace. Support-manual rollback in the meantime. | L |
+| ~~**Self-serve reef export**~~ ✅ v1.1.0 (zip) + restore-by-upload for self-host in v1.2.0 + ✅ v1.11.0 Markdown export (per-user zip of .md files, Settings → Account) | Settings → Backups / Account. | — |
+| ~~**Cloud snapshot browser + one-click rollback**~~ ✅ v1.12.0 (Settings → Backups lists nightly snapshots; file-queue handshake: host cron does restic — creds stay off containers — in-app sweeper does evict/swap/reopen; drill verified 2026-08-23) | David's vision, delivered. | — |
 | ~~**"What's New" banner**~~ ✅ v1.10.0 (lastSeenVersion in localStorage → dismissible banner → /changelog) | Version-change visibility. | — |
 | ~~**Password minimum → 8** (audit F8) + show-password toggle + caps-lock hint~~ ✅ v1.3.0 + v1.10.0 | Auth-page polish batch. | — |
 

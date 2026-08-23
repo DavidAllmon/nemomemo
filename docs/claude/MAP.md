@@ -33,7 +33,7 @@ storage caps, member caps, and restore.
 | File | Endpoints |
 | --- | --- |
 | `auth.ts` | POST signup (first user = ADMIN; bcrypt-before-checks race guard), signin, signout; GET me |
-| `memos.ts` | GET/POST `/memos` (list: scope home/explore/profile, filter DSL, pinned-first, page tokens; create: payload extraction, dory TTL, linking, mention notifications); GET/PATCH/DELETE `/memos/:uid`; GET/POST comments; POST/DELETE reactions; POST/GET shares |
+| `memos.ts` | GET/POST `/memos` (list: scope home/explore/profile, filter DSL, pinned-first, page tokens; create: payload extraction, dory TTL, linking, mention notifications); GET `/memos/export/markdown` (per-user zip: .md + frontmatter + attachments); GET/PATCH/DELETE `/memos/:uid`; GET/POST comments; POST/DELETE reactions; POST/GET shares |
 | `shares.ts` | GET `/shares/:token` (public, relations/comments stripped); DELETE (revoke) |
 | `users.ts` | `/-/mentionable`, `/-/tags` (10k cap), `/-/tags/rename`, `/-/settings` GET/PATCH, `/-/account` PATCH — **all before** `/:username` (route-order trap); GET `/users` + POST + `/:username/admin` PATCH/DELETE (admin); GET `/:username`, `/:username/stats` |
 | `instance.ts` | GET profile (version/publicMode/needsSetup), settings (admin), settings/memo (public reaction set); GET backup (admin zip stream: sqlite snapshot + uploads); POST restore (admin, self-host only); PATCH settings |
@@ -50,6 +50,7 @@ storage caps, member caps, and restore.
 | `settings.ts` | Zod-validated JSON settings (instance GENERAL/MEMO, user GENERAL/MEMO_VIEWS) with safe fallbacks |
 | `inbox-service.ts` | `notifyMentions` (skips self/unknown/archived/PRIVATE), `notifyComment` (owner), `notifyThreadParticipants` (earlier commenters → MEMO_THREAD, mention-deduped) |
 | `dory-sweeper.ts` | `sweepDoryMemos` + `startDorySweeper` (60s): deletes expired memos + orphaned comments + attachment files, transactional |
+| `export-service.ts` | `buildMarkdownExport`: the viewer's own memos as `memos/YYYY-MM-DD-<uid>.md` (comments under `comments/` with `comment_on:`), YAML frontmatter (created/updated/visibility/pinned/archived/forgets/tags/attachments), attachment files + inline `/file/attachments/` links rewritten relative; every row through `checkMemoRead` |
 
 ### Middleware (`src/middleware/`)
 
@@ -71,8 +72,11 @@ foreign_keys ON) — details in DATA-MODEL.md.
 
 | File | Role |
 | --- | --- |
-| `index.ts` | `startCloud()`: Registry + ReefFleet (fair-use defaults 25 members / 5 GB), Stripe wiring iff all four `STRIPE_*` env vars set, 60s cross-reef dory sweep |
-| `app.ts` | Host-header front door: `<slug>.<baseDomain>` → reef app (404 unknown/canceled, 403 suspended), intercepts `/api/v1/cloud/*`, `makePortalApp` for apex/app host |
+| `index.ts` | `startCloud()`: Registry + ReefFleet (fair-use defaults 25 members / 5 GB), Stripe wiring iff all four `STRIPE_*` env vars set, 60s cross-reef dory sweep, daily 90-day reef sweep, 10s restore sweep |
+| `app.ts` | Host-header front door: `<slug>.<baseDomain>` → reef app (404 unknown/canceled, 403 suspended), intercepts `/api/v1/cloud/snapshots*` always and other `/api/v1/cloud/*` iff billing, `makePortalApp` for apex/app host. Takes `dataDir` (4th param) |
+| `snapshots.ts` | Snapshot browser data + API: `snapshots.json` manifest reader, `restore/{queue,staged,status,tmp}` file contract with the host worker (`deploy/restore-cloud.sh`), `handleSnapshotApi` (reefkeeper-only GET list / POST restore, 409 while pending) |
+| `restore-sweeper.ts` | `sweepStagedRestores` (sync!): staged dir → evict → one `.pre-restore-<ts>` safety copy → rename in → status done |
+| `reef-sweeper.ts` | `sweepExpiredReefs`: deletes reefs suspended past the 90-day ToS grace (registry `status_changed_ts`) |
 | `tenants.ts` | `ReefFleet`: lazy per-reef `{app, db, config}` handles, migrations on first open, LRU (default 64), closes SQLite on evict |
 | `registry.ts` | Control-plane `registry.db` (own migrations): `reef` (status: provisioned/active/past_due/suspended/canceled, Stripe ids), `claim_token`; `REEF_SLUG_RE`, `RESERVED_SLUGS` |
 | `billing.ts` | Checkout redirect, Stripe webhook (`app: 'nemomemo-cloud'` metadata guard — shared Stripe account!), claim flow (rename reef dir, burn token, first admin via reef's own signup), reef-host billing API, portal pages |
@@ -80,7 +84,9 @@ foreign_keys ON) — details in DATA-MODEL.md.
 
 Cloud endpoints — portal host: GET `/` (pricing), GET `/cloud/checkout?interval=`,
 POST `/cloud/webhook/stripe`, GET `/claim`, POST `/cloud/claim`. Reef hosts
-(admin-only): GET `/api/v1/cloud/billing`, POST `/api/v1/cloud/billing/portal`.
+(admin-only): GET `/api/v1/cloud/billing`, POST `/api/v1/cloud/billing/portal`,
+GET `/api/v1/cloud/snapshots`, POST `/api/v1/cloud/snapshots/restore` (snapshots
+work without Stripe env — backups aren't a billing feature).
 
 ### Tests (`src/test/` — fresh in-memory SQLite per file via `makeTestApp()`, `app.request()`, no ports/mocks)
 
@@ -88,7 +94,9 @@ POST `/cloud/webhook/stripe`, GET `/claim`, POST `/cloud/claim`. Reef hosts
 `security` (relation stubs, mention privacy, dory closing every read path, JSON 404s),
 `dory`, `shares`, `backup` (zip round-trip; cloud reefs refuse restore),
 `cloud-isolation` (**the ship-dark gate — extend for any new cloud surface**),
-`cloud-billing` (checkout/claim/webhooks/fair-use/signatures).
+`cloud-billing` (checkout/claim/webhooks/fair-use/signatures), `export` (markdown
+zip: frontmatter/dory/comments/attachments), `cloud-snapshots` (manifest + API),
+`cloud-restore-sweeper` (swap/safety-copy semantics).
 
 ## web/ — React 19 + Vite + Tailwind v4 + TanStack Query v5
 
