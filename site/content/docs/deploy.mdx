@@ -135,6 +135,17 @@ zip containing a consistent database snapshot (safe even while people are writin
 every uploaded file. Do that on a schedule you'll actually keep, store the zip somewhere
 that isn't the server, and you're covered. Everything below is for automating it.
 
+### The readable way: Markdown export
+
+Any member (not just admins) can download their own memos as plain files: open
+**Settings → Account → Export as Markdown**. The zip holds one `.md` file per memo
+(named by date and id, comments in their own folder), each with YAML frontmatter —
+created/updated times, visibility, tags, pinned/archived flags — plus an
+`attachments/` folder with every file, and inline attachment links rewritten to
+relative paths so the export reads correctly in any Markdown app. It's a copy for
+humans and other tools, not a restore format — the backup zip above is the one the
+**Restore** button accepts.
+
 ### A safe snapshot (Docker)
 
 Don't copy `nemomemo.db` while the app is running — a plain `cp` can catch it

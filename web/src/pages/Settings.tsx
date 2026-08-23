@@ -77,6 +77,7 @@ function AccountSection() {
   };
 
   return (
+    <div className="flex flex-col gap-4">
     <SectionCard title="My account">
       <div className="flex flex-col gap-2">
         <label className="text-xs font-semibold text-muted-foreground">Avatar</label>
@@ -138,6 +139,19 @@ function AccountSection() {
         </div>
       </div>
     </SectionCard>
+    <SectionCard title="Export your memos">
+      <p className="text-sm text-muted-foreground">
+        Every memo you&apos;ve written, as plain Markdown files with your attachments
+        alongside — readable anywhere, in any app, forever. Your words are never
+        locked in this tank. 🐚
+      </p>
+      <div className="mt-3">
+        <Button size="sm" onClick={() => { window.location.href = '/api/v1/memos/export/markdown'; }}>
+          Export as Markdown
+        </Button>
+      </div>
+    </SectionCard>
+    </div>
   );
 }
 
@@ -489,7 +503,8 @@ function BackupsSection({ isCloud }: { isCloud: boolean }) {
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
           The export is yours to keep — one zip with everything, ready to archive or move
-          to a self-hosted reef.
+          to a self-hosted reef. Prefer plain files? Every member can export their own
+          memos as Markdown from the Account tab.
         </p>
       </SectionCard>
     );
@@ -518,7 +533,8 @@ function BackupsSection({ isCloud }: { isCloud: boolean }) {
           >
             backup guide
           </a>
-          .
+          . Prefer plain files? Every member can export their own memos as Markdown
+          from the Account tab.
         </p>
       </SectionCard>
 

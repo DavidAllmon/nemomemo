@@ -10,9 +10,12 @@ import {
   type ShareDto,
 } from '@nemomemo/shared';
 import { zValidator } from '@hono/zod-validator';
+import type { Archiver, ArchiverOptions } from 'archiver';
 import { and, asc, eq, gt, inArray, isNull, or } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import { customAlphabet } from 'nanoid';
+import { createRequire } from 'node:module';
+import { Readable } from 'node:stream';
 import type { Config } from '../config.js';
 import type { Db } from '../db/index.js';
 import {
@@ -27,6 +30,7 @@ import { nextPageToken, parsePageParams } from '../lib/pagination.js';
 import { nowSeconds } from '../lib/time.js';
 import { requireViewer, type AppEnv } from '../middleware/auth.js';
 import { checkMemoRead } from '../services/acl.js';
+import { buildMarkdownExport } from '../services/export-service.js';
 import { notifyComment, notifyMentions, notifyThreadParticipants } from '../services/inbox-service.js';
 import {
   assertDoryRules,
@@ -40,6 +44,11 @@ import {
   setReferenceRelations,
 } from '../services/memo-service.js';
 import { getInstanceGeneral, getInstanceMemoSetting } from '../services/settings.js';
+
+// archiver is CJS; createRequire sidesteps default-import interop differences
+// between node (tsx/tsup) and vitest's vite-node transform.
+const require_ = createRequire(import.meta.url);
+const archiver = require_('archiver') as (format: 'zip', options?: ArchiverOptions) => Archiver;
 
 const newShareToken = customAlphabet(
   'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
@@ -108,6 +117,27 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
       }
       throw error;
     }
+  });
+
+  // ---------- Export ----------
+  // A human-readable copy of the viewer's own memos: markdown + attachments.
+  app.get('/export/markdown', (c) => {
+    const viewer = requireViewer(c);
+    const { documents, files } = buildMarkdownExport(db, config, viewer);
+
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    for (const doc of documents) archive.append(doc.markdown, { name: doc.path });
+    for (const file of files) archive.file(file.absolutePath, { name: file.path });
+    void archive.finalize();
+
+    const date = new Date().toISOString().slice(0, 10);
+    return new Response(Readable.toWeb(archive) as ReadableStream, {
+      headers: {
+        'content-type': 'application/zip',
+        'content-disposition': `attachment; filename="nemomemo-memos-${viewer.username}-${date}.zip"`,
+        'cache-control': 'no-store',
+      },
+    });
   });
 
   // ---------- Create ----------
