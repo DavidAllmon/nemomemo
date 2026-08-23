@@ -74,10 +74,14 @@ Four workspace packages; `shared` is the keystone:
 - **Comments are memos** with a `COMMENT` row in `memo_relation`; they inherit the
   parent's visibility at read time, die with the parent, and can't be Dory memos.
   Feed queries exclude them with a `NOT EXISTS` on that relation.
-- **Dory memos**: `memo.forget_at` epoch + a 60s `setInterval` sweeper
-  (`services/dory-sweeper.ts`). Every read path must carry the
-  `forget_at IS NULL OR forget_at > now` guard — grep for it when adding queries.
-  Rules: pinned ⟂ dory (mutually exclusive), archiving clears `forget_at` ("rescue").
+- **The time layer runs on one clock**: `services/scheduler.ts` (minute tick) surfaces
+  bottles (`surface_at`), fires reminders (`remind_at`/`remind_every`), emits Dory
+  warnings, then runs the dory sweep — new time-based work goes in that tick, never a
+  new interval. Every memo read path carries the Dory guard
+  (`forget_at IS NULL OR forget_at > now`); feed queries ALSO carry the bottle guard
+  (`surface_at IS NULL OR surface_at <= now`) — grep for either when adding queries.
+  Rules: pinned ⟂ dory ⟂ bottle; archiving clears `forget_at` ("rescue"); pending
+  bottles are creator-only inside `checkMemoRead` (share tokens included).
 - **Migrations are hand-rolled**, not drizzle-kit: numbered `.sql` files in
   `server/src/db/migrations/` applied at boot inside a transaction, tracked in
   `schema_migration`. A schema change = new migration file **plus** matching edits to

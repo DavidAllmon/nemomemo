@@ -67,7 +67,7 @@ The dory-sweeper became the general minute-tick **scheduler service**
 | **Scheduler service** (prereq) | ✅ v1.15.0 — one tick: bottles → reminders → warnings → dory sweep; migration 0005 added `remind_at`/`remind_every`/`surface_at` |
 | **Per-memo forget window** | ✅ v1.15.0 — 1h/24h/3d/7d picker in editor + ⋯ menu; plain edits no longer reset the clock |
 | ⭐ **Reminders on any memo** | ✅ v1.15.0 — "Nudge me about this" → `REMINDER` inbox item + email when SMTP on |
-| ⭐ **Message in a bottle** | ✅ v1.15.0 — `surface_at` feed guard everywhere; pending bottles creator-only in ACL (share tokens included); `BOTTLE_ARRIVED` on surfacing |
+| ⭐ **Message in a bottle** | ✅ v1.15.0 — `surface_at` feed guard everywhere; pending bottles creator-only in ACL (share tokens included); `BOTTLE_ARRIVED` on surfacing. v1.15.1: friendly picker (tide presets + drift-line preview) |
 | **"Dory is about to forget…" notice** | ✅ v1.15.0 — `DORY_WARNING` 1h out, deduped, one-click **Keep it** in the inbox |
 | **Dory's Memory page** | ✅ v1.15.0 — `/dory`: fading (soonest first) + bottles at sea |
 | **Dory statistics** | ✅ v1.15.0 — `user.dory_forgotten_count`, shown on /dory |
