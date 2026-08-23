@@ -118,7 +118,8 @@ Dory's Memory: fading + bottles + forgotten counter), `/views` (auth),
 - `components/layout/` — AppShell, Sidebar, TagTree, ViewsList, CalendarHeatmap
 - `components/memo/` — MemoCard, **MemoContent** (markdown render + the checkbox
   offset-stamping rehype plugin → `toggleTaskAt`), MemoFeed, MemoActionMenu
-  (bulk `setAllTasks`), ReactionBar, ShareDialog, DoryBadge
+  (bulk `setAllTasks`, reminder dialog), ReactionBar, ShareDialog, DoryBadge,
+  BottleDialog (tide presets + drift-line preview for `surface_at`)
 - `components/editor/` — **WYSIWYG (TipTap v3) over markdown storage** since v1.6.0:
   `RichEditor.tsx` (shared core: toolbar variants full/slim, @member+#tag plain-text
   suggestion popups, Cmd+Enter, paste/drop upload), `MemoEditor.tsx` (memo chrome:

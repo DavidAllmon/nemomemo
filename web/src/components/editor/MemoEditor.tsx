@@ -3,11 +3,9 @@ import { useRef, useState } from 'react';
 import { DORY_WINDOWS, type DoryWindow, type MemoDto, type Visibility } from '@nemomemo/shared';
 import { Bubbles } from '@/components/Bubbles.js';
 import { RichEditor, type RichEditorHandle } from '@/components/editor/RichEditor.js';
+import { BottleDialog } from '@/components/memo/BottleDialog.js';
 import { Button } from '@/components/ui/button.js';
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -22,7 +20,7 @@ import {
   useUserSettings,
   useViewer,
 } from '@/hooks/queries.js';
-import { absoluteTime, cn, epochToLocalInput, localInputToEpoch } from '@/lib/utils.js';
+import { absoluteTime, cn } from '@/lib/utils.js';
 
 const DRAFT_KEY = 'nemo-draft-home';
 
@@ -76,7 +74,6 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
   const initialSurfaceAt = memo?.surfaceAt ?? null;
   const [surfaceAt, setSurfaceAt] = useState<number | null>(initialSurfaceAt);
   const [bottleOpen, setBottleOpen] = useState(false);
-  const [bottleInput, setBottleInput] = useState('');
   const [attachments, setAttachments] = useState<UploadedFile[]>(
     memo?.attachments.map((a) => ({ uid: a.uid, filename: a.filename })) ?? [],
   );
@@ -306,10 +303,7 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
               aria-label="Message in a bottle"
               aria-pressed={surfaceAt != null}
               disabled={memo?.pinned}
-              onClick={() => {
-                setBottleInput(surfaceAt != null ? epochToLocalInput(surfaceAt) : '');
-                setBottleOpen(true);
-              }}
+              onClick={() => setBottleOpen(true)}
               className={cn(
                 'flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-bold transition-colors',
                 surfaceAt != null
@@ -324,47 +318,13 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
           </Tip>
         )}
 
-        <Dialog open={bottleOpen} onOpenChange={setBottleOpen}>
-          <DialogContent
-            title="Message in a bottle"
-            description="Seal this memo away — it stays hidden from every feed until its day arrives, then washes ashore in your inbox."
-          >
-            <input
-              type="datetime-local"
-              aria-label="Surface date"
-              value={bottleInput}
-              min={epochToLocalInput(Math.floor(Date.now() / 1000) + 60)}
-              onChange={(event) => setBottleInput(event.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-            />
-            <div className="mt-3 flex justify-end gap-2">
-              {surfaceAt != null ? (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSurfaceAt(null);
-                    setBottleOpen(false);
-                  }}
-                >
-                  Pull it back ashore
-                </Button>
-              ) : (
-                <DialogClose asChild>
-                  <Button variant="outline">Cancel</Button>
-                </DialogClose>
-              )}
-              <Button
-                disabled={localInputToEpoch(bottleInput) <= Math.floor(Date.now() / 1000)}
-                onClick={() => {
-                  setSurfaceAt(localInputToEpoch(bottleInput));
-                  setBottleOpen(false);
-                }}
-              >
-                Seal the bottle
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <BottleDialog
+          open={bottleOpen}
+          onOpenChange={setBottleOpen}
+          surfaceAt={surfaceAt}
+          onSeal={setSurfaceAt}
+          onClear={() => setSurfaceAt(null)}
+        />
 
         <span className="ml-auto" />
         {isEdit ? (
