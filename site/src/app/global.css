@@ -147,10 +147,19 @@
   margin: 1rem 0;
 }
 .reef-prose h2 {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-weight: 700;
-  font-size: 1.35rem;
-  margin: 2rem 0 0.5rem;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+  margin: 2.2rem 0 0.5rem;
+}
+.reef-prose h2::before {
+  content: '## ';
+  color: var(--ocean-primary);
+}
+/* Fumadocs wraps headings in anchor links; keep them ink, not link-blue. */
+.reef-prose h2 a {
+  color: inherit;
 }
 .reef-prose ul,
 .reef-prose ol {

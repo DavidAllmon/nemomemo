@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Bubbles } from '@/components/sea-life';
+import { OceanCanvas } from '@/components/terminal/ocean-canvas';
 import { formatPostDate, getSortedPosts } from '@/lib/blog';
 import { pageMeta } from '@/lib/site';
 
@@ -19,67 +19,60 @@ export const metadata = {
 export default function BlogPage() {
   const posts = getSortedPosts();
   return (
-    <div>
-      <section className="relative overflow-hidden bg-gradient-to-b from-ocean-abyss to-ocean-bg px-4 pb-4 pt-16 text-center">
-        <Bubbles className="pointer-events-none absolute left-[14%] top-8 h-16 w-9 text-ocean-blue opacity-40" />
-        <Bubbles className="pointer-events-none absolute right-[12%] top-16 h-12 w-7 text-ocean-blue opacity-30" />
-        <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-ocean-blue">
-          The ship&apos;s log
+    <div className="relative">
+      <OceanCanvas />
+      <div className="relative z-10 mx-auto w-full max-w-4xl px-5 pb-24 pt-16">
+        <p className="font-mono text-[13px]" data-reveal>
+          <span className="font-bold text-ocean-primary">## SHIPS.LOG</span>{' '}
+          <span className="text-ocean-muted">
+            — announcements, self-hosting guides, and the occasional fish-adjacent essay ·{' '}
+            <a href="/feed.xml" className="text-ocean-blue hover:underline">
+              rss
+            </a>
+          </span>
         </p>
-        <h1 className="mt-2 font-display text-4xl font-extrabold sm:text-5xl">From the reef</h1>
-        <p className="mx-auto mt-3 max-w-md text-lg text-ocean-muted">
-          Announcements, self-hosting guides, and the occasional fish-adjacent essay — logged like
-          everything else around here: as a timeline.
+        <h1 className="mt-5 font-mono text-4xl font-bold tracking-tight sm:text-5xl" data-reveal>
+          From the reef<span className="term-cursor" aria-hidden />
+        </h1>
+        <p className="mt-5 font-mono text-[13px] text-ocean-muted" data-reveal>
+          $ ls -t entries/
         </p>
-      </section>
 
-      {/* Timeline */}
-      <section className="mx-auto w-full max-w-2xl px-4 pb-20 pt-10">
-        <div className="relative flex flex-col gap-10 border-l-2 border-ocean-border pl-8 sm:ml-4">
+        <div className="mt-4 border border-ocean-border bg-ocean-bg/70" data-reveal="stagger">
           {posts.map((post) => (
-            <article key={post.url} className="relative">
-              {/* timeline node */}
-              <span
-                className="absolute -left-[41px] top-1.5 flex size-5 items-center justify-center rounded-full border-2 border-ocean-blue bg-ocean-bg sm:-left-[42px]"
-                aria-hidden
-              >
-                <span className="size-1.5 rounded-full bg-ocean-blue" />
-              </span>
-              <p className="font-mono text-xs font-bold uppercase tracking-[0.15em] text-ocean-muted">
-                <time dateTime={post.data.date}>{formatPostDate(post.data.date)}</time>
-                <span className="mx-2 opacity-50">·</span>
-                {post.data.author}
+            <Link
+              key={post.url}
+              href={post.url}
+              className="group grid grid-cols-1 gap-x-6 border-b border-ocean-border px-5 py-5 transition-colors last:border-b-0 hover:bg-ocean-card/60 sm:grid-cols-[130px_1fr_auto] sm:items-baseline"
+            >
+              <p className="font-mono text-xs text-ocean-muted">
+                <time dateTime={post.data.date}>{post.data.date}</time>
               </p>
-              <Link
-                href={post.url}
-                className="group mt-2 block rounded-2xl border border-ocean-border bg-ocean-card p-6 transition-colors hover:border-ocean-primary"
-              >
-                <h2 className="font-display text-2xl font-bold leading-snug group-hover:text-ocean-primary">
+              <div>
+                <h2 className="mt-1 font-mono text-lg font-bold leading-snug group-hover:text-ocean-primary sm:mt-0">
                   {post.data.title}
                 </h2>
-                <p className="mt-2 text-[15px] leading-relaxed text-ocean-muted">
+                <p className="mt-1.5 max-w-xl font-mono text-[12.5px] leading-relaxed text-ocean-muted">
                   {post.data.description}
                 </p>
-                <p className="mt-4 text-sm font-bold text-ocean-blue">Read the entry →</p>
-              </Link>
-            </article>
+              </div>
+              <span
+                className="mt-2 font-mono text-[13px] font-semibold text-ocean-blue opacity-0 transition-opacity group-hover:opacity-100 sm:mt-0"
+                aria-hidden
+              >
+                read →
+              </span>
+            </Link>
           ))}
-          {/* end of log */}
-          <div className="relative">
-            <span
-              className="absolute -left-[38px] top-1 size-3.5 rounded-full border-2 border-ocean-border bg-ocean-bg sm:-left-[39px]"
-              aria-hidden
-            />
-            <p className="text-sm text-ocean-muted">
-              The log starts here — NemoMemo set sail in August 2026.{' '}
-              <a href="/feed.xml" className="font-semibold text-ocean-blue hover:underline">
-                Subscribe by RSS
-              </a>{' '}
-              for future entries.
-            </p>
-          </div>
         </div>
-      </section>
+
+        <p className="mt-6 font-mono text-[12.5px] text-ocean-muted" data-reveal>
+          $ head -1 ships.log{'  '}
+          <span className="text-ocean-ink">
+            # set sail august 2026 — <time dateTime={posts[posts.length - 1]?.data.date}>{formatPostDate(posts[posts.length - 1]?.data.date ?? '2026-08-21')}</time>
+          </span>
+        </p>
+      </div>
     </div>
   );
 }
