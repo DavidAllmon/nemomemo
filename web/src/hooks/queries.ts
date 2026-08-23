@@ -38,6 +38,7 @@ export const keys = {
   attachments: (params: Record<string, string | undefined>) => ['attachments', params] as const,
   members: ['members'] as const,
   cloudBilling: ['cloud', 'billing'] as const,
+  cloudSnapshots: ['cloud', 'snapshots'] as const,
 };
 
 // ---------- Viewer & instance ----------
@@ -78,6 +79,40 @@ export function useCloudBilling(enabled: boolean) {
     },
     enabled,
     staleTime: 5 * 60_000,
+    retry: false,
+  });
+}
+
+export interface CloudSnapshotInfo {
+  snapshots: { id: string; time: string }[];
+  restore: {
+    state: 'queued' | 'restoring' | 'staged' | 'failed' | 'done';
+    snapshotId: string;
+    requestedTs: number;
+    updatedTs: number;
+    message?: string;
+  } | null;
+}
+
+const RESTORE_PENDING = ['queued', 'restoring', 'staged'];
+
+/** Hosted reefs only; polls while a restore is in flight so the card live-updates. */
+export function useCloudSnapshots(enabled: boolean) {
+  return useQuery({
+    queryKey: keys.cloudSnapshots,
+    queryFn: async () => {
+      try {
+        return await api<CloudSnapshotInfo>('GET', '/api/v1/cloud/snapshots');
+      } catch (error) {
+        if (error instanceof ApiError && (error.status === 403 || error.status === 404)) return null;
+        throw error;
+      }
+    },
+    enabled,
+    refetchInterval: (query) => {
+      const restore = query.state.data?.restore;
+      return restore && RESTORE_PENDING.includes(restore.state) ? 5_000 : false;
+    },
     retry: false,
   });
 }

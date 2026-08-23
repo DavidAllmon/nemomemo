@@ -9,6 +9,7 @@ import { useTheme, type Theme } from '@/context/theme.js';
 import {
   keys,
   useCloudBilling,
+  useCloudSnapshots,
   useInstanceProfile,
   useInstanceSettings,
   useMembers,
@@ -478,35 +479,38 @@ function BackupsSection({ isCloud }: { isCloud: boolean }) {
 
   if (isCloud) {
     return (
-      <SectionCard title="Backups">
-        <p className="text-sm text-muted-foreground">
-          <span className="font-semibold text-foreground">Your reef is backed up automatically.</span>{' '}
-          Every night we take an encrypted snapshot of your entire reef — memos, members,
-          and files — and store it off-server. We keep 14 nightly and 8 weekly snapshots.
-        </p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Need to roll back to an earlier day?{' '}
-          <a
-            href="https://github.com/DavidAllmon/nemomemo/discussions"
-            target="_blank"
-            rel="noreferrer"
-            className="text-ocean underline"
-          >
-            Reach out
-          </a>{' '}
-          and we&apos;ll restore any snapshot for you.
-        </p>
-        <div className="mt-3">
-          <Button size="sm" onClick={() => { window.location.href = '/api/v1/instance/backup'; }}>
-            Export my reef
-          </Button>
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">
-          The export is yours to keep — one zip with everything, ready to archive or move
-          to a self-hosted reef. Prefer plain files? Every member can export their own
-          memos as Markdown from the Account tab.
-        </p>
-      </SectionCard>
+      <div className="flex flex-col gap-4">
+        <SectionCard title="Backups">
+          <p className="text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">Your reef is backed up automatically.</span>{' '}
+            Every night we take an encrypted snapshot of your entire reef — memos, members,
+            and files — and store it off-server. We keep 14 nightly and 8 weekly snapshots.
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Need to roll back? Pick a day below — or{' '}
+            <a
+              href="https://github.com/DavidAllmon/nemomemo/discussions"
+              target="_blank"
+              rel="noreferrer"
+              className="text-ocean underline"
+            >
+              reach out
+            </a>{' '}
+            and we&apos;ll help.
+          </p>
+          <div className="mt-3">
+            <Button size="sm" onClick={() => { window.location.href = '/api/v1/instance/backup'; }}>
+              Export my reef
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            The export is yours to keep — one zip with everything, ready to archive or move
+            to a self-hosted reef. Prefer plain files? Every member can export their own
+            memos as Markdown from the Account tab.
+          </p>
+        </SectionCard>
+        <CloudSnapshotsCard />
+      </div>
     );
   }
 
@@ -572,6 +576,71 @@ function BackupsSection({ isCloud }: { isCloud: boolean }) {
         {restoreError ? <p className="mt-2 text-xs font-semibold text-destructive">{restoreError}</p> : null}
       </SectionCard>
     </div>
+  );
+}
+
+function CloudSnapshotsCard() {
+  const { data } = useCloudSnapshots(true);
+  const queryClient = useQueryClient();
+  const [requestError, setRequestError] = useState<string | null>(null);
+  if (!data || (data.snapshots.length === 0 && !data.restore)) return null;
+
+  const restore = data.restore;
+  const pending = restore != null && ['queued', 'restoring', 'staged'].includes(restore.state);
+  const day = (iso: string) =>
+    new Date(iso).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' });
+  const restoreTime = restore ? data.snapshots.find((s) => s.id === restore.snapshotId)?.time : undefined;
+  const restoreDay = restoreTime ? day(restoreTime) : '';
+
+  const requestRestore = async (id: string, time: string) => {
+    const ok = window.confirm(
+      `Take your reef back to the morning of ${day(time)}?\n\nEverything written since then swims away. We keep the current state as a safety copy on the server.`,
+    );
+    if (!ok) return;
+    setRequestError(null);
+    try {
+      await api('POST', '/api/v1/cloud/snapshots/restore', { snapshotId: id });
+      await queryClient.invalidateQueries({ queryKey: keys.cloudSnapshots });
+    } catch (error) {
+      setRequestError(error instanceof ApiError ? error.message : 'Could not start the restore');
+    }
+  };
+
+  return (
+    <SectionCard title="Go back to an earlier day">
+      <p className="text-sm text-muted-foreground">
+        Pick a nightly snapshot and your whole reef — memos, members, files — returns to
+        how it was that morning. 🕰️🐠
+      </p>
+      {pending ? (
+        <p className="mt-3 text-sm font-semibold text-ocean">
+          Restoring your reef{restoreDay ? ` to ${restoreDay}` : ''} — this takes a few minutes. Just keep
+          swimming; this page updates itself.
+        </p>
+      ) : (
+        <ul className="mt-3 flex flex-col gap-1.5">
+          {data.snapshots.map((snapshot) => (
+            <li key={snapshot.id} className="flex items-center justify-between gap-2 text-sm">
+              <span>{day(snapshot.time)}</span>
+              <Button size="sm" variant="outline" onClick={() => void requestRestore(snapshot.id, snapshot.time)}>
+                Restore
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {restore?.state === 'done' && !pending ? (
+        <p className="mt-2 text-xs font-semibold text-ocean">
+          Restore complete{restoreDay ? ` — your reef is back to ${restoreDay}` : ''}. 🎉
+        </p>
+      ) : null}
+      {restore?.state === 'failed' ? (
+        <p className="mt-2 text-xs font-semibold text-destructive">
+          {restore.message ?? 'The restore failed — nothing was changed.'}
+        </p>
+      ) : null}
+      {requestError ? <p className="mt-2 text-xs font-semibold text-destructive">{requestError}</p> : null}
+    </SectionCard>
   );
 }
 
