@@ -77,6 +77,7 @@ export const attachments = sqliteTable('attachment', {
   size: integer('size').notNull().default(0),
   memoId: integer('memo_id').references(() => memos.id, { onDelete: 'set null' }),
   storagePath: text('storage_path').notNull(),
+  extractedText: text('extracted_text').notNull().default(''),
 });
 
 export const reactions = sqliteTable(
