@@ -2,7 +2,25 @@ import { describe, expect, it } from 'vitest';
 import type { Hono } from 'hono';
 import type { Db } from '../db/index.js';
 import type { AppEnv } from '../middleware/auth.js';
-import { makeTestApp, signup } from './helpers.js';
+import { jsonRequest, makeTestApp, signup } from './helpers.js';
+
+async function search(
+  app: Hono<AppEnv>,
+  expression: string,
+  cookie: string,
+): Promise<string[]> {
+  const response = await jsonRequest(
+    app,
+    'GET',
+    `/api/v1/memos?scope=home&filter=${encodeURIComponent(expression)}`,
+    undefined,
+    cookie,
+  );
+  expect(response.status).toBe(200);
+  return ((await response.json()) as { memos: { content: string }[] }).memos.map(
+    (memo) => memo.content,
+  );
+}
 
 async function uploadImage(app: Hono<AppEnv>, cookie: string, name: string): Promise<string> {
   const form = new FormData();
@@ -74,5 +92,51 @@ describe('OCR queue', () => {
     const cookie = await signup(app, 'nemo');
     await uploadImage(app, cookie, 'plain.png');
     expect(ocr).toBeNull();
+  });
+});
+
+describe('search reaches OCR text', () => {
+  it('finds a memo through its attachment text; unlinked text matches nothing', async () => {
+    const { app, db, ocr } = makeTestApp({}, { ocrEngine: { recognize: async () => 'SURFBOARD rental receipt' } });
+    const cookie = await signup(app, 'nemo');
+    const linked = await uploadImage(app, cookie, 'receipt.png');
+    await uploadImage(app, cookie, 'floating.png'); // never linked to a memo
+    await ocr!.idle();
+    const create = await jsonRequest(
+      app,
+      'POST',
+      '/api/v1/memos',
+      { content: 'photo from the shop', attachmentUids: [linked] },
+      cookie,
+    );
+    expect(create.status).toBe(201);
+
+    const hits = await search(app, 'content.contains("surfboard")', cookie);
+    expect(hits).toEqual(['photo from the shop']);
+    void db;
+  });
+
+  it('attachment text never leaks across visibility', async () => {
+    const { app, ocr } = makeTestApp({}, { ocrEngine: { recognize: async () => 'SECRETWORD here' } });
+    const owner = await signup(app, 'nemo');
+    const friend = await signup(app, 'marlin');
+    const uid = await uploadImage(app, owner, 'private.png');
+    await ocr!.idle();
+    await jsonRequest(
+      app,
+      'POST',
+      '/api/v1/memos',
+      { content: 'private pic', visibility: 'PRIVATE', attachmentUids: [uid] },
+      owner,
+    );
+    const response = await jsonRequest(
+      app,
+      'GET',
+      `/api/v1/memos?scope=explore&filter=${encodeURIComponent('content.contains("secretword")')}`,
+      undefined,
+      friend,
+    );
+    expect(response.status).toBe(200);
+    expect(((await response.json()) as { memos: unknown[] }).memos).toEqual([]);
   });
 });

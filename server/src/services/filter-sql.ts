@@ -39,8 +39,13 @@ export function compileFilter(node: FilterNode, nowEpoch: number): CompiledFilte
         if (n.mode === 'contains') {
           const match = toFtsMatchQuery(n.value);
           if (match != null) {
-            params.push(match);
-            return `(memo.id IN (SELECT rowid FROM memo_fts WHERE memo_fts MATCH ?))`;
+            // Memo content OR OCR text of its linked attachments. The join
+            // can't out-scope: the outer WHERE already gates the memo itself.
+            params.push(match, match);
+            return `(memo.id IN (SELECT rowid FROM memo_fts WHERE memo_fts MATCH ?)
+              OR memo.id IN (SELECT a.memo_id FROM attachment a
+                WHERE a.memo_id IS NOT NULL
+                  AND a.id IN (SELECT rowid FROM attachment_fts WHERE attachment_fts MATCH ?)))`;
           }
         }
         // startsWith/endsWith are positional (FTS can't express them), and
