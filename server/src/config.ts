@@ -28,6 +28,18 @@ export interface Config {
   requestRestart: (() => void) | null;
   /** Outbound mail; null (all NEMOMEMO_SMTP_* unset) disables email features. */
   smtp: SmtpConfig | null;
+  /** OCR on image attachments; null (NEMOMEMO_OCR=0) disables it. */
+  ocr: { langs: string[] } | null;
+}
+
+function ocrFromEnv(): { langs: string[] } | null {
+  const flag = process.env.NEMOMEMO_OCR;
+  if (flag === '0' || flag === 'false') return null;
+  const langs = (process.env.NEMOMEMO_OCR_LANGS ?? 'eng')
+    .split(',')
+    .map((lang) => lang.trim())
+    .filter(Boolean);
+  return { langs: langs.length > 0 ? langs : ['eng'] };
 }
 
 function smtpFromEnv(): SmtpConfig | null {
@@ -55,5 +67,6 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
     cloudLimits: overrides.cloudLimits ?? null,
     requestRestart: overrides.requestRestart ?? null,
     smtp: 'smtp' in overrides ? (overrides.smtp ?? null) : smtpFromEnv(),
+    ocr: 'ocr' in overrides ? (overrides.ocr ?? null) : ocrFromEnv(),
   };
 }

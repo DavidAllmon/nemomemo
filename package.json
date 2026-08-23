@@ -2,7 +2,7 @@
   "name": "nemomemo",
   "private": true,
   "version": "1.18.0",
-  "description": "NemoMemo — a cute, self-hosted memo timeline. Just keep swimming.",
+  "description": "NemoMemo \u2014 a cute, self-hosted memo timeline. Just keep swimming.",
   "license": "Elastic-2.0",
   "scripts": {
     "dev": "concurrently -n server,web -c blue,magenta \"pnpm --filter @nemomemo/server dev\" \"pnpm --filter @nemomemo/web dev\"",

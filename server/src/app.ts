@@ -2,7 +2,9 @@ import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { Config } from './config.js';
 import type { Db } from './db/index.js';
+import path from 'node:path';
 import { makeSmtpMailer, type Mailer } from './services/email.js';
+import { OcrQueue, tesseractEngine } from './services/ocr.js';
 import { viewerMiddleware, type AppEnv } from './middleware/auth.js';
 import { attachmentRoutes } from './routes/attachments.js';
 import { authRoutes } from './routes/auth.js';
@@ -28,10 +30,22 @@ function applySecurityHeaders(headers: Headers): void {
 export interface AppDeps {
   /** Outbound mail; defaults from config.smtp. Explicit null disables email. */
   mailer?: Mailer | null;
+  /** OCR job queue; defaults from config.ocr (shared tesseract engine). Explicit null disables OCR. */
+  ocr?: OcrQueue | null;
 }
 
 export function makeApp(db: Db, config: Config, deps: AppDeps = {}): Hono<AppEnv> {
   const mailer = 'mailer' in deps ? (deps.mailer ?? null) : config.smtp ? makeSmtpMailer(config.smtp) : null;
+  const ocr =
+    'ocr' in deps
+      ? (deps.ocr ?? null)
+      : config.ocr
+        ? new OcrQueue(
+            db,
+            config.uploadsDir,
+            tesseractEngine(config.ocr.langs, path.join(config.dataDir, 'ocr-cache')),
+          )
+        : null;
   const app = new Hono<AppEnv>();
 
   app.onError((error, c) => {
@@ -60,7 +74,7 @@ export function makeApp(db: Db, config: Config, deps: AppDeps = {}): Hono<AppEnv
   api.route('/shares', shareRoutes(db));
   api.route('/users', userRoutes(db, mailer));
   api.route('/inbox', inboxRoutes(db));
-  api.route('/attachments', attachmentRoutes(db, config));
+  api.route('/attachments', attachmentRoutes(db, config, ocr));
 
   app.route('/api/v1', api);
   app.route('/file', fileRoutes(db, config));

@@ -7,4 +7,6 @@ allowBuilds:
   better-sqlite3: true
   esbuild: true
   sharp: true
+  # postinstall is only an opencollective banner — skip it
+  tesseract.js: false
   workerd: true

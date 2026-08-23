@@ -7,6 +7,7 @@ import { loadConfig, type Config } from '../config.js';
 import { createDb, type Db } from '../db/index.js';
 import type { AppEnv } from '../middleware/auth.js';
 import type { MailMessage } from '../services/email.js';
+import { OcrQueue, type OcrEngine } from '../services/ocr.js';
 
 export interface TestContext {
   app: Hono<AppEnv>;
@@ -14,11 +15,13 @@ export interface TestContext {
   config: Config;
   /** Everything the app tried to email (recording fake; empty when email off). */
   sentMail: MailMessage[];
+  /** OCR queue when a fake engine was supplied; null otherwise (test default). */
+  ocr: OcrQueue | null;
 }
 
 export function makeTestApp(
   overrides: Partial<Config> = {},
-  options: { email?: boolean } = {},
+  options: { email?: boolean; ocrEngine?: OcrEngine } = {},
 ): TestContext {
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'nemomemo-test-'));
   const config = loadConfig({
@@ -26,6 +29,7 @@ export function makeTestApp(
     dbPath: ':memory:',
     uploadsDir: path.join(scratch, 'uploads'),
     smtp: null,
+    ocr: null, // never spin up real tesseract in tests
     ...overrides,
   });
   fs.mkdirSync(config.uploadsDir, { recursive: true });
@@ -39,8 +43,9 @@ export function makeTestApp(
             sentMail.push(message);
           },
         };
-  const app = makeApp(db, config, { mailer });
-  return { app, db, config, sentMail };
+  const ocr = options.ocrEngine ? new OcrQueue(db, config.uploadsDir, options.ocrEngine) : null;
+  const app = makeApp(db, config, { mailer, ocr });
+  return { app, db, config, sentMail, ocr };
 }
 
 export async function jsonRequest(

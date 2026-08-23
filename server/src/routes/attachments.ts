@@ -9,6 +9,7 @@ import { attachments, memos } from '../db/schema.js';
 import { apiError } from '../lib/errors.js';
 import { requireViewer, type AppEnv } from '../middleware/auth.js';
 import { newUid } from '../services/memo-service.js';
+import type { OcrQueue } from '../services/ocr.js';
 
 const MAX_UPLOAD_BYTES = 32 * 1024 * 1024;
 
@@ -33,7 +34,7 @@ function toDto(db: Db, row: typeof attachments.$inferSelect): AttachmentDto {
   };
 }
 
-export function attachmentRoutes(db: Db, config: Config): Hono<AppEnv> {
+export function attachmentRoutes(db: Db, config: Config, ocr: OcrQueue | null = null): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
 
   app.post('/', async (c) => {
@@ -69,6 +70,7 @@ export function attachmentRoutes(db: Db, config: Config): Hono<AppEnv> {
       })
       .returning()
       .get();
+    if (ocr && created.type.startsWith('image/')) ocr.enqueue(created.id);
     return c.json({ attachment: toDto(db, created) }, 201);
   });
 
