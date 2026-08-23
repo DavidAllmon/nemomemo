@@ -33,7 +33,7 @@ storage caps, member caps, and restore.
 | File | Endpoints |
 | --- | --- |
 | `auth.ts` | POST signup (first user = ADMIN; bcrypt-before-checks race guard), signin, signout; GET me |
-| `memos.ts` | GET/POST `/memos` (list: scope home/explore/profile, filter DSL, pinned-first, page tokens; create: payload extraction, dory TTL, linking, mention notifications); GET `/memos/export/markdown` (per-user zip: .md + frontmatter + attachments; power-user URL, no UI); GET/PATCH/DELETE `/memos/:uid`; GET `/memos/:uid/markdown` (single .md download, read-ACL); GET/POST comments; POST/DELETE reactions; POST/GET shares |
+| `memos.ts` | GET/POST `/memos` (list: scope home/explore/profile, filter DSL, pinned-first, page tokens; create: payload extraction, dory windows, bottles, linking, mention notifications); GET `/memos/export/markdown` (per-user zip: .md + frontmatter + attachments; power-user URL, no UI); GET `/memos/dory` (Dory's Memory: fading + bottles + forgotten counter); GET/PATCH/DELETE `/memos/:uid` (PATCH also: doryWindow/surfaceAt/remindAt/remindEvery); GET `/memos/:uid/markdown` (single .md download, read-ACL); GET/POST comments; POST/DELETE reactions; POST/GET shares |
 | `shares.ts` | GET `/shares/:token` (public, relations/comments stripped); DELETE (revoke) |
 | `users.ts` | `/-/mentionable`, `/-/tags` (10k cap), `/-/tags/rename`, `/-/settings` GET/PATCH, `/-/account` PATCH — **all before** `/:username` (route-order trap); GET `/users` + POST + `/:username/admin` PATCH/DELETE (admin); GET `/:username`, `/:username/stats` |
 | `instance.ts` | GET profile (version/publicMode/needsSetup), settings (admin), settings/memo (public reaction set); GET backup (admin zip stream: sqlite snapshot + uploads); POST restore (admin, self-host only); PATCH settings |
@@ -49,7 +49,8 @@ storage caps, member caps, and restore.
 | `filter-sql.ts` | Filter AST → parameterized WHERE (`compileFilter`; tags via `json_each`, properties via `json_extract`, frozen now) |
 | `settings.ts` | Zod-validated JSON settings (instance GENERAL/MEMO, user GENERAL/MEMO_VIEWS) with safe fallbacks |
 | `inbox-service.ts` | `notifyMentions` (skips self/unknown/archived/PRIVATE), `notifyComment` (owner), `notifyThreadParticipants` (earlier commenters → MEMO_THREAD, mention-deduped) |
-| `dory-sweeper.ts` | `sweepDoryMemos` + `startDorySweeper` (60s): deletes expired memos + orphaned comments + attachment files, transactional |
+| `scheduler.ts` | **The reef's one clock** (minute tick, `runSchedulerTick`/`startScheduler`): surfaces bottles → fires reminders (+ email) → dory warnings → dory sweep. New time-based work goes here, not a new interval |
+| `dory-sweeper.ts` | `sweepDoryMemos` (one pass of the scheduler tick): deletes expired memos + orphaned comments + attachment files, bumps `dory_forgotten_count`, transactional |
 | `export-service.ts` | `buildMarkdownExport`: the viewer's own memos as `memos/YYYY-MM-DD-<uid>.md` (comments under `comments/` with `comment_on:`), YAML frontmatter (created/updated/visibility/pinned/archived/forgets/tags/attachments), attachment files + inline `/file/attachments/` links rewritten relative; every row through `checkMemoRead` |
 
 ### Middleware (`src/middleware/`)
@@ -106,7 +107,8 @@ ViewSetting → Tooltip → BrowserRouter → App. No Redux/Zustand.
 ### Routes (`src/App.tsx`)
 
 `/auth`, `/auth/signup`, `/memos/shares/:token` (outside AppShell); inside AppShell:
-`/` Home (auth), `/explore`, `/u/:username`, `/archived` (auth), `/views` (auth),
+`/` Home (auth), `/explore`, `/u/:username`, `/archived` (auth), `/dory` (auth —
+Dory's Memory: fading + bottles + forgotten counter), `/views` (auth),
 `/attachments` (auth), `/inbox` (auth), `/settings` (auth), `/about`, `/memos/:uid`
 (public; server enforces visibility), `*` NotFound. `RequireAuth` redirects to
 `/auth?redirect=<path>`.

@@ -13,11 +13,25 @@ written down.
   payload is stale until rewritten — a migration or backfill is required, not optional.
 - **Every memo read path needs the Dory guard**: `forget_at IS NULL OR forget_at > now`.
   When adding any new query that returns memo rows, grep for that expression and copy
-  the pattern. Missing it = expired memos leak until the 60s sweeper deletes them
+  the pattern. Missing it = expired memos leak until the sweeper deletes them
   (and the sweeper only deletes; reads must not depend on it).
+- **Feed queries need the bottle guard too** (since v1.15.0):
+  `surface_at IS NULL OR surface_at <= now`. A pending bottle is hidden from EVERY
+  feed — including the owner's (that's the feature; the owner finds it on /dory).
+  Both guards live side by side in `listMemoRows`; grep for either when adding queries.
 - **Dory rules**: pinned and Dory are mutually exclusive; archiving clears `forget_at`
   ("rescue"); comments can't be Dory memos; share tokens do NOT resurrect expired memos
   (expiry is enforced inside `checkMemoRead`, including via expired parents).
+- **Bottle rules** (message in a bottle, `surface_at`): a pending bottle
+  (`surface_at > now`) is creator-only in `checkMemoRead`/`canGlimpseMemo` — share
+  tokens do NOT reveal it; pinned ⟂ bottle; comments can't be bottles; dory+bottle
+  allowed only when `forget_at > surface_at` (`assertTimeRules` enforces all three).
+- **The scheduler is the reef's one clock** (`services/scheduler.ts`, minute tick):
+  surfaces bottles (BOTTLE_ARRIVED), fires reminders (REMINDER + optional email;
+  recurring `remind_every` advances with single-nudge catch-up), warns in the final
+  hour (DORY_WARNING, deduped via NOT EXISTS on inbox), then runs the dory sweep
+  (which bumps `user.dory_forgotten_count`). New time-based work belongs in this
+  tick — do not add another interval.
 - **Comments are memos** with a `COMMENT` row in `memo_relation`. They inherit the
   parent's visibility *at read time*, die with the parent, and feed queries exclude
   them via `NOT EXISTS` on that relation. A new feed-like query must do the same or

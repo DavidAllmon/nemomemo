@@ -11,14 +11,14 @@ see GOTCHAS.md). `db/index.ts` sets `journal_mode=WAL`, `foreign_keys=ON`,
 
 | Table | Columns (key points) |
 | --- | --- |
-| `user` | id PK; created_ts/updated_ts; row_status `NORMAL\|ARCHIVED`; username (unique); role `ADMIN\|USER`; email, nickname, password_hash (bcrypt), avatar_url, description |
+| `user` | id PK; created_ts/updated_ts; row_status `NORMAL\|ARCHIVED`; username (unique); role `ADMIN\|USER`; email, nickname, password_hash (bcrypt), avatar_url, description; **dory_forgotten_count** (lifetime "Dory has forgotten N memos for you", bumped by the sweep) |
 | `user_session` | user_id → user (cascade); **token_hash** — sha256 of the opaque cookie token, never the token itself; created_ts, expires_ts, last_seen_ts (30-day sliding TTL, touched at most daily) |
-| `memo` | id PK; **uid** (text, unique — the public identifier used in URLs/API); creator_id → user (cascade); row_status `NORMAL\|ARCHIVED`; content (raw markdown); visibility `PUBLIC\|PROTECTED\|PRIVATE` (default PRIVATE); pinned (bool); **payload** (derived JSON index — see below); **forget_at** (nullable epoch — Dory expiry; partial index `idx_memo_forget_at`) |
+| `memo` | id PK; **uid** (text, unique — the public identifier used in URLs/API); creator_id → user (cascade); row_status `NORMAL\|ARCHIVED`; content (raw markdown); visibility `PUBLIC\|PROTECTED\|PRIVATE` (default PRIVATE); pinned (bool); **payload** (derived JSON index — see below); **forget_at** (nullable epoch — Dory expiry; partial index `idx_memo_forget_at`); **remind_at** + **remind_every** `DAILY\|WEEKLY\|MONTHLY` (nullable — reminders; partial index `idx_memo_remind_at`); **surface_at** (nullable epoch — message in a bottle, hidden until then; partial index `idx_memo_surface_at`) |
 | `memo_relation` | memo_id → memo, related_memo_id → memo, type `REFERENCE\|COMMENT`; unique(memo, related, type). COMMENT rows point **child → parent** |
 | `attachment` | uid (unique); creator_id → user; filename, type (mime), size; memo_id → memo (**set null** when memo dies); storage_path relative to uploadsDir |
 | `reaction` | creator_id, memo_id, emoji; unique(creator, memo, emoji) |
 | `memo_share` | uid = 22-char share token; memo_id, creator_id; expires_ts nullable (null = never) |
-| `inbox` | sender_id (no FK), receiver_id → user; status `UNREAD\|ARCHIVED`; type `MEMO_COMMENT\|MEMO_MENTION`; memo_id nullable |
+| `inbox` | sender_id (no FK), receiver_id → user; status `UNREAD\|READ\|ARCHIVED`; type `MEMO_COMMENT\|MEMO_MENTION\|MEMO_THREAD\|REMINDER\|BOTTLE_ARRIVED\|DORY_WARNING` (the last three are self-notifications: sender = receiver = creator); memo_id nullable (cascade) |
 | `auth_token` | user_id → user (cascade); purpose `EMAIL_VERIFY\|PASSWORD_RESET`; **token_hash** (sha256, never raw); expires_ts; used_ts (single-use). Verify TTL 7d, reset 1h |
 | `user_setting` | user_id + key (unique pair), value JSON. Keys: `GENERAL`, `MEMO_VIEWS` |
 | `instance_setting` | name (unique), value JSON. Names: `GENERAL`, `MEMO` |
@@ -44,6 +44,7 @@ backfilled. Filter compilation over it lives in `services/filter-sql.ts` (tags v
 | File | Contents |
 | --- | --- |
 | `0001_init.sql` (then 0002/0003 inbox rebuilds, 0004 email identity) | Full tenant schema, CHECK constraints, indexes: `idx_memo_creator_status`, `idx_memo_visibility`, partial `idx_memo_forget_at`, `idx_memo_relation_related`, `idx_attachment_memo_id`, `idx_reaction_memo_id`, `idx_memo_share_memo_id`, `idx_inbox_receiver` |
+| `0005_time_layer.sql` | `memo.remind_at`/`remind_every`/`surface_at` + partial indexes, `user.dory_forgotten_count`, inbox rebuild adding `REMINDER`/`BOTTLE_ARRIVED`/`DORY_WARNING` to the type CHECK |
 
 Adding one: next number, `.sql` only, plus the matching `schema.ts` edit. The build
 copies `src/db/migrations` → `dist/migrations`.

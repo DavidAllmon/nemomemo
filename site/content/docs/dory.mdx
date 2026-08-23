@@ -1,25 +1,35 @@
 ---
-title: Dory memos
-description: Notes that forget themselves in 24 hours — on purpose.
+title: Dory & the time layer
+description: Notes that forget themselves, nudge you back, or surface on a future day — on purpose.
 ---
 
 Some notes only need to live a day: the parking spot, the confirmation code, the errand.
-Dory memos let you say so up front, and then never think about them again.
+Dory memos let you say so up front, and then never think about them again. And Dory's
+department has grown: she can also **nudge** you about a memo at a time you pick, or carry
+a **message in a bottle** that stays hidden until its day arrives.
 
-## How it works
+## Dory memos: how it works
 
-1. Toggle the **Dory** button (the little blue tang 🐟) in the editor — at creation, or
-   later from a memo's action menu.
-2. The memo shows a countdown badge: **"forgets in 23h"**.
+1. Open the **Dory** button (the little blue tang 🐟) in the editor — at creation, or
+   later from a memo's action menu — and pick a forget window: **1 hour, 24 hours,
+   3 days, or 7 days** (24 hours is the classic).
+2. The memo shows a countdown badge: **"forgets in 23h"** (or "3d" for the long windows).
 3. Over its final six hours, the card gently fades.
-4. At the 24-hour mark, the server deletes it — truly deletes it, along with its comments,
+4. When time is up, the server deletes it — truly deletes it, along with its comments,
    attachments, and share links.
 
 The timer runs server-side, so forgetting happens even when nobody has the app open.
-Toggling Dory on an existing memo starts a fresh 24 hours; toggling it off cancels the
-countdown.
+Re-picking a window on an existing memo starts a fresh countdown; choosing **Off**
+cancels it. Plain edits don't touch the clock.
 
-## The rules
+### The warning shot
+
+One hour before Dory forgets a memo, a notice lands in your inbox: *"Dory is about to
+forget this memo"* — with a one-click **Keep it** button that cancels the countdown.
+Anxiety becomes trust. (A 1-hour Dory memo gets its notice right away — accurate, if
+a little eager.)
+
+### The rules
 
 - **Pinned memos can't be Dory memos.** Pinned means "keep forever"; the two are mutually
   exclusive, and the app will refuse the combination with a friendly error.
@@ -29,7 +39,37 @@ countdown.
   the memo, the conversation goes too. The comment box warns you.
 - **No recovery after zero.** Forgotten is forgotten. That's the feature.
 
-## Changing the window
+## Reminders: "Nudge me about this"
 
-Admins can shorten or lengthen Dory's memory instance-wide with the `DORY_TTL_SECONDS`
-environment variable (default `86400`). Setting it to `60` is a fun way to watch her work.
+Any memo can carry a nudge. Open its **⋯ menu → Nudge me about this**, pick a time, and
+Dory taps you on the shoulder when it arrives: an inbox note, plus an email if your
+instance sends mail. Nudges can repeat **daily, weekly, or monthly** — "every Monday:
+water the plants." Pair it with Dory for the full move: *remind me, then forget it.*
+
+If your instance was asleep when a recurring nudge came due, you get **one** catch-up
+nudge, not a pile.
+
+## Message in a bottle
+
+The inverse of Dory: instead of forgetting a memo, hide it until a future day. Press the
+**Bottle** button (⏳) in the editor, pick a date, and the memo goes to sea — invisible
+in every feed, even yours, until its day arrives. Then it washes ashore as an inbox
+note: *a memo from past you.*
+
+- A bottle at sea is **yours alone** — nobody else can see it, share links included,
+  until it surfaces.
+- Bottles can't be pinned, and comments can't be bottled.
+- A bottle can also be a Dory memo, as long as it surfaces *before* she'd forget it.
+- Changed your mind? Open the bottle dialog again and **pull it back ashore**.
+
+## Dory's Memory page
+
+The **Dory** entry in the sidebar opens her memory: everything currently fading (soonest
+first), your bottles still at sea, and her lifetime count — *"Dory has forgotten 214
+memos for you."* 🫧
+
+## Changing the default window
+
+Admins can shorten or lengthen Dory's default memory instance-wide with the
+`DORY_TTL_SECONDS` environment variable (default `86400`). Setting it to `60` is a fun
+way to watch her work. The per-memo window picker always offers 1h / 24h / 3d / 7d.

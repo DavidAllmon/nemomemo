@@ -57,21 +57,21 @@ Six waves, ordered so each wave's infrastructure feeds the next. ⭐ NEW = commi
 from the 2026-08-23 brainstorm; unmarked items were already on the menu and slot in
 where their dependencies live. Inside a wave, build top-to-bottom.
 
-## Wave 1 — The time layer (Dory's department grows up)
+## Wave 1 — The time layer (Dory's department grows up) ✅ SHIPPED v1.15.0
 
-The dory-sweeper becomes a general minute-tick **scheduler service**, and the new
-time-based features share it. This wave deepens the differentiator and is felt daily.
+The dory-sweeper became the general minute-tick **scheduler service**
+(`services/scheduler.ts`) and the whole wave shipped on it (2026-08-23).
 
-| Item | Why & how | Effort |
-| --- | --- | --- |
-| **Scheduler service** (prereq) | Generalize `services/dory-sweeper.ts` into one minute-tick service that processes `forget_at` (existing) plus new `remind_at` and `surface_at`. One migration adds both columns to `memo`. | S |
-| **Per-memo forget window** | 1h / 24h / 3d / 7d picker (default 24h) in the Dory toggle. Pure UI + the existing `forget_at`. | S |
-| ⭐ NEW **Reminders on any memo** | "Nudge me about this" in the ⋯ menu → date picker sets `remind_at`; scheduler fires a new `REMINDER` inbox item (+ email when SMTP is on) and clears the field. Reminder-lite without becoming a task manager; pairs with Dory: *remind me, then forget it*. | M |
-| ⭐ NEW **Message in a bottle** | The inverse of Dory: `surface_at` hides a memo from all feeds until its date, then it arrives with a `BOTTLE_ARRIVED` inbox item. Guard pattern mirrors `forget_at` — every feed query gains `surface_at IS NULL OR surface_at <= now` (add to the GOTCHAS grep list). Owner sees pending bottles on a "bottles at sea" list. Rules: bottle ⟂ pinned; with Dory only if `forget_at > surface_at`. | M |
-| **"Dory is about to forget…" notice** | Scheduler emits an inbox item 1h before expiry with one-click Rescue. Turns anxiety into trust. | S–M |
-| **Dory's Memory page** | Everything currently fading, sorted by time left; "bottles at sea" lives on the same page. | S–M |
-| **Dory statistics** | "Dory has forgotten 214 memos for you." A counter bumped by the sweeper. | S |
-| **Recurring Dory reminders** | "Every Monday: water the plants" — builds on `remind_at` + a recurrence rule; do last, once one-shot reminders are proven. | M–L |
+| Item | Shipped |
+| --- | --- |
+| **Scheduler service** (prereq) | ✅ v1.15.0 — one tick: bottles → reminders → warnings → dory sweep; migration 0005 added `remind_at`/`remind_every`/`surface_at` |
+| **Per-memo forget window** | ✅ v1.15.0 — 1h/24h/3d/7d picker in editor + ⋯ menu; plain edits no longer reset the clock |
+| ⭐ **Reminders on any memo** | ✅ v1.15.0 — "Nudge me about this" → `REMINDER` inbox item + email when SMTP on |
+| ⭐ **Message in a bottle** | ✅ v1.15.0 — `surface_at` feed guard everywhere; pending bottles creator-only in ACL (share tokens included); `BOTTLE_ARRIVED` on surfacing |
+| **"Dory is about to forget…" notice** | ✅ v1.15.0 — `DORY_WARNING` 1h out, deduped, one-click **Keep it** in the inbox |
+| **Dory's Memory page** | ✅ v1.15.0 — `/dory`: fading (soonest first) + bottles at sea |
+| **Dory statistics** | ✅ v1.15.0 — `user.dory_forgotten_count`, shown on /dory |
+| **Recurring Dory reminders** | ✅ v1.15.0 — `remind_every` DAILY/WEEKLY/MONTHLY, single-nudge catch-up after downtime |
 
 ## Wave 2 — Findability (make everything in the reef searchable)
 
@@ -191,8 +191,8 @@ Kept warm, not committed. Promote by moving into a wave.
 
 ## Suggested order
 
-1. **P0 loose ends** — three small items, clear the deck.
-2. **Wave 1 (time layer)** — scheduler + reminders + message in a bottle + Dory polish. One migration, one service, several features that deepen the differentiator; felt daily.
+1. **P0 loose ends** — three small items, clear the deck. (Tabled 2026-08-23 in favor of Wave 1.)
+2. ~~**Wave 1 (time layer)**~~ ✅ shipped v1.15.0 (2026-08-23) — scheduler + windows + reminders + bottles + warning + memory page + stats + recurrence, one migration (0005).
 3. **Wave 2 (findability)** — FTS5 first, then task rollup + gallery, then OCR; voice memos + transcription as their own release. Code-health #2 and #4 ride along.
 4. **Wave 3 (trust)** — trash → edit history → tag management (regex dedupe first). This is the wave that keeps year-two subscribers.
 5. **Wave 4 (capture)** — PATs → Telegram bot → PWA/share target; webhooks and import as follow-ons.
