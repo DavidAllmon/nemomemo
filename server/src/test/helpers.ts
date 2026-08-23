@@ -17,11 +17,13 @@ export interface TestContext {
   sentMail: MailMessage[];
   /** OCR queue when a fake engine was supplied; null otherwise (test default). */
   ocr: OcrQueue | null;
+  /** Transcription queue when a fake engine was supplied; null otherwise. */
+  transcribe: OcrQueue | null;
 }
 
 export function makeTestApp(
   overrides: Partial<Config> = {},
-  options: { email?: boolean; ocrEngine?: OcrEngine } = {},
+  options: { email?: boolean; ocrEngine?: OcrEngine; transcribeEngine?: OcrEngine } = {},
 ): TestContext {
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'nemomemo-test-'));
   const config = loadConfig({
@@ -30,6 +32,7 @@ export function makeTestApp(
     uploadsDir: path.join(scratch, 'uploads'),
     smtp: null,
     ocr: null, // never spin up real tesseract in tests
+    transcribe: null, // never hit a real transcription endpoint in tests
     ...overrides,
   });
   fs.mkdirSync(config.uploadsDir, { recursive: true });
@@ -44,8 +47,11 @@ export function makeTestApp(
           },
         };
   const ocr = options.ocrEngine ? new OcrQueue(db, config.uploadsDir, options.ocrEngine) : null;
-  const app = makeApp(db, config, { mailer, ocr });
-  return { app, db, config, sentMail, ocr };
+  const transcribe = options.transcribeEngine
+    ? new OcrQueue(db, config.uploadsDir, options.transcribeEngine)
+    : null;
+  const app = makeApp(db, config, { mailer, ocr, transcribe });
+  return { app, db, config, sentMail, ocr, transcribe };
 }
 
 export async function jsonRequest(

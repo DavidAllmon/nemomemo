@@ -30,6 +30,8 @@ export interface Config {
   smtp: SmtpConfig | null;
   /** OCR on image attachments; null (NEMOMEMO_OCR=0) disables it. */
   ocr: { langs: string[] } | null;
+  /** Voice transcription; null (NEMOMEMO_TRANSCRIBE_URL unset) disables it. */
+  transcribe: { url: string; key: string | null; model: string } | null;
 }
 
 function ocrFromEnv(): { langs: string[] } | null {
@@ -40,6 +42,16 @@ function ocrFromEnv(): { langs: string[] } | null {
     .map((lang) => lang.trim())
     .filter(Boolean);
   return { langs: langs.length > 0 ? langs : ['eng'] };
+}
+
+function transcribeFromEnv(): { url: string; key: string | null; model: string } | null {
+  const url = process.env.NEMOMEMO_TRANSCRIBE_URL;
+  if (!url) return null;
+  return {
+    url,
+    key: process.env.NEMOMEMO_TRANSCRIBE_KEY || null,
+    model: process.env.NEMOMEMO_TRANSCRIBE_MODEL || 'whisper-1',
+  };
 }
 
 function smtpFromEnv(): SmtpConfig | null {
@@ -68,5 +80,6 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
     requestRestart: overrides.requestRestart ?? null,
     smtp: 'smtp' in overrides ? (overrides.smtp ?? null) : smtpFromEnv(),
     ocr: 'ocr' in overrides ? (overrides.ocr ?? null) : ocrFromEnv(),
+    transcribe: 'transcribe' in overrides ? (overrides.transcribe ?? null) : transcribeFromEnv(),
   };
 }

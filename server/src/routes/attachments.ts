@@ -34,7 +34,12 @@ function toDto(db: Db, row: typeof attachments.$inferSelect): AttachmentDto {
   };
 }
 
-export function attachmentRoutes(db: Db, config: Config, ocr: OcrQueue | null = null): Hono<AppEnv> {
+export function attachmentRoutes(
+  db: Db,
+  config: Config,
+  ocr: OcrQueue | null = null,
+  transcribe: OcrQueue | null = null,
+): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
 
   app.post('/', async (c) => {
@@ -71,6 +76,7 @@ export function attachmentRoutes(db: Db, config: Config, ocr: OcrQueue | null = 
       .returning()
       .get();
     if (ocr && created.type.startsWith('image/')) ocr.enqueue(created.id);
+    if (transcribe && created.type.startsWith('audio/')) transcribe.enqueue(created.id);
     return c.json({ attachment: toDto(db, created) }, 201);
   });
 

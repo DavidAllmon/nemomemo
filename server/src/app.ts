@@ -5,6 +5,7 @@ import type { Db } from './db/index.js';
 import path from 'node:path';
 import { makeSmtpMailer, type Mailer } from './services/email.js';
 import { OcrQueue, tesseractEngine } from './services/ocr.js';
+import { transcribeEngine } from './services/transcribe.js';
 import { viewerMiddleware, type AppEnv } from './middleware/auth.js';
 import { attachmentRoutes } from './routes/attachments.js';
 import { authRoutes } from './routes/auth.js';
@@ -32,6 +33,8 @@ export interface AppDeps {
   mailer?: Mailer | null;
   /** OCR job queue; defaults from config.ocr (shared tesseract engine). Explicit null disables OCR. */
   ocr?: OcrQueue | null;
+  /** Voice transcription queue; defaults from config.transcribe. Explicit null disables it. */
+  transcribe?: OcrQueue | null;
 }
 
 export function makeApp(db: Db, config: Config, deps: AppDeps = {}): Hono<AppEnv> {
@@ -44,6 +47,16 @@ export function makeApp(db: Db, config: Config, deps: AppDeps = {}): Hono<AppEnv
             db,
             config.uploadsDir,
             tesseractEngine(config.ocr.langs, path.join(config.dataDir, 'ocr-cache')),
+          )
+        : null;
+  const transcribe =
+    'transcribe' in deps
+      ? (deps.transcribe ?? null)
+      : config.transcribe
+        ? new OcrQueue(
+            db,
+            config.uploadsDir,
+            transcribeEngine(config.transcribe.url, config.transcribe.key, config.transcribe.model),
           )
         : null;
   const app = new Hono<AppEnv>();
@@ -74,7 +87,7 @@ export function makeApp(db: Db, config: Config, deps: AppDeps = {}): Hono<AppEnv
   api.route('/shares', shareRoutes(db));
   api.route('/users', userRoutes(db, mailer));
   api.route('/inbox', inboxRoutes(db));
-  api.route('/attachments', attachmentRoutes(db, config, ocr));
+  api.route('/attachments', attachmentRoutes(db, config, ocr, transcribe));
 
   app.route('/api/v1', api);
   app.route('/file', fileRoutes(db, config));
