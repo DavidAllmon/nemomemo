@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { NemoLogo, Wordmark } from '@/components/NemoLogo.js';
 import { Button } from '@/components/ui/button.js';
@@ -12,6 +13,8 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const navigate = useNavigate();
@@ -87,14 +90,29 @@ export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {
           <label className="text-sm font-semibold" htmlFor="password">
             Password
           </label>
-          <Input
-            id="password"
-            type="password"
-            autoComplete={effectiveMode === 'signup' ? 'new-password' : 'current-password'}
-            minLength={effectiveMode === 'signup' ? 8 : undefined}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete={effectiveMode === 'signup' ? 'new-password' : 'current-password'}
+              minLength={effectiveMode === 'signup' ? 8 : undefined}
+              className="pr-9"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              onKeyUp={(event) => setCapsLock(event.getModifierState('CapsLock'))}
+            />
+            <button
+              type="button"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              onClick={() => setShowPassword((value) => !value)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
+          </div>
+          {capsLock ? (
+            <p className="text-xs font-semibold text-muted-foreground">Heads up — Caps Lock is on. 🔒</p>
+          ) : null}
           {error ? <p className="text-sm font-semibold text-destructive">{error}</p> : null}
           {effectiveMode === 'signin' && profile?.emailEnabled ? (
             <Link to="/auth/forgot" className="text-xs font-semibold text-ocean hover:underline">

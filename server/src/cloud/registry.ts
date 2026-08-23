@@ -12,6 +12,7 @@ export interface ReefRow {
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   createdTs: number;
+  statusChangedTs: number | null;
 }
 
 /** Lowercase DNS label, 1–40 chars, no leading/trailing hyphen, no dots. */
@@ -47,6 +48,12 @@ const REGISTRY_MIGRATIONS: { name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    // When did a reef last change status? Drives the 90-day suspended-reef
+    // deletion promise in the ToS. Null = never changed since this migration.
+    name: '0002_status_changed_ts',
+    sql: `ALTER TABLE reef ADD COLUMN status_changed_ts BIGINT;`,
+  },
 ];
 
 interface RawReefRow {
@@ -56,6 +63,7 @@ interface RawReefRow {
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   created_ts: number;
+  status_changed_ts: number | null;
 }
 
 function toReefRow(raw: RawReefRow): ReefRow {
@@ -66,6 +74,7 @@ function toReefRow(raw: RawReefRow): ReefRow {
     stripeCustomerId: raw.stripe_customer_id,
     stripeSubscriptionId: raw.stripe_subscription_id,
     createdTs: raw.created_ts,
+    statusChangedTs: raw.status_changed_ts,
   };
 }
 
@@ -147,11 +156,26 @@ export class Registry {
   }
 
   setReefStatus(slug: string, status: ReefStatus): void {
-    this.sqlite.prepare('UPDATE reef SET status = ? WHERE slug = ?').run(status, slug);
+    this.sqlite
+      .prepare("UPDATE reef SET status = ?, status_changed_ts = strftime('%s','now') WHERE slug = ?")
+      .run(status, slug);
   }
 
   setReefStatusById(id: number, status: ReefStatus): void {
-    this.sqlite.prepare('UPDATE reef SET status = ? WHERE id = ?').run(status, id);
+    this.sqlite
+      .prepare("UPDATE reef SET status = ?, status_changed_ts = strftime('%s','now') WHERE id = ?")
+      .run(status, id);
+  }
+
+  /** Suspended reefs whose suspension is older than the cutoff (ToS 90-day grace). */
+  listSuspendedBefore(cutoffTs: number): ReefRow[] {
+    return (
+      this.sqlite
+        .prepare(
+          "SELECT * FROM reef WHERE status = 'suspended' AND COALESCE(status_changed_ts, created_ts) < ?",
+        )
+        .all(cutoffTs) as RawReefRow[]
+    ).map(toReefRow);
   }
 
   updateReefSubscription(id: number, subscriptionId: string): void {

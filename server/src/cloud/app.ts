@@ -77,6 +77,19 @@ export function makeCloudApp(
       return reefError(c, 404, 'NOT_FOUND', 'This reef swam away');
     }
     if (reef.status === 'suspended') {
+      if (billing) {
+        const wakeUrl = `${billing.appUrl}/cloud/rescue?reef=${slug}`;
+        const accept = c.req.header('accept') ?? '';
+        const pathname = new URL(c.req.url).pathname;
+        if (!pathname.startsWith('/api/') && !pathname.startsWith('/file/') && accept.includes('text/html')) {
+          return c.html(
+            `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Taking a nap · NemoMemo</title><style>body{font-family:system-ui;margin:0;min-height:100vh;display:grid;place-items:center;background:#f0f9ff;color:#0c4a6e}main{max-width:26rem;padding:2rem;background:#fff;border-radius:1rem;box-shadow:0 8px 30px rgb(2 132 199 / .12);margin:1rem;text-align:center}a.btn{display:inline-block;margin-top:1rem;padding:.7rem 1.4rem;border-radius:.6rem;background:#0284c7;color:#fff;text-decoration:none;font-weight:600}</style></head><body><main><div style="font-size:2.5rem">😴</div><h1>This reef is taking a nap</h1><p>Its subscription lapsed, but your memos are safe for 90 days from suspension.</p><a class="btn" href="${wakeUrl}">Wake it up →</a><p style="font-size:.85rem;color:#0369a1">Fix the payment and everything is exactly as you left it.</p></main></body></html>`,
+            403,
+          );
+        }
+        // API/file callers still get JSON, with the rescue URL included.
+        return c.json({ error: { code: 'REEF_SUSPENDED', message: 'This reef is taking a nap', rescueUrl: wakeUrl } }, 403);
+      }
       return reefError(c, 403, 'REEF_SUSPENDED', 'This reef is taking a nap');
     }
     const handle = fleet.get(slug);

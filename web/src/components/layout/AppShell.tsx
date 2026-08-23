@@ -24,6 +24,58 @@ function PastDueBanner() {
   );
 }
 
+/** One line when the reef's version changes since your last visit. */
+function WhatsNewBanner() {
+  const { data: profile } = useInstanceProfile();
+  const [lastSeen, setLastSeen] = useState<string | null | undefined>(() => {
+    try {
+      return localStorage.getItem('nemo-last-seen-version');
+    } catch {
+      return undefined; // storage unavailable: never show
+    }
+  });
+  const version = profile?.version;
+  useEffect(() => {
+    // First visit: remember silently — don't greet newcomers with a changelog.
+    if (version && lastSeen === null) {
+      try {
+        localStorage.setItem('nemo-last-seen-version', version);
+      } catch {
+        // ignore
+      }
+      setLastSeen(version);
+    }
+  }, [version, lastSeen]);
+  if (!version || lastSeen == null || lastSeen === version) return null;
+  const dismiss = () => {
+    try {
+      localStorage.setItem('nemo-last-seen-version', version);
+    } catch {
+      // ignore
+    }
+    setLastSeen(version);
+  };
+  return (
+    <div className="mb-4 flex items-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm">
+      <span className="min-w-0 flex-1">
+        NemoMemo swam up to <span className="font-semibold">v{version}</span> —{' '}
+        <a
+          href="https://trynemomemo.com/changelog"
+          target="_blank"
+          rel="noreferrer"
+          className="font-semibold underline"
+        >
+          see what's new
+        </a>{' '}
+        🐟
+      </span>
+      <button onClick={dismiss} aria-label="Dismiss" className="shrink-0 font-bold text-muted-foreground hover:text-foreground">
+        ✕
+      </button>
+    </div>
+  );
+}
+
 /** When email is set up on this instance, nudge accounts that aren't rescuable yet. */
 function EmailNudgeBanner() {
   const { data: viewer } = useViewer();
@@ -139,6 +191,7 @@ export function AppShell() {
       <main className="min-w-0 flex-1 px-3 py-4 md:h-dvh md:overflow-y-auto md:px-6">
         <div className="mx-auto w-full max-w-2xl">
           <PastDueBanner />
+          <WhatsNewBanner />
           <EmailNudgeBanner />
           <Outlet />
         </div>

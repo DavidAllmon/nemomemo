@@ -10,6 +10,8 @@ export interface StripeGateway {
     priceId: string;
     successUrl: string;
     cancelUrl: string;
+    /** Reuse an existing Stripe customer (reef rescue) instead of minting one. */
+    customerId?: string;
   }): Promise<{ id: string; url: string }>;
   retrieveCheckoutSession(id: string): Promise<{
     id: string;
@@ -33,8 +35,9 @@ export interface StripeWebhookEvent {
 export function makeStripeGateway(secretKey: string, webhookSecret: string): StripeGateway {
   const stripe = new Stripe(secretKey);
   return {
-    async createCheckoutSession({ priceId, successUrl, cancelUrl }) {
+    async createCheckoutSession({ priceId, successUrl, cancelUrl, customerId }) {
       const session = await stripe.checkout.sessions.create({
+        ...(customerId ? { customer: customerId } : {}),
         mode: 'subscription',
         line_items: [{ price: priceId, quantity: 1 }],
         success_url: successUrl,

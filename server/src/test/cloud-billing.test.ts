@@ -8,6 +8,7 @@ import { loadConfig } from '../config.js';
 import { makeCloudApp } from '../cloud/app.js';
 import { Registry } from '../cloud/registry.js';
 import { makeStripeGateway, type StripeGateway } from '../cloud/stripe.js';
+import { sweepExpiredReefs } from '../cloud/reef-sweeper.js';
 import { ReefFleet } from '../cloud/tenants.js';
 
 const BASE_DOMAIN = 'reef.test';
@@ -26,7 +27,7 @@ interface FakeSession {
 class FakeStripe implements StripeGateway {
   sessions = new Map<string, FakeSession>();
   customerMetadata = new Map<string, Record<string, string>>();
-  created: { priceId: string; successUrl: string; cancelUrl: string }[] = [];
+  created: { priceId: string; successUrl: string; cancelUrl: string; customerId?: string }[] = [];
   private counter = 0;
 
   async createCheckoutSession(opts: { priceId: string; successUrl: string; cancelUrl: string }) {
@@ -137,6 +138,75 @@ async function payAndProvision(ctx: BillingTestContext, customerId = 'cus_1'): P
   const claimUrl = ctx.stripe.customerMetadata.get(customerId)!.nemomemo_claim_url!;
   return new URL(claimUrl).searchParams.get('token')!;
 }
+
+describe('cloud lifecycle: rescue + 90-day sweep', () => {
+  let ctx: BillingTestContext;
+
+  beforeEach(() => {
+    ctx = makeBillingTestContext();
+  });
+
+  afterEach(() => {
+    ctx.fleet.closeAll();
+    ctx.registry.close();
+    fs.rmSync(ctx.scratch, { recursive: true, force: true });
+  });
+
+  async function claimedSuspendedReef(): Promise<void> {
+    const token = await payAndProvision(ctx);
+    await postClaim(ctx, { token, slug: 'lagoon', email: 'keeper@claim.test', username: 'nemo', password: 'password123' });
+    await postWebhook(ctx, {
+      type: 'customer.subscription.deleted',
+      data: { object: { customer: 'cus_1', id: 'sub_1' } },
+    });
+    expect(ctx.registry.getReefBySlug('lagoon')!.status).toBe('suspended');
+  }
+
+  it('a suspended reef page offers a wake-up link and checkout revives the SAME reef', async () => {
+    await claimedSuspendedReef();
+
+    const napPage = await ctx.app.request(`http://lagoon.${BASE_DOMAIN}/`, { headers: { host: `lagoon.${BASE_DOMAIN}` } });
+    expect(napPage.status).toBe(403);
+    expect(await napPage.text()).toContain('/cloud/rescue?reef=lagoon');
+
+    const rescue = await ctx.app.request(`${APP_URL}/cloud/rescue?reef=lagoon`, { headers: { host: APP_HOST } });
+    expect(rescue.status).toBe(303);
+    // The checkout session reuses the existing Stripe customer.
+    expect(ctx.stripe.created.at(-1)!.customerId).toBe('cus_1');
+
+    const before = ctx.registry.getReefBySlug('lagoon')!;
+    await postWebhook(ctx, {
+      type: 'checkout.session.completed',
+      data: { object: { customer: 'cus_1', subscription: 'sub_2', metadata: { app: 'nemomemo-cloud' } } },
+    });
+    const after = ctx.registry.getReefBySlug('lagoon')!;
+    expect(after.id).toBe(before.id); // same reef, not a new one
+    expect(after.status).toBe('active');
+    expect(after.stripeSubscriptionId).toBe('sub_2');
+  });
+
+  it('sweeps reefs suspended for more than 90 days; younger ones survive', async () => {
+    await claimedSuspendedReef();
+    const reef = ctx.registry.getReefBySlug('lagoon')!;
+    const reefDir = path.join(ctx.scratch, 'reefs', 'lagoon');
+    expect(fs.existsSync(reefDir)).toBe(true);
+
+    const now = Math.floor(Date.now() / 1000);
+    // Not old enough: nothing happens.
+    ctx.registry.sqlite.prepare('UPDATE reef SET status_changed_ts = ? WHERE id = ?').run(now - 80 * 86400, reef.id);
+    expect(sweepExpiredReefs(ctx.registry, ctx.fleet, path.join(ctx.scratch, 'reefs'), now)).toBe(0);
+    expect(fs.existsSync(reefDir)).toBe(true);
+
+    // Past the 90-day grace: data deleted, reef marked canceled.
+    ctx.registry.sqlite.prepare('UPDATE reef SET status_changed_ts = ? WHERE id = ?').run(now - 91 * 86400, reef.id);
+    expect(sweepExpiredReefs(ctx.registry, ctx.fleet, path.join(ctx.scratch, 'reefs'), now)).toBe(1);
+    expect(fs.existsSync(reefDir)).toBe(false);
+    expect(ctx.registry.getReefBySlug('lagoon')!.status).toBe('canceled');
+
+    // Idempotent: a second sweep finds nothing.
+    expect(sweepExpiredReefs(ctx.registry, ctx.fleet, path.join(ctx.scratch, 'reefs'), now)).toBe(0);
+  });
+});
 
 describe('cloud billing + claim flow', () => {
   let ctx: BillingTestContext;

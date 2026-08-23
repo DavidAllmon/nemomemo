@@ -5,6 +5,7 @@ import { sweepDoryMemos } from '../services/dory-sweeper.js';
 import { makeCloudApp, type CloudSettings } from './app.js';
 import type { BillingDeps } from './billing.js';
 import { makeSmtpMailer } from '../services/email.js';
+import { sweepExpiredReefs } from './reef-sweeper.js';
 import { Registry } from './registry.js';
 import { makeStripeGateway } from './stripe.js';
 import { ReefFleet } from './tenants.js';
@@ -56,6 +57,19 @@ export function startCloud(): void {
     console.log('[cloud] Stripe env incomplete — billing routes disabled');
   }
   const app = makeCloudApp(registry, fleet, settings, billing);
+
+  // ToS 90-day promise: delete reefs suspended past the grace window, daily.
+  const reefsDir = path.join(base.dataDir, 'reefs');
+  const reefSweep = () => {
+    try {
+      sweepExpiredReefs(registry, fleet, reefsDir, Math.floor(Date.now() / 1000));
+    } catch (error) {
+      console.error('[cloud] reef sweep failed:', error);
+    }
+  };
+  reefSweep();
+  const reefSweepTimer = setInterval(reefSweep, 24 * 3600 * 1000);
+  reefSweepTimer.unref?.();
 
   // Dory sweeps run per open reef; a closed reef is swept on its next open,
   // and every read path already refuses expired memos regardless.

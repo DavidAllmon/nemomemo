@@ -76,8 +76,13 @@ async function ensureProvisioned(
 ): Promise<{ reef: ReefRow; claimUrl: string }> {
   const existing = deps.registry.getReefByStripeCustomerId(customerId);
   if (existing) {
-    if (!existing.stripeSubscriptionId && subscriptionId) {
+    if (subscriptionId && subscriptionId !== existing.stripeSubscriptionId) {
       deps.registry.updateReefSubscription(existing.id, subscriptionId);
+    }
+    // A completed payment wakes a sleeping reef (rescue path) — but never
+    // touches 'provisioned' (unclaimed) or 'canceled' (data already gone).
+    if (existing.status === 'suspended' || existing.status === 'past_due') {
+      deps.registry.setReefStatusById(existing.id, 'active');
     }
     const metadata = await deps.gateway.getCustomerMetadata(customerId);
     const claimUrl = metadata.nemomemo_claim_url;
@@ -295,6 +300,24 @@ export function billingRoutes(deps: BillingDeps): Hono {
       priceId: deps.prices[interval],
       successUrl: `${deps.appUrl}/claim?session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: deps.cancelUrl,
+    });
+    return c.redirect(session.url, 303);
+  });
+
+  // Wake-up path for suspended reefs: same checkout, same Stripe customer, so
+  // the completed webhook revives the SAME reef instead of provisioning a new one.
+  app.get('/cloud/rescue', checkoutLimiter, async (c) => {
+    const slug = (c.req.query('reef') ?? '').toLowerCase().trim();
+    const reef = slug && REEF_SLUG_RE.test(slug) ? deps.registry.getReefBySlug(slug) : null;
+    if (!reef || !reef.stripeCustomerId || (reef.status !== 'suspended' && reef.status !== 'past_due')) {
+      return c.html(page('Nothing to wake', `<h1>This reef isn't napping 🐠</h1><p>If you think it should be rescuable, reach out and we'll help.</p>`), 404);
+    }
+    const interval = c.req.query('interval') === 'year' ? 'year' : 'month';
+    const session = await deps.gateway.createCheckoutSession({
+      priceId: deps.prices[interval],
+      successUrl: `https://${reef.slug}.${deps.baseDomain}/`,
+      cancelUrl: deps.cancelUrl,
+      customerId: reef.stripeCustomerId,
     });
     return c.redirect(session.url, 303);
   });
