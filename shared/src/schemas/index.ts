@@ -1,10 +1,13 @@
 import { z } from 'zod';
 import {
   CONTENT_LENGTH_LIMIT,
+  DORY_WINDOWS,
+  REMIND_REPEATS,
   ROLES,
   ROW_STATUSES,
   USERNAME_REGEX,
   VISIBILITIES,
+  type RemindRepeat,
 } from '../constants.js';
 
 // ---------- Request schemas (validated at the route boundary) ----------
@@ -58,6 +61,8 @@ export const createMemoRequestSchema = z.object({
   content: z.string().max(CONTENT_LENGTH_LIMIT),
   visibility: z.enum(VISIBILITIES).optional(),
   dory: z.boolean().optional(),
+  doryWindow: z.enum(DORY_WINDOWS).optional(),
+  surfaceAt: z.number().int().positive().optional(),
   attachmentUids: z.array(z.string()).max(20).optional(),
   relatedMemoUids: z.array(z.string()).max(20).optional(),
 });
@@ -68,6 +73,10 @@ export const updateMemoRequestSchema = z.object({
   pinned: z.boolean().optional(),
   rowStatus: z.enum(ROW_STATUSES).optional(),
   dory: z.boolean().optional(),
+  doryWindow: z.enum(DORY_WINDOWS).optional(),
+  surfaceAt: z.number().int().positive().nullable().optional(),
+  remindAt: z.number().int().positive().nullable().optional(),
+  remindEvery: z.enum(REMIND_REPEATS).nullable().optional(),
   attachmentUids: z.array(z.string()).max(20).optional(),
   relatedMemoUids: z.array(z.string()).max(20).optional(),
 });
@@ -208,6 +217,9 @@ export interface MemoDto {
   reactions: ReactionDto[];
   commentCount: number;
   forgetAt: number | null;
+  remindAt: number | null;
+  remindEvery: RemindRepeat | null;
+  surfaceAt: number | null;
   parentUid: string | null;
   referencing: RelatedMemoStubDto[];
   referencedBy: RelatedMemoStubDto[];
@@ -228,7 +240,7 @@ export interface InboxDto {
   id: number;
   createdTs: number;
   status: 'UNREAD' | 'READ' | 'ARCHIVED';
-  type: 'MEMO_COMMENT' | 'MEMO_MENTION' | 'MEMO_THREAD';
+  type: 'MEMO_COMMENT' | 'MEMO_MENTION' | 'MEMO_THREAD' | 'REMINDER' | 'BOTTLE_ARRIVED' | 'DORY_WARNING';
   sender: UserDto | null;
   memoUid: string | null;
   memoSnippet: string | null;

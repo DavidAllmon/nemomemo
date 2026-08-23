@@ -15,6 +15,7 @@ export const users = sqliteTable('user', {
   passwordHash: text('password_hash').notNull(),
   avatarUrl: text('avatar_url').notNull().default(''),
   description: text('description').notNull().default(''),
+  doryForgottenCount: integer('dory_forgotten_count').notNull().default(0),
 });
 
 export const userSessions = sqliteTable('user_session', {
@@ -44,6 +45,10 @@ export const memos = sqliteTable('memo', {
   pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
   payload: text('payload').notNull().default('{}'),
   forgetAt: integer('forget_at'),
+  remindAt: integer('remind_at'),
+  // Keep in sync with the CHECK constraint in migration 0005.
+  remindEvery: text('remind_every', { enum: ['DAILY', 'WEEKLY', 'MONTHLY'] }),
+  surfaceAt: integer('surface_at'),
 });
 
 export const memoRelations = sqliteTable(
@@ -110,9 +115,11 @@ export const inboxes = sqliteTable('inbox', {
   receiverId: integer('receiver_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  // Keep these enums in sync with the CHECK constraints in migrations 0003+.
+  // Keep these enums in sync with the CHECK constraints in migrations 0003+/0005.
   status: text('status', { enum: ['UNREAD', 'READ', 'ARCHIVED'] }).notNull().default('UNREAD'),
-  type: text('type', { enum: ['MEMO_COMMENT', 'MEMO_MENTION', 'MEMO_THREAD'] }).notNull(),
+  type: text('type', {
+    enum: ['MEMO_COMMENT', 'MEMO_MENTION', 'MEMO_THREAD', 'REMINDER', 'BOTTLE_ARRIVED', 'DORY_WARNING'],
+  }).notNull(),
   memoId: integer('memo_id').references(() => memos.id, { onDelete: 'cascade' }),
 });
 

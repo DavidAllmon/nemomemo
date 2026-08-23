@@ -195,6 +195,9 @@ export function buildMemoDtos(db: Db, rows: MemoRow[], viewer: UserRow | null): 
       reactions: reactionsByMemo.get(row.id) ?? [],
       commentCount,
       forgetAt: row.forgetAt,
+      remindAt: row.remindAt,
+      remindEvery: row.remindEvery,
+      surfaceAt: row.surfaceAt,
       parentUid,
       referencing,
       referencedBy,
@@ -216,6 +219,7 @@ function placeholderUser(): UserRow {
     passwordHash: '',
     avatarUrl: '',
     description: '',
+    doryForgottenCount: 0,
   };
 }
 
@@ -332,6 +336,9 @@ function rawToMemoRow(raw: Record<string, unknown>): MemoRow {
     pinned: (raw.pinned as number) === 1,
     payload: raw.payload as string,
     forgetAt: (raw.forget_at as number | null) ?? null,
+    remindAt: (raw.remind_at as number | null) ?? null,
+    remindEvery: (raw.remind_every as MemoRow['remindEvery']) ?? null,
+    surfaceAt: (raw.surface_at as number | null) ?? null,
   };
 }
 
