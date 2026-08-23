@@ -13,7 +13,17 @@ import { useEffect } from 'react';
  */
 export function SmoothScroll() {
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // Close the mobile menu after any link tap (independent of motion prefs).
+    const closeMenu = (event: MouseEvent) => {
+      const link = (event.target as HTMLElement).closest('a');
+      const menu = (event.target as HTMLElement).closest('details');
+      if (link && menu) menu.removeAttribute('open');
+    };
+    document.addEventListener('click', closeMenu);
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return () => document.removeEventListener('click', closeMenu);
+    }
 
     gsap.registerPlugin(ScrollTrigger);
 
@@ -45,6 +55,7 @@ export function SmoothScroll() {
     document.addEventListener('click', onClick);
 
     return () => {
+      document.removeEventListener('click', closeMenu);
       document.removeEventListener('click', onClick);
       gsap.ticker.remove(raf);
       lenis.destroy();

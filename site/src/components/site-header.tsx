@@ -49,6 +49,27 @@ export function SiteHeader() {
           >
             install
           </Link>
+          {/* Mobile menu (CSS-only) */}
+          <details className="group relative md:hidden">
+            <summary
+              className="cursor-pointer list-none font-semibold text-ocean-muted transition-colors hover:text-ocean-ink [&::-webkit-details-marker]:hidden"
+              aria-label="Menu"
+            >
+              <span className="group-open:hidden">[menu]</span>
+              <span className="hidden group-open:inline">[close]</span>
+            </summary>
+            <nav className="absolute right-0 top-9 z-50 flex w-44 flex-col border border-ocean-border bg-ocean-bg font-medium">
+              {[...NAV, { label: 'docs ↗', href: '/docs' }].map((item) => (
+                <Link
+                  key={item.href + item.label}
+                  href={item.href}
+                  className="border-b border-ocean-border px-4 py-2.5 text-ocean-muted transition-colors last:border-b-0 hover:text-ocean-ink"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </details>
         </div>
       </div>
     </header>

@@ -244,16 +244,11 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-      </div>
-
-      {/* ——— The scroll story (full-bleed pinned scene) ——— */}
-      <div className="relative z-10">
+        {/* ——— The life of a memo ——— */}
         <MemoLife />
-      </div>
 
-      <div className="relative z-10 mx-auto w-full max-w-5xl px-5">
         {/* ——— Features ——— */}
-        <section className="mt-6">
+        <section className="mt-20">
           <SectionTag id="features" label="FEATURES" note="18 total. no tiers, no hidden 'pro' flag." />
           <div className="mt-5 border border-ocean-border" data-reveal="stagger">
             {FEATURES.map((feature) => (
