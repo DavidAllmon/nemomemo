@@ -25,6 +25,11 @@ on your Stripe receipt's customer record if you lose it.
 Almost nothing — that's the point. The differences:
 
 - **We run it**: updates, monitoring, and nightly off-server backups are our job.
+  Need to roll back to an earlier day? You can do it yourself: **Settings → Backups →
+  Go back to an earlier day** lists every nightly snapshot of your reef — pick a date,
+  confirm, and a few minutes later your reef is back to that morning (we keep the
+  pre-restore state as a safety copy on the server). If anything looks off, reach out
+  and we'll help.
 - **Isolation**: every reef is its own separate database. Other customers' reefs are
   physically invisible to yours.
 - **Fair use**: memos are unlimited; each reef includes up to 25 members and 5 GB of
