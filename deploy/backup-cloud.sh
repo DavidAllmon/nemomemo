@@ -19,7 +19,11 @@ ENV_FILE=/opt/nemomemo-deploy/backup.env
 set -a; source "$ENV_FILE"; set +a
 
 DATA=$(docker volume inspect nemomemo-deploy_cloud-data --format '{{.Mountpoint}}')
-STAGE=$(mktemp -d /tmp/nemomemo-backup.XXXXXX)
+# Fixed stage path: stable restic paths across nights (better parent detection,
+# and per-reef restores can --include a predictable prefix).
+STAGE=/tmp/nemomemo-backup-stage
+rm -rf "$STAGE"
+mkdir -p "$STAGE"
 trap 'rm -rf "$STAGE"' EXIT
 
 # Consistent SQLite snapshots: registry + every reef database.
@@ -38,6 +42,18 @@ done < <(find "$DATA" -type d -name uploads)
 
 restic backup --tag nemomemo-cloud "$STAGE"
 restic forget --tag nemomemo-cloud --keep-daily 14 --keep-weekly 8 --prune
+
+# Manifest for the in-app snapshot browser: ids, dates, and which reefs each
+# snapshot holds. No secrets — the app container reads this file.
+SNAPS=$(restic snapshots --tag nemomemo-cloud --json)
+PREV=$(cat "$DATA/snapshots.json" 2>/dev/null || echo '[]')
+REEFS=$(ls -1 "$STAGE/reefs" 2>/dev/null | jq -R . | jq -sc .)
+jq -n --argjson snaps "$SNAPS" --argjson prev "$PREV" --argjson reefs "$REEFS" '
+  ($prev | map({key: .id, value: .reefs}) | from_entries) as $known
+  | $snaps | sort_by(.time) | reverse
+  | map({id: .short_id, time: .time, reefs: ($known[.short_id] // null)})
+  | if length > 0 then .[0].reefs = (.[0].reefs // $reefs) else . end
+' > "$DATA/snapshots.json.tmp" && mv "$DATA/snapshots.json.tmp" "$DATA/snapshots.json"
 
 if [[ -n ${HEALTHCHECK_URL:-} ]]; then
   curl -fsS -m 10 --retry 3 "$HEALTHCHECK_URL" > /dev/null || true

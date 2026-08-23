@@ -6,6 +6,8 @@ import { makeCloudApp, type CloudSettings } from './app.js';
 import type { BillingDeps } from './billing.js';
 import { makeSmtpMailer } from '../services/email.js';
 import { sweepExpiredReefs } from './reef-sweeper.js';
+import { sweepStagedRestores } from './restore-sweeper.js';
+import { ensureRestoreDirs } from './snapshots.js';
 import { Registry } from './registry.js';
 import { makeStripeGateway } from './stripe.js';
 import { ReefFleet } from './tenants.js';
@@ -56,7 +58,7 @@ export function startCloud(): void {
   } else {
     console.log('[cloud] Stripe env incomplete — billing routes disabled');
   }
-  const app = makeCloudApp(registry, fleet, settings, billing);
+  const app = makeCloudApp(registry, fleet, settings, base.dataDir, billing);
 
   // ToS 90-day promise: delete reefs suspended past the grace window, daily.
   const reefsDir = path.join(base.dataDir, 'reefs');
@@ -70,6 +72,20 @@ export function startCloud(): void {
   reefSweep();
   const reefSweepTimer = setInterval(reefSweep, 24 * 3600 * 1000);
   reefSweepTimer.unref?.();
+
+  // Snapshot rollback: the host worker stages verified restores into the
+  // volume; we swap them in. 10s cadence — an idle scan is one readdir.
+  ensureRestoreDirs(base.dataDir);
+  const restoreSweep = () => {
+    try {
+      sweepStagedRestores(fleet, base.dataDir);
+    } catch (error) {
+      console.error('[cloud] restore sweep failed:', error);
+    }
+  };
+  restoreSweep();
+  const restoreTimer = setInterval(restoreSweep, 10_000);
+  restoreTimer.unref?.();
 
   // Dory sweeps run per open reef; a closed reef is swept on its next open,
   // and every read path already refuses expired memos regardless.

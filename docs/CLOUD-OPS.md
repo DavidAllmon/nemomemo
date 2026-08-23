@@ -65,6 +65,24 @@ rebuild `demo`, `cloud`, and `site` per the usual path rules.
 3. Confirm: backups restoring (do one `restic restore` fire drill), uptime alerts firing
    (pause the container once), refund path known (Stripe dashboard → payment → refund).
 
+## Snapshot browser / self-serve rollback
+
+The app lists nightly snapshots from `snapshots.json` in the cloud volume (written by
+`backup-cloud.sh`; run `deploy/backfill-snapshot-manifest.sh` once to fill history).
+Restores are a file-queue handshake in `<volume>/restore/`:
+`queue/<slug>.json` (app) → `restore-cloud.sh` cron (host, every minute, logs to
+`/opt/nemomemo-deploy/restore.log`) restic-restores + integrity-checks into
+`staged/<slug>/` → the app's 10 s sweeper evicts the reef, keeps one
+`reefs/<slug>.pre-restore-<ts>` safety copy, and swaps the restore in.
+`status/<slug>.json` carries the state machine (queued → restoring → staged → done,
+or failed with a message). Restic creds stay in `backup.env`, host-only.
+
+Troubleshooting: a request stuck in `restoring` for >15 min → check `restore.log`;
+a crashed worker leaves `queue/<slug>.json.working`, which the next cron run
+requeues automatically. To undo a restore: the safety copy is
+`reefs/<slug>.pre-restore-<ts>` — just move it to `restore/staged/<slug>` and the
+sweeper swaps it back in.
+
 ## Recovering a customer's claim link
 
 Stripe dashboard → Customers → the customer → metadata `nemomemo_claim_url`.
