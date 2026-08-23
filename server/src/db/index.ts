@@ -3,6 +3,7 @@ import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { backfillPayloads } from './backfill.js';
 import * as schema from './schema.js';
 
 export type Db = BetterSQLite3Database<typeof schema> & { $client: Database.Database };
@@ -48,6 +49,8 @@ export function createDb(filename: string): Db {
   sqlite.pragma('foreign_keys = ON');
   sqlite.pragma('busy_timeout = 5000');
   runMigrations(sqlite);
+  const rewritten = backfillPayloads(sqlite);
+  if (rewritten > 0) console.log(`[db] payload backfill rewrote ${rewritten} memos`);
   return drizzle(sqlite, { schema }) as Db;
 }
 
