@@ -20,6 +20,7 @@ const NotFoundPage = lazy(() => import('@/pages/NotFound.js').then((m) => ({ def
 const ProfilePage = lazy(() => import('@/pages/Profile.js').then((m) => ({ default: m.ProfilePage })));
 const SettingsPage = lazy(() => import('@/pages/Settings.js').then((m) => ({ default: m.SettingsPage })));
 const SharePage = lazy(() => import('@/pages/Share.js').then((m) => ({ default: m.SharePage })));
+const TasksPage = lazy(() => import('@/pages/Tasks.js').then((m) => ({ default: m.TasksPage })));
 const VerifyEmailPage = lazy(() => import('@/pages/VerifyEmail.js').then((m) => ({ default: m.VerifyEmailPage })));
 const ForgotPasswordPage = lazy(() => import('@/pages/ResetPassword.js').then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPassword.js').then((m) => ({ default: m.ResetPasswordPage })));
@@ -72,6 +73,14 @@ export function App() {
           element={
             <RequireAuth>
               <DoryMemoryPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/tasks"
+          element={
+            <RequireAuth>
+              <TasksPage />
             </RequireAuth>
           }
         />

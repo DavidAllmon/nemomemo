@@ -17,7 +17,7 @@ export function ViewsList() {
   const activeView = searchParams.get('view');
 
   if (!viewer) return null;
-  const views = [BUILT_IN_TASKS_VIEW, ...(settings?.memoViews ?? [])];
+  const views = settings?.memoViews ?? [];
 
   return (
     <section aria-label="Views">
@@ -32,6 +32,18 @@ export function ViewsList() {
         </NavLink>
       </div>
       <div className="flex flex-col gap-0.5">
+        <NavLink
+          to="/tasks"
+          className={({ isActive }) =>
+            cn(
+              'flex items-center gap-2 rounded-lg px-2 py-1 text-[13px] hover:bg-accent',
+              isActive && 'bg-accent font-semibold',
+            )
+          }
+        >
+          <ListChecks className="size-3.5 text-ocean" />
+          <span className="truncate">{BUILT_IN_TASKS_VIEW.title}</span>
+        </NavLink>
         {views.map((view) => (
           <button
             key={view.id}
@@ -42,11 +54,7 @@ export function ViewsList() {
               activeView === view.id && 'bg-accent font-semibold',
             )}
           >
-            {view.id === BUILT_IN_TASKS_VIEW.id ? (
-              <ListChecks className="size-3.5 text-ocean" />
-            ) : (
-              <Filter className="size-3.5 text-ocean" />
-            )}
+            <Filter className="size-3.5 text-ocean" />
             <span className="truncate">{view.title}</span>
           </button>
         ))}
