@@ -86,11 +86,11 @@ Old script kept at `update.sh.bak-predisk`. Still open (roadmap): post-deploy
 smoke test + alerting; uptime monitoring will catch a stuck version externally.
 
 
-## Monitoring setup (one account: Better Stack)
+## Monitoring — LIVE since 2026-08-23 (Better Stack)
 
-One free Better Stack account (betterstack.com — free tier: 10 monitors + 10
-heartbeats, 3-minute checks, email/push alerts, status page) covers both kinds
-of monitoring. Maintainer signs up, then creates:
+One free Better Stack account covers everything; all of the below EXISTS and
+is verified up. API token + version-monitor id live in
+`/opt/nemomemo-deploy/betterstack.env` on the VM (never in this repo).
 
 **Uptime monitors** (alert when a probe FAILS):
 - `https://app.trynemomemo.com/healthz`   (cloud portal + tenant supervisor)
@@ -107,6 +107,9 @@ of monitoring. Maintainer signs up, then creates:
 - Optional: "demo-reset", period 1 day, grace 2 h → append
   `curl -fsS -m 10 --retry 3 <heartbeat-url>` to reset-demo.sh.
 
-(UptimeRobot + healthchecks.io remain a fine two-account alternative if Better
-Stack's free limits ever pinch.) Once the account exists, hand the heartbeat
-URLs to the assistant/session with VM access and it wires them in.
+**Version canary is self-updating**: update.sh PATCHes the keyword monitor to
+the freshly deployed version after every successful deploy, so a wedged deploy
+(prod serving an old version) trips a DOWN alert within minutes. Heartbeat
+URLs are wired: backup.env `HEALTHCHECK_URL` (backup) and a curl at the end of
+reset-demo.sh (demo reset). New customer reefs need NO new monitors — every
+reef shares the container/tunnel the customer-reef canary already probes.

@@ -16,7 +16,7 @@ Priority: **P0** do before anything else · **P1** next milestone · **P2** feat
 | Item | Why | Effort |
 | --- | --- | --- |
 | ~~**Off-VM nightly backups**~~ ✅ DONE 2026-08-22 | restic → Cloudflare R2 (`nemomemo-cloud-backups`, free tier), consistent SQLite snapshots nightly at 07:17 UTC, 14 daily + 8 weekly retention, restore drill verified. | — |
-| **Uptime monitoring** | External monitor (UptimeRobot/healthchecks.io free tier) on app host, a reef, demo, site — plus the backup script's success ping. | S |
+| ~~**Uptime monitoring**~~ ✅ DONE 2026-08-23 | Better Stack (free): 5 monitors (app/demo/site/reef-canary/self-updating version canary) + 2 heartbeats (backup, demo reset), wired via API; update.sh syncs the version keyword each deploy. | — |
 | ~~**Security fix PR** (audit F1, F4, F5, F6, F7, F8)~~ ✅ DONE 2026-08-22 (v1.3.0) | Attachment nosniff + sandbox/attachment disposition, `Secure` cookie flag, security-header middleware, sign-in dummy-hash, avatarUrl scheme/size cap, password min 8. | — |
 | ~~**Rate limiting** (audit F3)~~ ✅ v1.3.0 (limiter) | Per-IP fixed-window limiter honoring `CF-Connecting-IP` on signin/signup/checkout. **Still open (S):** swap bcryptjs → native bcrypt/argon2 off the event loop. | S |
 | **Rotate the live Stripe key** | The live key transited chat during launch; roll it in the dashboard, re-run the env swap. Hygiene, not an incident. | S |
