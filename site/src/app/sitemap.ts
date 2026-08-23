@@ -7,8 +7,6 @@ export const dynamic = 'force-static';
 
 const MARKETING_PATHS = [
   '/',
-  '/features',
-  '/use-cases',
   '/compare',
   '/compare/memos',
   '/compare/notion',

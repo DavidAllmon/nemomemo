@@ -137,6 +137,32 @@ export function TinyFish({ className, fill }: { className?: string; fill?: strin
   );
 }
 
+/** A little fishing boat that sits on the waterline; the anchor line drops from it. */
+export function BoatMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 96 56" className={className ?? 'h-14 w-24'} role="img" aria-label="A small boat">
+      <path d="M50 6v30" stroke={STROKE} strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M50 6c9 2 14 7 15 12H50z" fill="oklch(0.72 0.15 48)" stroke={STROKE} strokeWidth="2" strokeLinejoin="round" />
+      <path d="M12 36h72l-8 12c-2 3-5 5-9 5H29c-4 0-7-2-9-5z" fill="oklch(0.42 0.06 250)" stroke={STROKE} strokeWidth="2.5" strokeLinejoin="round" />
+      <path d="M24 30h20v6H24z" fill="oklch(0.9 0.03 95)" stroke={STROKE} strokeWidth="2" strokeLinejoin="round" />
+      <circle cx="30" cy="33" r="1.4" fill={STROKE} />
+      <circle cx="38" cy="33" r="1.4" fill={STROKE} />
+    </svg>
+  );
+}
+
+/** The anchor, resting on the seafloor at the end of the dive. */
+export function AnchorMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 60" className={className ?? 'h-14 w-11'} role="img" aria-label="An anchor">
+      <circle cx="24" cy="9" r="5.5" fill="none" stroke="oklch(0.62 0.03 245)" strokeWidth="3" />
+      <path d="M24 14.5V48" stroke="oklch(0.62 0.03 245)" strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M13 22h22" stroke="oklch(0.62 0.03 245)" strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M8 36c1 8 7 13 16 14 9-1 15-6 16-14l-6 3 2-7c-2 6-6 9-12 10-6-1-10-4-12-10l2 7z" fill="oklch(0.62 0.03 245)" stroke="oklch(0.62 0.03 245)" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /** A loose cluster of rising bubbles. Purely decorative. */
 export function Bubbles({ className }: { className?: string }) {
   return (

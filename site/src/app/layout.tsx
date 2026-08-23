@@ -1,6 +1,6 @@
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import type { Metadata, Viewport } from 'next';
-import { Baloo_2, Nunito } from 'next/font/google';
+import { Baloo_2, IBM_Plex_Mono, Nunito } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { JsonLd } from '@/components/json-ld';
 import { REPO_URL } from '@/lib/demo-url';
@@ -9,6 +9,11 @@ import './global.css';
 
 const nunito = Nunito({ subsets: ['latin'], variable: '--font-nunito' });
 const baloo = Baloo_2({ subsets: ['latin'], variable: '--font-baloo' });
+const plexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-plex-mono',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -41,7 +46,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
-      className={`${nunito.variable} ${baloo.variable}`}
+      className={`${nunito.variable} ${baloo.variable} ${plexMono.variable}`}
       style={{ fontFamily: 'var(--font-nunito), ui-rounded, sans-serif' }}
       suppressHydrationWarning
     >

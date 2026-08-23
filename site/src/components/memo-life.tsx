@@ -12,7 +12,7 @@ import { Bubbles } from '@/components/sea-life';
 function MemoCard({ className }: { className?: string }) {
   return (
     <div
-      className={`w-[min(34rem,88vw)] rounded-2xl border border-ocean-border bg-ocean-card p-6 shadow-[0_24px_80px_oklch(0.1_0.03_255_/_0.5)] ${className ?? ''}`}
+      className={`w-[min(34rem,88vw)] rounded-xl border border-[oklch(0.34_0.045_250)] bg-ocean-card/95 p-6 shadow-[0_24px_80px_oklch(0.08_0.02_255_/_0.6)] ${className ?? ''}`}
     >
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-ocean-muted">Today, 8:02 AM</p>
@@ -45,12 +45,12 @@ function Caption({
 }) {
   return (
     <div className="scrolly-caption" style={{ top }}>
-      <div className="rounded-2xl border border-ocean-border bg-ocean-bg/95 p-5 shadow-[0_16px_48px_oklch(0.1_0.03_255_/_0.55)]">
+      <div className="border border-ocean-border bg-ocean-bg/95 p-5">
         <p className="font-mono text-[11px] font-bold uppercase tracking-[0.25em] text-ocean-blue">
           {step}
         </p>
-        <p className="mt-1.5 font-display text-lg font-bold">{title}</p>
-        <p className="mt-1.5 text-sm leading-relaxed text-ocean-muted">{children}</p>
+        <p className="mt-2 font-mono text-[15px] font-bold">{title}</p>
+        <p className="mt-1.5 font-mono text-[12.5px] leading-relaxed text-ocean-muted">{children}</p>
       </div>
     </div>
   );
@@ -61,9 +61,9 @@ export function MemoLife() {
     <section aria-label="The life of a Dory memo">
       {/* ——— Enhanced: pinned scroll-driven scene ——— */}
       <div className="scrolly">
-        <div className="scrolly-stage bg-gradient-to-b from-ocean-bg via-[oklch(0.18_0.045_252)] to-ocean-bg">
+        <div className="scrolly-stage">
           {/* corner status chip (à la Pudding's state indicator) */}
-          <div className="absolute right-5 top-20 z-20 rounded-xl border border-ocean-border bg-ocean-card px-4 py-2 font-mono text-xs font-bold sm:right-10">
+          <div className="absolute right-5 top-20 z-20 border border-ocean-border bg-ocean-bg/90 px-4 py-2 font-mono text-xs font-bold sm:right-10">
             <span className="text-ocean-muted">status:&nbsp;</span>
             <span className="inline-grid text-left align-bottom">
               <span className="fx fx-status-fresh [grid-area:1/1] text-ocean-ink">fresh</span>
@@ -91,11 +91,9 @@ export function MemoLife() {
           {/* the forgetting */}
           <Bubbles className="fx fx-bubbles absolute z-10 h-24 w-12 text-ocean-blue" />
           <div className="fx fx-gone absolute z-10 text-center">
-            <p className="font-display text-3xl font-extrabold sm:text-4xl">
-              Forgotten. On purpose. 🫧
-            </p>
-            <p className="mt-2 text-sm text-ocean-muted">
-              (Archiving would have rescued it forever — your call.)
+            <p className="font-mono text-3xl font-bold sm:text-4xl">Forgotten. On purpose. 🫧</p>
+            <p className="mt-3 font-mono text-[13px] text-ocean-muted">
+              (archiving would have rescued it forever — your call.)
             </p>
           </div>
         </div>
