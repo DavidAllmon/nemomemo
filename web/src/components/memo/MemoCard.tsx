@@ -23,7 +23,10 @@ function AttachmentPanel({ memo, shareToken }: { memo: MemoDto; shareToken?: str
   const [lightbox, setLightbox] = useState<{ uid: string; filename: string } | null>(null);
   if (memo.attachments.length === 0) return null;
   const images = memo.attachments.filter((a) => a.type.startsWith('image/'));
-  const files = memo.attachments.filter((a) => !a.type.startsWith('image/'));
+  const audio = memo.attachments.filter((a) => a.type.startsWith('audio/'));
+  const files = memo.attachments.filter(
+    (a) => !a.type.startsWith('image/') && !a.type.startsWith('audio/'),
+  );
   return (
     <div className="rounded-xl border border-border p-2.5">
       <p className="mb-2 flex items-center gap-1 text-xs font-bold text-muted-foreground">
@@ -47,6 +50,26 @@ function AttachmentPanel({ memo, shareToken }: { memo: MemoDto; shareToken?: str
           ))}
         </div>
       ) : null}
+      {audio.map((attachment) => (
+        <div key={attachment.uid} className="mt-1 flex flex-col gap-1">
+          <audio
+            controls
+            preload="none"
+            src={fileUrl(attachment.uid, attachment.filename, { share: shareToken })}
+            className="h-9 w-full"
+          >
+            <a href={fileUrl(attachment.uid, attachment.filename, { share: shareToken })}>
+              {attachment.filename}
+            </a>
+          </audio>
+          {attachment.extractedText ? (
+            <details className="rounded-lg bg-muted/50 px-2 py-1 text-xs text-muted-foreground">
+              <summary className="cursor-pointer font-semibold">Transcript</summary>
+              <p className="mt-1 whitespace-pre-wrap">{attachment.extractedText}</p>
+            </details>
+          ) : null}
+        </div>
+      ))}
       {files.map((attachment) => (
         <a
           key={attachment.uid}

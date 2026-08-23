@@ -31,6 +31,7 @@ function toDto(db: Db, row: typeof attachments.$inferSelect): AttachmentDto {
     size: row.size,
     createdTs: row.createdTs,
     memoUid,
+    extractedText: row.extractedText,
   };
 }
 

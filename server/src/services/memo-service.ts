@@ -93,6 +93,7 @@ export function buildMemoDtos(db: Db, rows: MemoRow[], viewer: UserRow | null): 
       size: row.size,
       createdTs: row.createdTs,
       memoUid: uidById.get(row.memoId!) ?? null,
+      extractedText: row.extractedText,
     });
     attachmentsByMemo.set(row.memoId!, list);
   }

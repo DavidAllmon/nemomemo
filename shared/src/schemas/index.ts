@@ -190,6 +190,8 @@ export interface AttachmentDto {
   size: number;
   createdTs: number;
   memoUid: string | null;
+  /** OCR text (images) or transcript (audio); '' when none. */
+  extractedText?: string;
 }
 
 export interface ReactionDto {
