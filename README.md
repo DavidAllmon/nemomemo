@@ -10,6 +10,9 @@ NemoMemo is a cute, self-hosted memo timeline — a playful, ocean-themed recrea
 excellent open-source [Memos](https://usememos.com) project, with one new trick:
 **Dory memos** forget themselves 24 hours after you write them.
 
+**Website & docs:** [trynemomemo.com](https://trynemomemo.com) ·
+**Live demo:** [demo.trynemomemo.com](https://demo.trynemomemo.com)
+
 ## Features
 
 - ✍️ **Frictionless capture** — open, type Markdown, save. Tasks, code blocks, tables,
@@ -42,20 +45,38 @@ can freely create, edit, comment, react, and let Dory forget things.
 
 ## Install NemoMemo (the app)
 
-One command — the image is published to GitHub Container Registry (amd64 + arm64), and
-it contains **only the app**: no marketing site, no docs site.
+One command. The install script checks for Docker (and tells you exactly what to do if
+it's missing), pulls the image (amd64 + arm64, app only — no marketing site inside),
+starts it with a persistent data volume, and waits for your reef to answer.
+
+**Linux & macOS:**
 
 ```bash
-docker run -d --name nemomemo \
+curl -fsSL https://trynemomemo.com/install.sh | sh
+```
+
+**Windows** (PowerShell, with Docker Desktop):
+
+```powershell
+irm https://trynemomemo.com/install.ps1 | iex
+```
+
+Open **http://localhost:5230**, create your account (the first one becomes the admin),
+and start writing. Re-running the same command later **upgrades in place** — new image,
+same data. The scripts are short and live right here in the repo
+([`install.sh`](install.sh) / [`install.ps1`](install.ps1)) — read them first if piping
+to a shell isn't your thing, or use plain Docker:
+
+```bash
+docker run -d --name nemomemo --restart unless-stopped \
   -p 5230:5230 \
   -v nemomemo-data:/app/data \
   ghcr.io/davidallmon/nemomemo:latest
 ```
 
-Open **http://localhost:5230**, create your account (the first one becomes the admin),
-and start writing. All data — one SQLite database plus your uploads — lives in the
-`/app/data` volume. Full guide: [Getting started](site/content/docs/getting-started.mdx)
-· [Deploy](site/content/docs/deploy.mdx).
+All data — one SQLite database plus your uploads — lives in the `/app/data` volume.
+Full guide: [Getting started](https://trynemomemo.com/docs/getting-started)
+· [Deploy](https://trynemomemo.com/docs/deploy).
 
 ### One-click cloud deploy
 

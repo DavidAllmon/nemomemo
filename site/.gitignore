@@ -3,3 +3,5 @@
 next-env.d.ts
 out/
 tsconfig.tsbuildinfo
+public/install.sh
+public/install.ps1

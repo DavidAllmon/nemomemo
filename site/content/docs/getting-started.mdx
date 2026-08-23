@@ -7,18 +7,49 @@ description: From zero to your first memo in about two minutes.
 
 You need exactly one of the following:
 
-- **Docker** (the fast path) — [install Docker Engine](https://docs.docker.com/engine/install/)
-  or Docker Desktop. Nothing else; you don't even need to clone the repository.
+- **Docker** (the fast path — options A, B, C all use it) —
+  [install Docker Engine](https://docs.docker.com/engine/install/) on Linux, or Docker
+  Desktop on macOS/Windows. Nothing else; you don't even need to clone the repository,
+  and the install script will point you at the right Docker setup if it's missing.
 - **Node.js 22+ and pnpm** (only if you'd rather run from source) — plus `git` to clone.
 
 ## 1. Run NemoMemo
 
-### Option A — Docker (recommended)
+### Option A — the install script (recommended)
 
-The image is published to GitHub Container Registry, so this is genuinely one command:
+One command. It checks that Docker is there (and tells you exactly what to do if it
+isn't), pulls the image, starts NemoMemo with a persistent data volume, and waits until
+your reef answers.
+
+**Linux and macOS:**
 
 ```bash
-docker run -d --name nemomemo \
+curl -fsSL https://trynemomemo.com/install.sh | sh
+```
+
+**Windows** (PowerShell, with Docker Desktop):
+
+```powershell
+irm https://trynemomemo.com/install.ps1 | iex
+```
+
+Then open `http://localhost:5230`. Re-running the same command later **upgrades in
+place** — it pulls the newest image and recreates the container while keeping your data
+volume. Prefer a different port or names? Set `NEMOMEMO_PORT`, `NEMOMEMO_VOLUME`,
+`NEMOMEMO_CONTAINER`, or `NEMOMEMO_IMAGE` in your environment first, e.g.
+`NEMOMEMO_PORT=5231 curl -fsSL https://trynemomemo.com/install.sh | sh`.
+
+(Piping a script to your shell is a trust decision — the script is short and lives in
+the repo at [`install.sh`](https://github.com/DavidAllmon/nemomemo/blob/main/install.sh)
+/ [`install.ps1`](https://github.com/DavidAllmon/nemomemo/blob/main/install.ps1), so
+read it first if you like. It only talks to Docker.)
+
+### Option B — plain Docker
+
+The same thing the script does, by hand:
+
+```bash
+docker run -d --name nemomemo --restart unless-stopped \
   -p 5230:5230 \
   -v nemomemo-data:/app/data \
   ghcr.io/davidallmon/nemomemo:latest
@@ -26,7 +57,7 @@ docker run -d --name nemomemo \
 
 Then open `http://localhost:5230`.
 
-### Option B — Docker Compose
+### Option C — Docker Compose
 
 ```yaml
 services:
@@ -45,7 +76,7 @@ volumes:
 docker compose up -d
 ```
 
-### Option C — from source
+### Option D — from source
 
 ```bash
 git clone https://github.com/DavidAllmon/nemomemo.git
