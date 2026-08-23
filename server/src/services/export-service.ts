@@ -43,15 +43,29 @@ export function buildMarkdownExport(db: Db, config: Config, viewer: UserRow): Ma
     });
 
     documents.push({
-      path: `${parent ? 'comments' : 'memos'}/${isoSeconds(row.createdTs).slice(0, 10)}-${row.uid}.md`,
-      markdown: renderMemo(row, parent, attachmentPaths),
+      path: `${parent ? 'comments' : 'memos'}/${markdownFilename(row)}`,
+      markdown: renderMemoMarkdown(row, parent, {
+        attachmentPaths,
+        content: row.content.replaceAll('/file/attachments/', 'attachments/'),
+      }),
     });
   }
 
   return { documents, files };
 }
 
-function renderMemo(row: MemoRow, parent: MemoRow | null, attachmentPaths: string[]): string {
+export function markdownFilename(row: MemoRow): string {
+  return `${isoSeconds(row.createdTs).slice(0, 10)}-${row.uid}.md`;
+}
+
+/** Frontmattered markdown for one memo. Options cover the bulk-zip case:
+ *  a rewritten content body and the zip-relative attachment paths. */
+export function renderMemoMarkdown(
+  row: MemoRow,
+  parent: MemoRow | null,
+  opts: { attachmentPaths?: string[]; content?: string } = {},
+): string {
+  const attachmentPaths = opts.attachmentPaths ?? [];
   const lines: string[] = [`created: ${isoSeconds(row.createdTs)}`];
   if (row.updatedTs !== row.createdTs) lines.push(`updated: ${isoSeconds(row.updatedTs)}`);
   lines.push(`visibility: ${row.visibility}`);
@@ -66,6 +80,5 @@ function renderMemo(row: MemoRow, parent: MemoRow | null, attachmentPaths: strin
   if (attachmentPaths.length > 0) {
     lines.push('attachments:', ...attachmentPaths.map((p) => `  - ${JSON.stringify(p)}`));
   }
-  const content = row.content.replaceAll('/file/attachments/', 'attachments/');
-  return `---\n${lines.join('\n')}\n---\n\n${content}\n`;
+  return `---\n${lines.join('\n')}\n---\n\n${opts.content ?? row.content}\n`;
 }

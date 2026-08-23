@@ -30,7 +30,7 @@ import { nextPageToken, parsePageParams } from '../lib/pagination.js';
 import { nowSeconds } from '../lib/time.js';
 import { requireViewer, type AppEnv } from '../middleware/auth.js';
 import { checkMemoRead } from '../services/acl.js';
-import { buildMarkdownExport } from '../services/export-service.js';
+import { buildMarkdownExport, markdownFilename, renderMemoMarkdown } from '../services/export-service.js';
 import { notifyComment, notifyMentions, notifyThreadParticipants } from '../services/inbox-service.js';
 import {
   assertDoryRules,
@@ -176,6 +176,19 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
   app.get('/:uid', (c) => {
     const memo = readableMemo(c, c.req.param('uid'));
     return c.json({ memo: buildMemoDtos(db, [memo], c.get('viewer'))[0] });
+  });
+
+  // One memo as a frontmattered .md download — same ACL as reading it.
+  app.get('/:uid/markdown', (c) => {
+    const memo = readableMemo(c, c.req.param('uid'));
+    const parent = getParentMemo(db, memo.id);
+    return new Response(renderMemoMarkdown(memo, parent), {
+      headers: {
+        'content-type': 'text/markdown; charset=utf-8',
+        'content-disposition': `attachment; filename="${markdownFilename(memo)}"`,
+        'cache-control': 'no-store',
+      },
+    });
   });
 
   // ---------- Update ----------

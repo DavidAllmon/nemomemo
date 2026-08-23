@@ -124,6 +124,34 @@ describe('markdown export service', () => {
   });
 });
 
+describe('GET /api/v1/memos/:uid/markdown (single memo)', () => {
+  it('downloads one memo as a frontmattered .md file, ACL-gated like reading it', async () => {
+    const ctx = makeTestApp();
+    const finnCookie = await signup(ctx.app, 'finn');
+    const gillCookie = await signup(ctx.app, 'gill');
+    const memo = await createMemo(ctx.app, finnCookie, {
+      content: 'Current #reef status: thriving',
+      visibility: 'PRIVATE',
+    });
+
+    const response = await jsonRequest(ctx.app, 'GET', `/api/v1/memos/${memo.uid}/markdown`, undefined, finnCookie);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('text/markdown');
+    expect(response.headers.get('content-disposition')).toMatch(
+      new RegExp(`attachment; filename="\\d{4}-\\d{2}-\\d{2}-${memo.uid}\\.md"`),
+    );
+    const markdown = await response.text();
+    expect(markdown).toContain('---\n');
+    expect(markdown).toContain('visibility: PRIVATE');
+    expect(markdown).toContain('- "reef"');
+    expect(markdown).toContain('Current #reef status: thriving');
+
+    // Someone else's PRIVATE memo swims away, exactly like reading it.
+    const denied = await jsonRequest(ctx.app, 'GET', `/api/v1/memos/${memo.uid}/markdown`, undefined, gillCookie);
+    expect(denied.status).toBe(404);
+  });
+});
+
 describe('GET /api/v1/memos/export/markdown', () => {
   it('signed-in members get a zip of their memos; anonymous visitors are refused', async () => {
     const ctx = makeTestApp();

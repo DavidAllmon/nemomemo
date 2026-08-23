@@ -2,6 +2,7 @@ import {
   Archive,
   ArchiveRestore,
   Copy,
+  Download,
   EllipsisVertical,
   Fish,
   Link2,
@@ -99,6 +100,11 @@ export function MemoActionMenu({ memo, onEdit }: { memo: MemoDto; onEdit?: () =>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={copyContent}>
                 <Copy className="size-4" /> Copy content
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => { window.location.href = `/api/v1/memos/${memo.uid}/markdown`; }}
+              >
+                <Download className="size-4" /> Download as .md
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>

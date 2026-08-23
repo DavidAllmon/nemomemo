@@ -33,7 +33,7 @@ storage caps, member caps, and restore.
 | File | Endpoints |
 | --- | --- |
 | `auth.ts` | POST signup (first user = ADMIN; bcrypt-before-checks race guard), signin, signout; GET me |
-| `memos.ts` | GET/POST `/memos` (list: scope home/explore/profile, filter DSL, pinned-first, page tokens; create: payload extraction, dory TTL, linking, mention notifications); GET `/memos/export/markdown` (per-user zip: .md + frontmatter + attachments); GET/PATCH/DELETE `/memos/:uid`; GET/POST comments; POST/DELETE reactions; POST/GET shares |
+| `memos.ts` | GET/POST `/memos` (list: scope home/explore/profile, filter DSL, pinned-first, page tokens; create: payload extraction, dory TTL, linking, mention notifications); GET `/memos/export/markdown` (per-user zip: .md + frontmatter + attachments; power-user URL, no UI); GET/PATCH/DELETE `/memos/:uid`; GET `/memos/:uid/markdown` (single .md download, read-ACL); GET/POST comments; POST/DELETE reactions; POST/GET shares |
 | `shares.ts` | GET `/shares/:token` (public, relations/comments stripped); DELETE (revoke) |
 | `users.ts` | `/-/mentionable`, `/-/tags` (10k cap), `/-/tags/rename`, `/-/settings` GET/PATCH, `/-/account` PATCH — **all before** `/:username` (route-order trap); GET `/users` + POST + `/:username/admin` PATCH/DELETE (admin); GET `/:username`, `/:username/stats` |
 | `instance.ts` | GET profile (version/publicMode/needsSetup), settings (admin), settings/memo (public reaction set); GET backup (admin zip stream: sqlite snapshot + uploads); POST restore (admin, self-host only); PATCH settings |
