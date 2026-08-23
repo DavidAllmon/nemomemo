@@ -2,6 +2,7 @@ import { Earth, Fish, Hourglass, Image as ImageIcon, Lock, Paperclip, Users, X }
 import { useRef, useState } from 'react';
 import { DORY_WINDOWS, type DoryWindow, type MemoDto, type Visibility } from '@nemomemo/shared';
 import { Bubbles } from '@/components/Bubbles.js';
+import { RecordButton } from '@/components/editor/RecordButton.js';
 import { RichEditor, type RichEditorHandle } from '@/components/editor/RichEditor.js';
 import { BottleDialog } from '@/components/memo/BottleDialog.js';
 import { Button } from '@/components/ui/button.js';
@@ -174,19 +175,22 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
           }
         }}
         extraToolbar={
-          <label className="cursor-pointer rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground">
-            <ImageIcon className="size-4" />
-            <span className="sr-only">Attach files</span>
-            <input
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(event) => {
-                if (event.target.files) void uploadFiles(event.target.files);
-                event.target.value = '';
-              }}
-            />
-          </label>
+          <>
+            <label className="cursor-pointer rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground">
+              <ImageIcon className="size-4" />
+              <span className="sr-only">Attach files</span>
+              <input
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(event) => {
+                  if (event.target.files) void uploadFiles(event.target.files);
+                  event.target.value = '';
+                }}
+              />
+            </label>
+            <RecordButton onFile={(file) => void uploadFiles([file])} />
+          </>
         }
       />
 
