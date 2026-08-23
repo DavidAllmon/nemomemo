@@ -6,6 +6,7 @@ import {
   type ReactionDto,
   type RelatedMemoStubDto,
   type UserDto,
+  type UserStatsDto,
   type Visibility,
 } from '@nemomemo/shared';
 import { and, eq, inArray, or } from 'drizzle-orm';
@@ -238,8 +239,23 @@ export interface ListMemosOptions {
   includeComments?: boolean;
 }
 
-export function listMemoRows(db: Db, opts: ListMemosOptions): { rows: MemoRow[]; hasMore: boolean } {
-  const now = nowSeconds();
+export type MemoWhereOptions = Omit<
+  ListMemosOptions,
+  'filterExpression' | 'orderBy' | 'direction' | 'pinnedFirst' | 'limit' | 'offset'
+>;
+
+/**
+ * The one place the memo visibility story is written in SQL: Dory guard,
+ * bottle guard, comment exclusion, state, and scope/visibility rules.
+ * Every query that returns or aggregates memo rows — listings AND
+ * aggregations — must build its WHERE here so no surface can drift.
+ * Returns null when the caller should answer with nothing.
+ */
+export function buildMemoListWhere(
+  db: Db,
+  opts: MemoWhereOptions,
+  now: number,
+): { where: string[]; params: unknown[] } | null {
   const where: string[] = [];
   const params: unknown[] = [];
 
@@ -264,36 +280,36 @@ export function listMemoRows(db: Db, opts: ListMemosOptions): { rows: MemoRow[];
   let creatorId: number | null = null;
   if (opts.creatorUsername) {
     const creator = db.select().from(users).where(eq(users.username, opts.creatorUsername)).get();
-    if (!creator) return { rows: [], hasMore: false };
+    if (!creator) return null;
     creatorId = creator.id;
   }
 
   if (opts.state === 'ARCHIVED') {
     // Archived memos are always creator-only.
-    if (!opts.viewer) return { rows: [], hasMore: false };
+    if (!opts.viewer) return null;
     where.push('memo.creator_id = ?');
     params.push(opts.viewer.id);
   } else if (opts.scope === 'home') {
-    if (!opts.viewer) return { rows: [], hasMore: false };
+    if (!opts.viewer) return null;
     where.push('memo.creator_id = ?');
     params.push(opts.viewer.id);
   } else if (opts.scope === 'explore') {
     if (opts.viewer) {
       where.push(`memo.visibility IN ('PUBLIC','PROTECTED')`);
     } else {
-      if (!opts.allowAnonymous) return { rows: [], hasMore: false };
+      if (!opts.allowAnonymous) return null;
       where.push(`memo.visibility = 'PUBLIC'`);
     }
   } else {
     // profile
-    if (creatorId == null) return { rows: [], hasMore: false };
+    if (creatorId == null) return null;
     where.push('memo.creator_id = ?');
     params.push(creatorId);
     if (opts.viewer?.id !== creatorId) {
       if (opts.viewer) {
         where.push(`memo.visibility IN ('PUBLIC','PROTECTED')`);
       } else {
-        if (!opts.allowAnonymous) return { rows: [], hasMore: false };
+        if (!opts.allowAnonymous) return null;
         where.push(`memo.visibility = 'PUBLIC'`);
       }
     }
@@ -303,6 +319,15 @@ export function listMemoRows(db: Db, opts: ListMemosOptions): { rows: MemoRow[];
     where.push('memo.creator_id = ?');
     params.push(creatorId);
   }
+
+  return { where, params };
+}
+
+export function listMemoRows(db: Db, opts: ListMemosOptions): { rows: MemoRow[]; hasMore: boolean } {
+  const now = nowSeconds();
+  const built = buildMemoListWhere(db, opts, now);
+  if (!built) return { rows: [], hasMore: false };
+  const { where, params } = built;
 
   if (opts.filterExpression) {
     const compiled = compileFilterExpression(opts.filterExpression, now);
@@ -323,6 +348,79 @@ export function listMemoRows(db: Db, opts: ListMemosOptions): { rows: MemoRow[];
   const rows = raw.map(rawToMemoRow);
   const hasMore = rows.length > opts.limit;
   return { rows: rows.slice(0, opts.limit), hasMore };
+}
+
+// ---------- Aggregation (SQL json_each — no row cap, guards inherited) ----------
+
+export function aggregateTagCounts(db: Db, opts: MemoWhereOptions): Record<string, number> {
+  const built = buildMemoListWhere(db, opts, nowSeconds());
+  if (!built) return {};
+  const sql = `SELECT je.value AS tag, count(*) AS n
+    FROM memo, json_each(memo.payload, '$.tags') AS je
+    WHERE ${built.where.join(' AND ')}
+    GROUP BY je.value`;
+  const rows = db.$client.prepare(sql).all(...(built.params as never[])) as {
+    tag: string;
+    n: number;
+  }[];
+  return Object.fromEntries(rows.map((row) => [row.tag, row.n]));
+}
+
+export function aggregateUserStats(db: Db, opts: MemoWhereOptions): UserStatsDto {
+  const empty: UserStatsDto = {
+    totalMemoCount: 0,
+    memoCreatedTimestamps: [],
+    tagCounts: {},
+    linkCount: 0,
+    codeCount: 0,
+    taskCount: 0,
+    incompleteTaskCount: 0,
+    openTaskCount: 0,
+    pinnedCount: 0,
+  };
+  const built = buildMemoListWhere(db, opts, nowSeconds());
+  if (!built) return empty;
+  const whereSql = built.where.join(' AND ');
+  const params = built.params as never[];
+
+  const prop = (name: string) => `SUM(COALESCE(json_extract(memo.payload, '$.property.${name}'), 0))`;
+  const totals = db.$client
+    .prepare(
+      `SELECT count(*) AS total,
+        ${prop('hasLink')} AS links,
+        ${prop('hasCode')} AS code,
+        ${prop('hasTaskList')} AS tasks,
+        ${prop('hasIncompleteTasks')} AS incomplete,
+        ${prop('incompleteTasks')} AS openTasks,
+        SUM(memo.pinned) AS pinned
+      FROM memo WHERE ${whereSql}`,
+    )
+    .get(...params) as {
+    total: number;
+    links: number | null;
+    code: number | null;
+    tasks: number | null;
+    incomplete: number | null;
+    openTasks: number | null;
+    pinned: number | null;
+  };
+  const timestamps = (
+    db.$client.prepare(`SELECT memo.created_ts AS ts FROM memo WHERE ${whereSql}`).all(...params) as {
+      ts: number;
+    }[]
+  ).map((row) => row.ts);
+
+  return {
+    totalMemoCount: totals.total,
+    memoCreatedTimestamps: timestamps,
+    tagCounts: aggregateTagCounts(db, opts),
+    linkCount: totals.links ?? 0,
+    codeCount: totals.code ?? 0,
+    taskCount: totals.tasks ?? 0,
+    incompleteTaskCount: totals.incomplete ?? 0,
+    openTaskCount: totals.openTasks ?? 0,
+    pinnedCount: totals.pinned ?? 0,
+  };
 }
 
 export function rawToMemoRow(raw: Record<string, unknown>): MemoRow {

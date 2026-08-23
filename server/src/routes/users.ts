@@ -20,9 +20,9 @@ import { randomBytes } from 'node:crypto';
 import { nowSeconds } from '../lib/time.js';
 import { requireAdmin, requireViewer, type AppEnv } from '../middleware/auth.js';
 import {
+  aggregateTagCounts,
+  aggregateUserStats,
   buildPayload,
-  listMemoRows,
-  parsePayload,
   userToDto,
 } from '../services/memo-service.js';
 import {
@@ -32,8 +32,6 @@ import {
   setMemoViews,
   setUserGeneral,
 } from '../services/settings.js';
-
-const STATS_MEMO_CAP = 10_000;
 
 export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
@@ -54,24 +52,13 @@ export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
 
   app.get('/-/tags', (c) => {
     const viewer = requireViewer(c);
-    const { rows } = listMemoRows(db, {
+    const tags = aggregateTagCounts(db, {
       viewer,
       allowAnonymous: false,
       state: 'NORMAL',
       scope: 'home',
-      orderBy: 'created_ts',
-      direction: 'DESC',
-      pinnedFirst: false,
-      limit: STATS_MEMO_CAP,
-      offset: 0,
     });
-    const counts: Record<string, number> = {};
-    for (const row of rows) {
-      for (const tag of parsePayload(row.payload).tags ?? []) {
-        counts[tag] = (counts[tag] ?? 0) + 1;
-      }
-    }
-    return c.json({ tags: counts });
+    return c.json({ tags });
   });
 
   app.post('/-/tags/rename', zValidator('json', renameTagRequestSchema), (c) => {
@@ -242,42 +229,13 @@ export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
     const username = c.req.param('username');
     const user = db.select().from(users).where(eq(users.username, username)).get();
     if (!user || user.rowStatus === 'ARCHIVED') throw apiError('NOT_FOUND', 'User not found');
-    const { rows } = listMemoRows(db, {
+    const stats = aggregateUserStats(db, {
       viewer,
       allowAnonymous: getInstanceGeneral(db).publicMode,
       state: 'NORMAL',
       scope: viewer?.id === user.id ? 'home' : 'profile',
       creatorUsername: viewer?.id === user.id ? undefined : username,
-      orderBy: 'created_ts',
-      direction: 'DESC',
-      pinnedFirst: false,
-      limit: STATS_MEMO_CAP,
-      offset: 0,
     });
-
-    const stats: UserStatsDto = {
-      totalMemoCount: rows.length,
-      memoCreatedTimestamps: rows.map((row) => row.createdTs),
-      tagCounts: {},
-      linkCount: 0,
-      codeCount: 0,
-      taskCount: 0,
-      incompleteTaskCount: 0,
-      openTaskCount: 0,
-      pinnedCount: 0,
-    };
-    for (const row of rows) {
-      const payload = parsePayload(row.payload);
-      for (const tag of payload.tags ?? []) {
-        stats.tagCounts[tag] = (stats.tagCounts[tag] ?? 0) + 1;
-      }
-      if (payload.property?.hasLink) stats.linkCount++;
-      if (payload.property?.hasCode) stats.codeCount++;
-      if (payload.property?.hasTaskList) stats.taskCount++;
-      if (payload.property?.hasIncompleteTasks) stats.incompleteTaskCount++;
-      stats.openTaskCount += payload.property?.incompleteTasks ?? 0;
-      if (row.pinned) stats.pinnedCount++;
-    }
     return c.json(stats);
   });
 
