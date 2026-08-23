@@ -107,6 +107,7 @@ export function attachmentRoutes(db: Db, config: Config, ocr: OcrQueue | null = 
         size: row.size as number,
         memoId: (row.memo_id as number | null) ?? null,
         storagePath: row.storage_path as string,
+        extractedText: (row.extracted_text as string) ?? '',
       }));
     } else {
       rows = db

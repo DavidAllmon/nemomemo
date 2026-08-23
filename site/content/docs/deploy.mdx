@@ -93,6 +93,20 @@ app — never the marketing/docs site).
 | `NEMOMEMO_SMTP_USER` | — | SMTP login |
 | `NEMOMEMO_SMTP_PASS` | — | SMTP password / API key |
 | `NEMOMEMO_SMTP_FROM` | — | From address, e.g. `"NemoMemo <no-reply@your.domain>"` |
+| `NEMOMEMO_OCR` | `1` | Read text inside image attachments so search finds it — set `0` to turn off |
+| `NEMOMEMO_OCR_LANGS` | `eng` | OCR languages, comma-separated [tesseract codes](https://tesseract-ocr.github.io/tessdoc/Data-Files-in-different-versions.html) (e.g. `eng,deu`) |
+
+## Image text search (OCR)
+
+Since v1.19, search can read your screenshots: when someone attaches an image,
+the reef quietly extracts any text in it (receipts, whiteboards, signs) and adds
+it to the search index. It runs entirely on your server — no cloud API, nothing
+leaves the reef.
+
+The first image after a fresh install downloads the OCR language data (a few MB)
+into `data/ocr-cache` and reuses it from then on. If your reef runs air-gapped
+with no outbound network, set `NEMOMEMO_OCR=0` — everything else works exactly
+the same, images just aren't searchable by their contents.
 
 ## Email (optional, recommended)
 
