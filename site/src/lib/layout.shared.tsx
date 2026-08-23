@@ -14,8 +14,10 @@ export function baseOptions(): BaseLayoutProps {
     },
     links: [
       { text: 'Features', url: '/features' },
-      { text: 'Use cases', url: '/use-cases' },
       { text: 'Compare', url: '/compare' },
+      { text: 'Pricing', url: '/pricing' },
+      { text: 'Blog', url: '/blog' },
+      { text: 'Changelog', url: '/changelog' },
       { text: DEMO_LABEL, url: DEMO_URL, external: true },
     ],
   };

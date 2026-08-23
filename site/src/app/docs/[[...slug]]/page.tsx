@@ -5,6 +5,7 @@ import {
   DocsTitle,
 } from 'fumadocs-ui/layouts/docs/page';
 import { notFound } from 'next/navigation';
+import { OG_IMAGE, absoluteUrl } from '@/lib/site';
 import { source } from '@/lib/source';
 import { getMDXComponents } from '@/mdx-components';
 
@@ -37,5 +38,13 @@ export async function generateMetadata(props: { params: Promise<{ slug?: string[
   return {
     title: page.data.title,
     description: page.data.description,
+    alternates: { canonical: absoluteUrl(page.url) },
+    openGraph: {
+      title: page.data.title,
+      description: page.data.description,
+      url: absoluteUrl(page.url),
+      siteName: 'NemoMemo',
+      images: [OG_IMAGE],
+    },
   };
 }

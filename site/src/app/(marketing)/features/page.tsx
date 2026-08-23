@@ -1,6 +1,11 @@
-import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/site';
 
-export const metadata: Metadata = { title: 'Features' };
+export const metadata = pageMeta({
+  title: 'Features',
+  description:
+    'Everything in NemoMemo: Markdown editor with inline tags, filter expressions and saved views, per-memo sharing, comments and reactions, 24-hour Dory memos, and single-container self-hosting.',
+  path: '/features',
+});
 
 const BUCKETS: { title: string; blurb: string; items: { name: string; body: string }[] }[] = [
   {

@@ -141,9 +141,23 @@ ViewSetting → Tooltip → BrowserRouter → App. No Redux/Zustand.
 
 ## site/ — Next.js App Router + Fumadocs (marketing/docs; deployed separately)
 
-- `src/app/(marketing)/` — home, features, pricing, compare, use-cases, changelog,
-  privacy, terms, blog. `src/app/docs/[[...slug]]` renders MDX from
-  `site/content/docs/` (loader in `src/lib/source.ts`; sidebar order `meta.json`).
+- `src/app/(marketing)/` — home, features, pricing, compare (+ per-competitor pages
+  `compare/{memos,notion,google-keep,obsidian}`), use-cases, changelog, privacy,
+  terms, blog. Marketing pages use the fixed dark "Deep Sea" palette via the
+  `.reef-deep` token block in `global.css` (docs keep the light/dark toggle).
+  `src/app/docs/[[...slug]]` renders MDX from `site/content/docs/`
+  (loader in `src/lib/source.ts`; sidebar order `meta.json`).
+- **Blog is a Fumadocs MDX collection**: posts in `site/content/blog/*.mdx`
+  (frontmatter: title/description/author/date), collection `blogPosts` in
+  `source.config.ts`, loader `src/lib/blog.ts`, routes `blog/page.tsx` +
+  `blog/[slug]/page.tsx`. RSS at `/feed.xml`; changelog RSS at `/changelog.xml`
+  (release parser shared in `src/lib/changelog.ts`).
+- **SEO layer**: `src/lib/site.ts` (`SITE_URL`, `pageMeta()` canonical+OG helper,
+  `OG_IMAGE` — must be spread into any per-page `openGraph`, Next replaces the
+  object wholesale), `app/sitemap.ts`, `app/robots.ts`, `app/manifest.ts`,
+  `app/not-found.tsx` (reef 404), JSON-LD via `components/json-ld.tsx`. Brand
+  assets: `app/icon.svg`, `app/apple-icon.png`, `app/opengraph-image.png` +
+  `twitter-image.png` (+`.alt.txt`).
 - **Changelog page reads `../docs/changelog/vX.Y.Z.md` at build time** and renders
   ONLY "What's new" (Technical notes stay repo-only). `Dockerfile.site` copies
   `docs/changelog/` in for this reason.

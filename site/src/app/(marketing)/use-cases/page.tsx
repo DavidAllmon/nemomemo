@@ -1,6 +1,11 @@
-import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/site';
 
-export const metadata: Metadata = { title: 'Use cases' };
+export const metadata = pageMeta({
+  title: 'Use cases',
+  description:
+    'What people do with a self-hosted memo timeline: daily logs, dev notebooks and TILs, shared household notes, tiny team logs, and one-day Dory memos for parking spots and reminders.',
+  path: '/use-cases',
+});
 
 const GROUPS = [
   {

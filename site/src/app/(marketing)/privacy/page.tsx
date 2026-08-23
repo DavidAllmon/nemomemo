@@ -1,8 +1,13 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SUPPORT_URL } from '@/lib/demo-url';
+import { pageMeta } from '@/lib/site';
 
-export const metadata: Metadata = { title: 'Privacy Policy' };
+export const metadata = pageMeta({
+  title: 'Privacy Policy',
+  description:
+    'How NemoMemo Cloud and this website handle your data — and why self-hosted NemoMemo never touches us at all.',
+  path: '/privacy',
+});
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

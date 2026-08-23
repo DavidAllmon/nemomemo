@@ -1,8 +1,15 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
+import { JsonLd } from '@/components/json-ld';
 import { CLOUD_LIVE, CLOUD_URL, DEMO_LABEL, DEMO_URL } from '@/lib/demo-url';
+import { pageMeta } from '@/lib/site';
 
-export const metadata: Metadata = { title: 'Pricing' };
+export const metadata = pageMeta({
+  title: 'Pricing',
+  description: CLOUD_LIVE
+    ? 'NemoMemo is free to self-host, forever. Rather not run a server? A hosted reef is $1.99/month or $19/year — updates, backups, and TLS included.'
+    : 'NemoMemo is free to self-host, forever — no tiers, no seats, no metering. You pay only for wherever you run it.',
+  path: '/pricing',
+});
 
 function SelfHostCard() {
   return (
@@ -20,7 +27,7 @@ function SelfHostCard() {
         href="/docs"
         className="mt-auto pt-6"
       >
-        <span className="inline-block w-full rounded-xl border-2 border-ocean-primary px-5 py-2.5 font-bold text-ocean-primary transition-colors hover:bg-ocean-primary hover:text-white">
+        <span className="inline-block w-full rounded-xl border-2 border-ocean-primary px-5 py-2.5 font-bold text-ocean-primary transition-colors hover:bg-ocean-primary hover:text-ocean-on-primary">
           Install NemoMemo
         </span>
       </Link>
@@ -31,7 +38,7 @@ function SelfHostCard() {
 function CloudCard() {
   return (
     <div className="flex flex-col rounded-2xl border-2 border-ocean-primary bg-ocean-card p-8 text-center">
-      <p className="font-display font-bold text-ocean-primary">NemoMemo Cloud</p>
+      <p className="font-display font-bold text-ocean-primary">Hosted reef</p>
       <p className="mt-2 font-display text-5xl font-bold">
         $1.99<span className="text-lg text-ocean-muted">/mo</span>
       </p>
@@ -47,13 +54,13 @@ function CloudCard() {
       <div className="mt-auto flex flex-col gap-2 pt-6">
         <a
           href={`${CLOUD_URL}/cloud/checkout?interval=month`}
-          className="inline-block w-full rounded-xl bg-ocean-primary px-5 py-2.5 font-bold text-white transition-opacity hover:opacity-90"
+          className="inline-block w-full rounded-xl bg-ocean-primary px-5 py-2.5 font-bold text-ocean-on-primary transition-opacity hover:opacity-90"
         >
           Get your reef — $1.99/mo
         </a>
         <a
           href={`${CLOUD_URL}/cloud/checkout?interval=year`}
-          className="inline-block w-full rounded-xl border border-ocean-primary px-5 py-2 text-sm font-bold text-ocean-primary transition-colors hover:bg-ocean-primary hover:text-white"
+          className="inline-block w-full rounded-xl border border-ocean-primary px-5 py-2 text-sm font-bold text-ocean-primary transition-colors hover:bg-ocean-primary hover:text-ocean-on-primary"
         >
           Or $19/year
         </a>
@@ -65,6 +72,22 @@ function CloudCard() {
 export default function PricingPage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-14 text-center">
+      {CLOUD_LIVE ? (
+        <JsonLd
+          data={{
+            '@context': 'https://schema.org',
+            '@type': 'Product',
+            name: 'NemoMemo Cloud',
+            description:
+              'A hosted NemoMemo instance at your own subdomain — updated, backed up, and run for you.',
+            brand: { '@type': 'Brand', name: 'NemoMemo' },
+            offers: [
+              { '@type': 'Offer', price: '1.99', priceCurrency: 'USD', description: 'Monthly' },
+              { '@type': 'Offer', price: '19', priceCurrency: 'USD', description: 'Yearly' },
+            ],
+          }}
+        />
+      ) : null}
       <h1 className="font-display text-4xl font-bold">
         {CLOUD_LIVE ? 'Free to self-host. Cheap to let us host.' : 'Free. As in fish.'}
       </h1>

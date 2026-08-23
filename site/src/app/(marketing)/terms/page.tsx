@@ -1,8 +1,13 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SUPPORT_URL } from '@/lib/demo-url';
+import { pageMeta } from '@/lib/site';
 
-export const metadata: Metadata = { title: 'Terms of Service' };
+export const metadata = pageMeta({
+  title: 'Terms of Service',
+  description:
+    'The terms for NemoMemo Cloud, the hosted subscription service. Self-hosted NemoMemo is governed only by its license (ELv2).',
+  path: '/terms',
+});
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

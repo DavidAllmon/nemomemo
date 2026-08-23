@@ -1,0 +1,33 @@
+---
+title: 'Self-host your notes in the time it takes to make coffee'
+description: 'A practical intro to self-hosted note-taking: why your quick notes belong on your own server, and how NemoMemo gets there with one Docker command.'
+author: David Allmon
+date: '2026-08-23'
+---
+
+There's a moment every self-hoster knows: the day a service you relied on changes its pricing, its features, or its mind. Notes are a bad thing to have in the blast radius. They're small, they're personal, and ten years of them is irreplaceable.
+
+The good news is that notes are also the _easiest_ thing to self-host. No GPU, no cluster, no database server. NemoMemo runs as one container with one data volume:
+
+```bash
+docker run -d -p 5230:5230 \
+  -v nemomemo-data:/app/data \
+  ghcr.io/davidallmon/nemomemo:latest
+```
+
+Open `localhost:5230`, create the first account — that account becomes the reef keeper, with the admin keys — and you're writing memos. That's genuinely the whole setup.
+
+## What you actually get
+
+- **A private Markdown timeline.** One box: type, save, move on. Tags like `#homelab` or nested `#bio/midterm` organize things later, if ever.
+- **Your data in two artifacts.** An SQLite database and an uploads folder, both inside that one volume. Backing up is copying files; leaving is taking them with you.
+- **Notes that clean up after themselves.** Mark a memo as a Dory memo and it deletes itself in 24 hours — the parking spots and confirmation codes never become archaeology.
+- **Room for your people.** Invite accounts, share memos with per-memo visibility, or hand out expiring share links.
+
+## What it runs on
+
+Anything that runs Docker: the Raspberry Pi in your closet, a NAS, or the cheapest VPS you can rent. NemoMemo is a small Node process in front of SQLite — it does not need much of a machine.
+
+From there, the [deployment guide](/docs/deploy) covers the details — ports, data location, and running it behind your reverse proxy.
+
+Start with one memo. It doesn't even have to be a keeper. 🐠

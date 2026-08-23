@@ -14,6 +14,9 @@
   --ocean-glass: oklch(0.92 0.04 175);
   --ocean-muted: oklch(0.54 0.025 245);
   --ocean-border: oklch(0.9 0.02 85);
+  --ocean-dory: oklch(0.55 0.15 255);
+  --ocean-abyss: oklch(0.95 0.02 85);
+  --ocean-on-primary: oklch(1 0 0);
   --color-fd-primary: oklch(0.66 0.16 45);
 }
 
@@ -27,7 +30,30 @@
   --ocean-glass: oklch(0.34 0.045 200);
   --ocean-muted: oklch(0.72 0.03 235);
   --ocean-border: oklch(0.35 0.03 250);
+  --ocean-dory: oklch(0.72 0.12 255);
+  --ocean-abyss: oklch(0.18 0.038 252);
+  --ocean-on-primary: oklch(0.16 0.03 250);
   --color-fd-primary: oklch(0.72 0.15 48);
+}
+
+/*
+ * "Deep Sea" — the marketing pages' fixed palette (the approved Option A
+ * redesign). Scoped to the marketing layout wrapper so the docs keep their
+ * light/dark toggle; these values intentionally win over both :root and .dark.
+ */
+.reef-deep {
+  --ocean-bg: oklch(0.2 0.04 252);
+  --ocean-ink: oklch(0.92 0.012 240);
+  --ocean-card: oklch(0.24 0.04 250);
+  --ocean-primary: oklch(0.72 0.15 48);
+  --ocean-blue: oklch(0.68 0.1 230);
+  --ocean-blue-soft: oklch(0.3 0.05 245);
+  --ocean-glass: oklch(0.34 0.045 200);
+  --ocean-muted: oklch(0.7 0.025 240);
+  --ocean-border: oklch(0.32 0.04 250);
+  --ocean-dory: oklch(0.72 0.12 255);
+  --ocean-abyss: oklch(0.17 0.04 255);
+  --ocean-on-primary: oklch(0.16 0.03 250);
 }
 
 @theme inline {
@@ -40,7 +66,50 @@
   --color-ocean-glass: var(--ocean-glass);
   --color-ocean-muted: var(--ocean-muted);
   --color-ocean-border: var(--ocean-border);
+  --color-ocean-dory: var(--ocean-dory);
+  --color-ocean-abyss: var(--ocean-abyss);
+  --color-ocean-on-primary: var(--ocean-on-primary);
   --font-display: var(--font-baloo), ui-rounded, sans-serif;
+}
+
+/* Long-form article styling for blog posts (rendered outside the docs shell). */
+.reef-prose {
+  line-height: 1.7;
+}
+.reef-prose p {
+  margin: 1rem 0;
+}
+.reef-prose h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.35rem;
+  margin: 2rem 0 0.5rem;
+}
+.reef-prose ul,
+.reef-prose ol {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.reef-prose a {
+  color: var(--ocean-blue);
+  font-weight: 600;
+}
+.reef-prose a:hover {
+  text-decoration: underline;
+}
+.reef-prose strong {
+  color: var(--ocean-ink);
+}
+.reef-prose :not(pre) > code {
+  background: var(--ocean-card);
+  border: 1px solid var(--ocean-border);
+  border-radius: 6px;
+  padding: 0.1em 0.35em;
+  font-size: 0.9em;
 }
 
 @keyframes fish-bob {
