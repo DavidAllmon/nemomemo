@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { AppPreview } from '@/components/app-preview';
 import { DoryMark } from '@/components/dory-mark';
 import { JsonLd } from '@/components/json-ld';
+import { MemoLife } from '@/components/memo-life';
 import { NemoMark } from '@/components/nemo-mark';
 import { CLOUD_LIVE, CLOUD_URL, DEMO_LABEL, DEMO_LIVE, DEMO_URL } from '@/lib/demo-url';
 import { OG_IMAGE, SITE_URL } from '@/lib/site';
@@ -114,7 +115,7 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-b from-ocean-abyss via-ocean-bg to-ocean-bg">
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center px-4 pt-20 text-center">
+        <div className="fx-hero-exit mx-auto flex w-full max-w-6xl flex-col items-center px-4 pt-20 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-ocean-blue-soft bg-ocean-card px-3.5 py-1.5 text-xs font-bold text-ocean-blue sm:text-[13px]">
             Self-hosted · source-available · one container
           </div>
@@ -158,14 +159,19 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* The life of a memo — scroll-driven story */}
+      <MemoLife />
+
       {/* Bento */}
       <section className="mx-auto w-full max-w-6xl px-4 py-20">
-        <h2 className="text-center font-display text-3xl font-bold sm:text-4xl">Small on purpose.</h2>
-        <p className="mx-auto mt-3 max-w-xl text-center text-lg text-ocean-muted">
+        <h2 className="fx-rise text-center font-display text-3xl font-bold sm:text-4xl">
+          Small on purpose.
+        </h2>
+        <p className="fx-rise mx-auto mt-3 max-w-xl text-center text-lg text-ocean-muted">
           Not a workspace. Not a second brain. A timeline for the notes you&apos;d otherwise lose.
         </p>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-          <div className="rounded-2xl border border-ocean-border bg-gradient-to-br from-[oklch(0.26_0.05_252)] to-[oklch(0.24_0.07_255)] p-6 sm:col-span-2 sm:p-8 lg:col-span-4">
+          <div className="fx-rise rounded-2xl border border-ocean-border bg-gradient-to-br from-[oklch(0.26_0.05_252)] to-[oklch(0.24_0.07_255)] p-6 sm:col-span-2 sm:p-8 lg:col-span-4">
             <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
               <div className="max-w-sm">
                 <p className="font-display text-2xl font-bold">Dory memos forget for you</p>
@@ -182,24 +188,24 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-          <BentoCell className="lg:col-span-2" title="One command">
+          <BentoCell className="fx-rise lg:col-span-2" title="One command">
             <p>One container, one volume. Happy on a Raspberry Pi.</p>
             <pre className="mt-3 overflow-x-auto rounded-lg border border-ocean-border bg-[oklch(0.16_0.03_252)] p-3 font-mono text-xs leading-relaxed text-[oklch(0.85_0.05_160)]">
               <code>{DOCKER_COMMAND}</code>
             </pre>
           </BentoCell>
-          <BentoCell className="lg:col-span-2" title="Plain Markdown, forever">
+          <BentoCell className="fx-rise lg:col-span-2" title="Plain Markdown, forever">
             <p>
               Tasks, tables, code blocks, inline #tags. Portable text — never a proprietary format.
             </p>
           </BentoCell>
-          <BentoCell className="lg:col-span-2" title="One SQLite file">
+          <BentoCell className="fx-rise lg:col-span-2" title="One SQLite file">
             <p>
               Your server, your database, your uploads folder. Zero telemetry. That&apos;s the whole
               footprint.
             </p>
           </BentoCell>
-          <BentoCell className="lg:col-span-2" title="A reef, not a silo">
+          <BentoCell className="fx-rise lg:col-span-2" title="A reef, not a silo">
             <p>
               Per-memo visibility, comments, reactions, mentions, and share links that expire with
               the memo.
@@ -211,7 +217,7 @@ export default function HomePage() {
       {/* Hosted reef (Cloud) */}
       {CLOUD_LIVE ? (
         <section id="cloud" className="mx-auto w-full max-w-6xl px-4 pb-20">
-          <div className="flex flex-col items-start gap-10 rounded-2xl border border-[oklch(0.36_0.06_235)] bg-gradient-to-br from-[oklch(0.24_0.05_245)] to-[oklch(0.26_0.06_255)] p-8 lg:flex-row lg:items-center lg:p-11">
+          <div className="fx-rise flex flex-col items-start gap-10 rounded-2xl border border-[oklch(0.36_0.06_235)] bg-gradient-to-br from-[oklch(0.24_0.05_245)] to-[oklch(0.26_0.06_255)] p-8 lg:flex-row lg:items-center lg:p-11">
             <div className="max-w-lg">
               <p className="text-[13px] font-extrabold tracking-wider text-ocean-blue">
                 SELF-HOSTING IS FREE, FOREVER
@@ -284,7 +290,7 @@ export default function HomePage() {
             <Link
               key={cell.label}
               href={cell.href}
-              className={`group p-7 transition-colors hover:bg-ocean-card ${
+              className={`fx-rise group p-7 transition-colors hover:bg-ocean-card ${
                 index < 2 ? 'border-b border-ocean-border sm:border-b-0 sm:border-r' : ''
               }`}
             >
@@ -303,7 +309,7 @@ export default function HomePage() {
         <h2 className="text-center font-display text-3xl font-bold">Before you dive in</h2>
         <div className="mt-8 flex flex-col gap-4">
           {FAQ.map((item) => (
-            <div key={item.q} className="rounded-2xl border border-ocean-border bg-ocean-card p-5">
+            <div key={item.q} className="fx-rise rounded-2xl border border-ocean-border bg-ocean-card p-5">
               <p className="font-display font-bold">{item.q}</p>
               <p className="mt-1.5 text-sm leading-relaxed text-ocean-muted">{item.a}</p>
             </div>
