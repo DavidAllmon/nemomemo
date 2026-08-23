@@ -263,6 +263,7 @@ export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
       codeCount: 0,
       taskCount: 0,
       incompleteTaskCount: 0,
+      openTaskCount: 0,
       pinnedCount: 0,
     };
     for (const row of rows) {
@@ -274,6 +275,7 @@ export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
       if (payload.property?.hasCode) stats.codeCount++;
       if (payload.property?.hasTaskList) stats.taskCount++;
       if (payload.property?.hasIncompleteTasks) stats.incompleteTaskCount++;
+      stats.openTaskCount += payload.property?.incompleteTasks ?? 0;
       if (row.pinned) stats.pinnedCount++;
     }
     return c.json(stats);

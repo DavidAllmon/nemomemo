@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildMemoPayload,
   extractProps,
   listTaskItems,
   renameTagInContent,
   setAllTasks,
-  toggleTask,
+  toggleTaskAt,
   withImpliedAncestors,
 } from './extract.js';
 
@@ -63,10 +64,15 @@ describe('task splicing', () => {
     }
   });
 
-  it('toggles a single task without touching the rest', () => {
-    const out = toggleTask(doc, 0, true);
+  it('toggleTaskAt splices exactly the marker at the given offset', () => {
+    const items = listTaskItems(doc);
+    const out = toggleTaskAt(doc, items[0]!.markerOffset, true);
     expect(out).toBe('Intro\n\n- [x] first\n- [x] second\n- [ ] third');
-    expect(toggleTask(out, 1, false)).toContain('- [ ] second');
+    expect(toggleTaskAt(out, items[1]!.markerOffset, false)).toContain('- [ ] second');
+  });
+
+  it('toggleTaskAt is a no-op when no marker sits near the offset', () => {
+    expect(toggleTaskAt(doc, 0, true)).toBe(doc);
   });
 
   it('checks and unchecks all', () => {
@@ -74,8 +80,23 @@ describe('task splicing', () => {
     expect(setAllTasks(doc, false)).toBe('Intro\n\n- [ ] first\n- [ ] second\n- [ ] third');
   });
 
-  it('is a no-op for out-of-range index', () => {
-    expect(toggleTask(doc, 99, true)).toBe(doc);
+  it('counts incomplete tasks', () => {
+    const { property } = extractProps('- [ ] one\n- [x] done\n- [ ] two');
+    expect(property.incompleteTasks).toBe(2);
+    expect(property.hasIncompleteTasks).toBe(true);
+    expect(extractProps('- [x] done').property.incompleteTasks).toBe(0);
+    expect(extractProps('plain text').property.incompleteTasks).toBe(0);
+  });
+
+  it('buildMemoPayload serializes tags + property and returns mentions', () => {
+    const { payload, mentions } = buildMemoPayload('#reef hi @marlin\n\n- [ ] task');
+    const parsed = JSON.parse(payload) as {
+      tags: string[];
+      property: { incompleteTasks: number };
+    };
+    expect(parsed.tags).toEqual(['reef']);
+    expect(parsed.property.incompleteTasks).toBe(1);
+    expect(mentions).toEqual(['marlin']);
   });
 });
 

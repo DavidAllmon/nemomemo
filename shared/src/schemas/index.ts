@@ -179,6 +179,8 @@ export interface MemoPropertyDto {
   hasCode: boolean;
   hasTaskList: boolean;
   hasIncompleteTasks: boolean;
+  /** Number of unchecked `[ ]` items; 0 for memos saved before v1.17. */
+  incompleteTasks?: number;
 }
 
 export interface AttachmentDto {
@@ -254,6 +256,8 @@ export interface UserStatsDto {
   codeCount: number;
   taskCount: number;
   incompleteTaskCount: number;
+  /** Total unchecked `[ ]` items across the counted memos. */
+  openTaskCount: number;
   pinnedCount: number;
 }
 

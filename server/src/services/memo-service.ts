@@ -1,5 +1,5 @@
 import {
-  extractProps,
+  buildMemoPayload,
   type AttachmentDto,
   type MemoDto,
   type MemoPropertyDto,
@@ -65,13 +65,9 @@ export function parsePayload(payload: string): MemoPayload {
   }
 }
 
-export function buildPayload(content: string): { payload: string; mentions: string[] } {
-  const extracted = extractProps(content);
-  return {
-    payload: JSON.stringify({ tags: extracted.tags, property: extracted.property }),
-    mentions: extracted.mentions,
-  };
-}
+// Payload composition lives in shared (buildMemoPayload) so the boot backfill
+// and the write paths can never drift; this alias keeps route imports stable.
+export const buildPayload = buildMemoPayload;
 
 // ---------- DTO assembly (batch, no N+1) ----------
 
@@ -190,6 +186,7 @@ export function buildMemoDtos(db: Db, rows: MemoRow[], viewer: UserRow | null): 
         hasCode: payload.property?.hasCode ?? false,
         hasTaskList: payload.property?.hasTaskList ?? false,
         hasIncompleteTasks: payload.property?.hasIncompleteTasks ?? false,
+        incompleteTasks: payload.property?.incompleteTasks ?? 0,
       },
       attachments: attachmentsByMemo.get(row.id) ?? [],
       reactions: reactionsByMemo.get(row.id) ?? [],

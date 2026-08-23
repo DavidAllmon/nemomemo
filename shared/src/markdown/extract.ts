@@ -23,6 +23,8 @@ export interface MemoProperty {
   hasCode: boolean;
   hasTaskList: boolean;
   hasIncompleteTasks: boolean;
+  /** Number of unchecked `[ ]` items in the document. */
+  incompleteTasks: number;
 }
 
 export interface ExtractedProps {
@@ -60,7 +62,7 @@ export function extractProps(content: string): ExtractedProps {
   let hasLink = false;
   let hasCode = false;
   let hasTaskList = false;
-  let hasIncompleteTasks = false;
+  let incompleteTasks = 0;
 
   const ancestors: Node[] = [];
   const walk = (node: Node) => {
@@ -78,7 +80,7 @@ export function extractProps(content: string): ExtractedProps {
         const item = node as ListItem;
         if (typeof item.checked === 'boolean') {
           hasTaskList = true;
-          if (item.checked === false) hasIncompleteTasks = true;
+          if (item.checked === false) incompleteTasks++;
         }
         break;
       }
@@ -108,7 +110,27 @@ export function extractProps(content: string): ExtractedProps {
   return {
     tags: withImpliedAncestors(tags),
     mentions: [...mentions].sort(),
-    property: { hasLink, hasCode, hasTaskList, hasIncompleteTasks },
+    property: {
+      hasLink,
+      hasCode,
+      hasTaskList,
+      hasIncompleteTasks: incompleteTasks > 0,
+      incompleteTasks,
+    },
+  };
+}
+
+/**
+ * Compose the derived memo payload JSON — the exact shape SQL reads via
+ * json_extract/json_each. The single source of truth for payload writes
+ * (memo routes) AND boot backfills; change it and older rows are stale
+ * until a backfill rewrites them.
+ */
+export function buildMemoPayload(content: string): { payload: string; mentions: string[] } {
+  const extracted = extractProps(content);
+  return {
+    payload: JSON.stringify({ tags: extracted.tags, property: extracted.property }),
+    mentions: extracted.mentions,
   };
 }
 
@@ -153,15 +175,6 @@ export function toggleTaskAt(content: string, offset: number, checked: boolean):
   if (bracket === -1) return content;
   const at = offset + bracket;
   return content.slice(0, at) + `[${checked ? 'x' : ' '}]` + content.slice(at + 3);
-}
-
-/** Toggle one task (by document-order index) and return the new content. */
-export function toggleTask(content: string, taskIndex: number, checked: boolean): string {
-  const items = listTaskItems(content);
-  const item = items[taskIndex];
-  if (!item) return content;
-  const mark = checked ? 'x' : ' ';
-  return content.slice(0, item.markerOffset) + `[${mark}]` + content.slice(item.markerOffset + 3);
 }
 
 /** Check or uncheck every task in the document. */
