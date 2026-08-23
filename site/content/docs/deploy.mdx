@@ -95,6 +95,9 @@ app — never the marketing/docs site).
 | `NEMOMEMO_SMTP_FROM` | — | From address, e.g. `"NemoMemo <no-reply@your.domain>"` |
 | `NEMOMEMO_OCR` | `1` | Read text inside image attachments so search finds it — set `0` to turn off |
 | `NEMOMEMO_OCR_LANGS` | `eng` | OCR languages, comma-separated [tesseract codes](https://tesseract-ocr.github.io/tessdoc/Data-Files-in-different-versions.html) (e.g. `eng,deu`) |
+| `NEMOMEMO_TRANSCRIBE_URL` | — | OpenAI-compatible `/audio/transcriptions` endpoint for voice memo transcripts (optional — see below) |
+| `NEMOMEMO_TRANSCRIBE_KEY` | — | API key for that endpoint (omit for keyless local servers) |
+| `NEMOMEMO_TRANSCRIBE_MODEL` | `whisper-1` | Model name sent to the endpoint |
 
 ## Image text search (OCR)
 
@@ -107,6 +110,25 @@ The first image after a fresh install downloads the OCR language data (a few MB)
 into `data/ocr-cache` and reuses it from then on. If your reef runs air-gapped
 with no outbound network, set `NEMOMEMO_OCR=0` — everything else works exactly
 the same, images just aren't searchable by their contents.
+
+## Voice transcription (optional)
+
+Since v1.20 you can record voice memos right in the editor — they play back
+inline with no setup at all. Point `NEMOMEMO_TRANSCRIBE_URL` at any
+OpenAI-compatible `/audio/transcriptions` endpoint and the reef also
+transcribes each recording: the transcript appears under the player and the
+words become searchable, just like text you typed.
+
+```bash
+# OpenAI:
+NEMOMEMO_TRANSCRIBE_URL=https://api.openai.com/v1/audio/transcriptions
+NEMOMEMO_TRANSCRIBE_KEY=sk-...
+# …or a local whisper.cpp / LocalAI / Speaches server on your own hardware:
+NEMOMEMO_TRANSCRIBE_URL=http://localhost:8080/v1/audio/transcriptions
+```
+
+Leave it unset and voice memos still record and play — they just aren't
+searchable by what was said.
 
 ## Email (optional, recommended)
 
