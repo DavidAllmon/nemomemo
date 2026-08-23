@@ -1,4 +1,5 @@
 import { CompareLayout, type Comparison } from '@/components/compare-layout';
+import { OctopusMark } from '@/components/sea-life';
 import { pageMeta } from '@/lib/site';
 
 export const metadata = pageMeta({
@@ -10,6 +11,8 @@ export const metadata = pageMeta({
 
 const comparison: Comparison = {
   name: 'Notion',
+  creature: <OctopusMark className="size-20" />,
+  species: 'The octopus',
   heading: 'NemoMemo vs. Notion',
   subheading: 'A workspace asks you to build. A timeline asks you to type one line and leave.',
   intro: [

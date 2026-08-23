@@ -1,4 +1,5 @@
 import { CompareLayout, type Comparison } from '@/components/compare-layout';
+import { NautilusMark } from '@/components/sea-life';
 import { pageMeta } from '@/lib/site';
 
 export const metadata = pageMeta({
@@ -10,6 +11,8 @@ export const metadata = pageMeta({
 
 const comparison: Comparison = {
   name: 'Obsidian',
+  creature: <NautilusMark className="h-18 w-20" />,
+  species: 'The nautilus',
   heading: 'NemoMemo vs. Obsidian',
   subheading: 'A knowledge base vs. the notes that come before structure.',
   intro: [

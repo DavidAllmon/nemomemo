@@ -1,4 +1,5 @@
 import { CompareLayout, type Comparison } from '@/components/compare-layout';
+import { GoldfishMark } from '@/components/sea-life';
 import { pageMeta } from '@/lib/site';
 
 export const metadata = pageMeta({
@@ -10,6 +11,8 @@ export const metadata = pageMeta({
 
 const comparison: Comparison = {
   name: 'Google Keep',
+  creature: <GoldfishMark className="h-16 w-20" />,
+  species: 'The goldfish',
   heading: 'NemoMemo vs. Google Keep',
   subheading: 'The same speed, without handing your notes to Google.',
   intro: [

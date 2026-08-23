@@ -1,4 +1,5 @@
 import { CompareLayout, type Comparison } from '@/components/compare-layout';
+import { ReefCousinMark } from '@/components/sea-life';
 import { MEMOS_URL } from '@/lib/demo-url';
 import { pageMeta } from '@/lib/site';
 
@@ -11,6 +12,8 @@ export const metadata = pageMeta({
 
 const comparison: Comparison = {
   name: 'Memos',
+  creature: <ReefCousinMark className="h-16 w-20" />,
+  species: 'The reef cousin',
   heading: 'NemoMemo vs. Memos',
   subheading: 'The unusual comparison page where we tell you the other product is excellent.',
   intro: [

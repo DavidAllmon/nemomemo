@@ -74,7 +74,8 @@
 
 /* Long-form article styling for blog posts (rendered outside the docs shell). */
 .reef-prose {
-  line-height: 1.7;
+  font-size: 1.0625rem;
+  line-height: 1.75;
 }
 .reef-prose p {
   margin: 1rem 0;
@@ -122,8 +123,46 @@
   }
 }
 
+@keyframes sea-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes sea-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-48px);
+  }
+}
+
+@keyframes sea-sway {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .animate-fish-bob {
     animation: fish-bob 3.2s ease-in-out infinite;
+  }
+  .animate-float {
+    animation: sea-float 6s ease-in-out infinite;
+  }
+  .animate-drift {
+    animation: sea-drift 9s ease-in-out infinite alternate;
+  }
+  .animate-sway {
+    animation: sea-sway 5s ease-in-out infinite;
   }
 }
