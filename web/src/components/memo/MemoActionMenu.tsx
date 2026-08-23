@@ -1,4 +1,5 @@
 import {
+  AlarmClock,
   Archive,
   ArchiveRestore,
   Copy,
@@ -15,7 +16,14 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { setAllTasks, type MemoDto } from '@nemomemo/shared';
+import {
+  DORY_WINDOWS,
+  REMIND_REPEATS,
+  setAllTasks,
+  type DoryWindow,
+  type MemoDto,
+  type RemindRepeat,
+} from '@nemomemo/shared';
 import { Button } from '@/components/ui/button.js';
 import {
   Dialog,
@@ -32,6 +40,20 @@ import {
 } from '@/components/ui/overlays.js';
 import { useDeleteMemo, useUpdateMemo, useViewer } from '@/hooks/queries.js';
 import { ShareDialog } from '@/components/memo/ShareDialog.js';
+import { epochToLocalInput, localInputToEpoch } from '@/lib/utils.js';
+
+const DORY_WINDOW_LABELS: Record<DoryWindow, string> = {
+  '1h': '1 hour',
+  '24h': '24 hours',
+  '3d': '3 days',
+  '7d': '7 days',
+};
+
+const REPEAT_LABELS: Record<RemindRepeat, string> = {
+  DAILY: 'Daily',
+  WEEKLY: 'Weekly',
+  MONTHLY: 'Monthly',
+};
 
 export function MemoActionMenu({ memo, onEdit }: { memo: MemoDto; onEdit?: () => void }) {
   const { data: viewer } = useViewer();
@@ -40,6 +62,9 @@ export function MemoActionMenu({ memo, onEdit }: { memo: MemoDto; onEdit?: () =>
   const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [remindOpen, setRemindOpen] = useState(false);
+  const [remindInput, setRemindInput] = useState('');
+  const [repeatInput, setRepeatInput] = useState<RemindRepeat | ''>('');
 
   // Creator-or-admin may moderate (archive/delete); only the creator edits —
   // pins, Dory, tasks, and Edit rewrite content or curation, so they're theirs.
@@ -82,12 +107,38 @@ export function MemoActionMenu({ memo, onEdit }: { memo: MemoDto; onEdit?: () =>
             </DropdownMenuItem>
           ) : null}
           {isCreator && !archived && !isComment ? (
+            memo.forgetAt != null ? (
+              <DropdownMenuItem onSelect={() => update.mutate({ uid: memo.uid, dory: false })}>
+                <Fish className="size-4 text-dory" /> Let Dory remember it
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger disabled={memo.pinned}>
+                  <Fish className="size-4 text-dory" /> Make it a Dory memo
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  {DORY_WINDOWS.map((window) => (
+                    <DropdownMenuItem
+                      key={window}
+                      onSelect={() => update.mutate({ uid: memo.uid, dory: true, doryWindow: window })}
+                    >
+                      Forget after {DORY_WINDOW_LABELS[window]}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            )
+          ) : null}
+          {isCreator && !archived ? (
             <DropdownMenuItem
-              onSelect={() => update.mutate({ uid: memo.uid, dory: memo.forgetAt == null })}
-              disabled={memo.pinned}
+              onSelect={() => {
+                setRemindInput(memo.remindAt != null ? epochToLocalInput(memo.remindAt) : '');
+                setRepeatInput(memo.remindEvery ?? '');
+                setRemindOpen(true);
+              }}
             >
-              <Fish className="size-4 text-dory" />
-              {memo.forgetAt != null ? 'Let Dory remember it' : 'Make it a Dory memo'}
+              <AlarmClock className="size-4" />
+              {memo.remindAt != null ? 'Change the nudge…' : 'Nudge me about this'}
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuSub>
@@ -177,6 +228,67 @@ export function MemoActionMenu({ memo, onEdit }: { memo: MemoDto; onEdit?: () =>
               }}
             >
               Delete memo
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={remindOpen} onOpenChange={setRemindOpen}>
+        <DialogContent
+          title="Nudge me about this"
+          description="Dory taps you on the shoulder at the time you pick — an inbox note, plus an email if your reef sends mail."
+        >
+          <div className="flex flex-col gap-2">
+            <input
+              type="datetime-local"
+              aria-label="Reminder time"
+              value={remindInput}
+              min={epochToLocalInput(Math.floor(Date.now() / 1000) + 60)}
+              onChange={(event) => setRemindInput(event.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            />
+            <select
+              aria-label="Repeat"
+              value={repeatInput}
+              onChange={(event) => setRepeatInput(event.target.value as RemindRepeat | '')}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            >
+              <option value="">Doesn&apos;t repeat</option>
+              {REMIND_REPEATS.map((repeat) => (
+                <option key={repeat} value={repeat}>
+                  {REPEAT_LABELS[repeat]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="mt-3 flex justify-end gap-2">
+            {memo.remindAt != null ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  update.mutate({ uid: memo.uid, remindAt: null });
+                  setRemindOpen(false);
+                }}
+              >
+                Remove nudge
+              </Button>
+            ) : (
+              <DialogClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DialogClose>
+            )}
+            <Button
+              disabled={localInputToEpoch(remindInput) <= Math.floor(Date.now() / 1000)}
+              onClick={() => {
+                update.mutate({
+                  uid: memo.uid,
+                  remindAt: localInputToEpoch(remindInput),
+                  remindEvery: repeatInput === '' ? null : repeatInput,
+                });
+                setRemindOpen(false);
+              }}
+            >
+              Set the nudge
             </Button>
           </div>
         </DialogContent>

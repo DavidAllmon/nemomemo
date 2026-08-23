@@ -1,4 +1,4 @@
-import { Earth, Link2, Lock, MessageCircle, Paperclip, Pin, Reply, Users } from 'lucide-react';
+import { AlarmClock, Earth, Hourglass, Link2, Lock, MessageCircle, Paperclip, Pin, Reply, Users } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { MemoDto } from '@nemomemo/shared';
@@ -166,6 +166,16 @@ export function MemoCard({
           </div>
         </div>
         {memo.forgetAt != null ? <DoryBadge forgetAt={memo.forgetAt} /> : null}
+        {memo.remindAt != null ? (
+          <Tip label={`Nudge ${absoluteTime(memo.remindAt)}${memo.remindEvery ? ' · repeats' : ''}`}>
+            <AlarmClock className="size-3.5 text-primary" aria-label="Reminder set" />
+          </Tip>
+        ) : null}
+        {memo.surfaceAt != null ? (
+          <Tip label={`At sea — surfaces ${absoluteTime(memo.surfaceAt)}`}>
+            <Hourglass className="size-3.5 text-ocean" aria-label="Bottle at sea" />
+          </Tip>
+        ) : null}
         {memo.pinned ? <Pin className="size-3.5 text-primary" aria-label="Pinned" /> : null}
         <Tip label={VISIBILITY_META[memo.visibility].label}>
           <Visibility className="size-3.5 text-muted-foreground" />

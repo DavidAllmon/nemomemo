@@ -16,7 +16,7 @@ export function DoryBadge({ forgetAt }: { forgetAt: number }) {
   const urgent = remaining < 3600;
 
   return (
-    <Tip label="Dory memos are forgotten 24 hours after they're written. Archive it to keep it.">
+    <Tip label="Dory forgets this memo when its time is up. Archive it to keep it.">
       <span
         className={cn(
           'inline-flex items-center gap-1 rounded-full border border-dory/30 bg-dory-soft px-2 py-0.5 text-[11px] font-bold text-dory',

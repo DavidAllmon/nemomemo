@@ -1,10 +1,13 @@
-import { Earth, Fish, Image as ImageIcon, Lock, Paperclip, Users, X } from 'lucide-react';
+import { Earth, Fish, Hourglass, Image as ImageIcon, Lock, Paperclip, Users, X } from 'lucide-react';
 import { useRef, useState } from 'react';
-import type { MemoDto, Visibility } from '@nemomemo/shared';
+import { DORY_WINDOWS, type DoryWindow, type MemoDto, type Visibility } from '@nemomemo/shared';
 import { Bubbles } from '@/components/Bubbles.js';
 import { RichEditor, type RichEditorHandle } from '@/components/editor/RichEditor.js';
 import { Button } from '@/components/ui/button.js';
 import {
+  Dialog,
+  DialogClose,
+  DialogContent,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -19,9 +22,16 @@ import {
   useUserSettings,
   useViewer,
 } from '@/hooks/queries.js';
-import { cn } from '@/lib/utils.js';
+import { absoluteTime, cn, epochToLocalInput, localInputToEpoch } from '@/lib/utils.js';
 
 const DRAFT_KEY = 'nemo-draft-home';
+
+const DORY_WINDOW_LABELS: Record<DoryWindow, string> = {
+  '1h': '1 hour',
+  '24h': '24 hours',
+  '3d': '3 days',
+  '7d': '7 days',
+};
 
 const VISIBILITY_OPTIONS: { value: Visibility; label: string; hint: string; icon: typeof Lock }[] = [
   { value: 'PRIVATE', label: 'Private', hint: 'Only visible to you', icon: Lock },
@@ -59,7 +69,14 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
   const loadedMarkdown = useRef(memo?.content ?? loadDraft());
   const [hasContent, setHasContent] = useState(loadedMarkdown.current.trim().length > 0);
   const [visibility, setVisibility] = useState<Visibility | null>(memo?.visibility ?? null);
-  const [dory, setDory] = useState(memo ? memo.forgetAt != null : false);
+  const initialDory = memo ? memo.forgetAt != null : false;
+  const [dory, setDory] = useState(initialDory);
+  const [doryWindow, setDoryWindow] = useState<DoryWindow>('24h');
+  const [windowTouched, setWindowTouched] = useState(false);
+  const initialSurfaceAt = memo?.surfaceAt ?? null;
+  const [surfaceAt, setSurfaceAt] = useState<number | null>(initialSurfaceAt);
+  const [bottleOpen, setBottleOpen] = useState(false);
+  const [bottleInput, setBottleInput] = useState('');
   const [attachments, setAttachments] = useState<UploadedFile[]>(
     memo?.attachments.map((a) => ({ uid: a.uid, filename: a.filename })) ?? [],
   );
@@ -86,13 +103,22 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
     const content = editorRef.current?.getMarkdown() ?? '';
     if (!content.trim() && attachments.length === 0) return;
     if (isEdit && memo) {
+      // Dory: only send the flag when toggled or re-windowed, so a plain edit
+      // never resets the forget countdown.
+      const doryChanged = dory !== initialDory || (dory && windowTouched);
       update.mutate(
         {
           uid: memo.uid,
           // No phantom edits: only send content when the words actually changed.
           ...(content !== loadedMarkdown.current ? { content } : {}),
           attachmentUids: attachments.map((a) => a.uid),
-          ...(isComment ? {} : { visibility: effectiveVisibility, dory }),
+          ...(isComment
+            ? {}
+            : {
+                visibility: effectiveVisibility,
+                ...(doryChanged ? { dory, ...(dory ? { doryWindow } : {}) } : {}),
+                ...(surfaceAt !== initialSurfaceAt ? { surfaceAt } : {}),
+              }),
         },
         { onSuccess: () => onDone?.() },
       );
@@ -102,6 +128,8 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
           content,
           visibility: effectiveVisibility,
           dory,
+          ...(dory ? { doryWindow } : {}),
+          ...(surfaceAt != null ? { surfaceAt } : {}),
           attachmentUids: attachments.map((a) => a.uid),
         },
         {
@@ -110,6 +138,9 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
             loadedMarkdown.current = '';
             setAttachments([]);
             setDory(false);
+            setDoryWindow('24h');
+            setWindowTouched(false);
+            setSurfaceAt(null);
             setBurst((n) => n + 1);
             try {
               localStorage.removeItem(DRAFT_KEY);
@@ -209,33 +240,131 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
         )}
 
         {isComment ? null : (
+          <DropdownMenu>
+            <Tip
+              label={
+                memo?.pinned
+                  ? 'Pinned memos are safe from Dory'
+                  : dory
+                    ? `Dory will forget this memo after ${DORY_WINDOW_LABELS[doryWindow]}`
+                    : 'Make this a Dory memo — she forgets it after a while'
+              }
+            >
+              <DropdownMenuTrigger asChild>
+                <button
+                  aria-label="Dory memo"
+                  aria-pressed={dory}
+                  disabled={memo?.pinned}
+                  className={cn(
+                    'flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-bold transition-colors',
+                    dory
+                      ? 'border-dory/40 bg-dory-soft text-dory'
+                      : 'border-border text-muted-foreground hover:bg-accent',
+                    memo?.pinned && 'opacity-40',
+                  )}
+                >
+                  <Fish className="size-3.5" />
+                  {dory ? `Dory · ${doryWindow}` : 'Dory'}
+                </button>
+              </DropdownMenuTrigger>
+            </Tip>
+            <DropdownMenuContent align="start" className="w-48">
+              {dory ? (
+                <DropdownMenuItem onSelect={() => setDory(false)}>
+                  Off — Dory remembers it
+                </DropdownMenuItem>
+              ) : null}
+              {DORY_WINDOWS.map((window) => (
+                <DropdownMenuItem
+                  key={window}
+                  onSelect={() => {
+                    setDory(true);
+                    setDoryWindow(window);
+                    setWindowTouched(true);
+                  }}
+                >
+                  <Fish className="size-4 text-dory" />
+                  <span className="flex-1">Forget after {DORY_WINDOW_LABELS[window]}</span>
+                  {dory && doryWindow === window ? <span className="text-primary">✓</span> : null}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
+        {isComment ? null : (
           <Tip
             label={
               memo?.pinned
-                ? 'Pinned memos are safe from Dory'
-                : dory
-                  ? 'Dory will forget this memo in 24 hours'
-                  : 'Make this a Dory memo — she forgets it in 24 hours'
+                ? "Pinned memos can't go to sea"
+                : surfaceAt != null
+                  ? `Sealed in a bottle — surfaces ${absoluteTime(surfaceAt)}`
+                  : 'Seal it in a bottle — hidden until the day you pick'
             }
           >
             <button
-              aria-label="Dory memo"
-              aria-pressed={dory}
+              aria-label="Message in a bottle"
+              aria-pressed={surfaceAt != null}
               disabled={memo?.pinned}
-              onClick={() => setDory((value) => !value)}
+              onClick={() => {
+                setBottleInput(surfaceAt != null ? epochToLocalInput(surfaceAt) : '');
+                setBottleOpen(true);
+              }}
               className={cn(
                 'flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-bold transition-colors',
-                dory
-                  ? 'border-dory/40 bg-dory-soft text-dory'
+                surfaceAt != null
+                  ? 'border-ocean/40 bg-accent text-ocean'
                   : 'border-border text-muted-foreground hover:bg-accent',
                 memo?.pinned && 'opacity-40',
               )}
             >
-              <Fish className="size-3.5" />
-              Dory
+              <Hourglass className="size-3.5" />
+              Bottle
             </button>
           </Tip>
         )}
+
+        <Dialog open={bottleOpen} onOpenChange={setBottleOpen}>
+          <DialogContent
+            title="Message in a bottle"
+            description="Seal this memo away — it stays hidden from every feed until its day arrives, then washes ashore in your inbox."
+          >
+            <input
+              type="datetime-local"
+              aria-label="Surface date"
+              value={bottleInput}
+              min={epochToLocalInput(Math.floor(Date.now() / 1000) + 60)}
+              onChange={(event) => setBottleInput(event.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              {surfaceAt != null ? (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSurfaceAt(null);
+                    setBottleOpen(false);
+                  }}
+                >
+                  Pull it back ashore
+                </Button>
+              ) : (
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+              )}
+              <Button
+                disabled={localInputToEpoch(bottleInput) <= Math.floor(Date.now() / 1000)}
+                onClick={() => {
+                  setSurfaceAt(localInputToEpoch(bottleInput));
+                  setBottleOpen(false);
+                }}
+              >
+                Seal the bottle
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <span className="ml-auto" />
         {isEdit ? (

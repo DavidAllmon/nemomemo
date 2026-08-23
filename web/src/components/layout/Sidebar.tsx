@@ -2,6 +2,7 @@ import {
   Archive,
   Bell,
   Compass,
+  Fish,
   House,
   Info,
   LogOut,
@@ -104,6 +105,7 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
         {viewer ? (
           <>
             <NavItem to="/archived" icon={<Archive className="size-4" />} label="Archived" />
+            <NavItem to="/dory" icon={<Fish className="size-4" />} label="Dory" />
             <NavItem to="/attachments" icon={<Paperclip className="size-4" />} label="Attachments" />
             <NavItem
               to="/inbox"

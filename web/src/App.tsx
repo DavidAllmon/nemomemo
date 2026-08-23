@@ -7,6 +7,7 @@ import { AboutPage } from '@/pages/About.js';
 import { ArchivedPage } from '@/pages/Archived.js';
 import { AttachmentsPage } from '@/pages/Attachments.js';
 import { AuthPage } from '@/pages/Auth.js';
+import { DoryMemoryPage } from '@/pages/DoryMemory.js';
 import { ExplorePage } from '@/pages/Explore.js';
 import { HomePage } from '@/pages/Home.js';
 import { InboxPage } from '@/pages/Inbox.js';
@@ -57,6 +58,14 @@ export function App() {
           element={
             <RequireAuth>
               <ArchivedPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/dory"
+          element={
+            <RequireAuth>
+              <DoryMemoryPage />
             </RequireAuth>
           }
         />

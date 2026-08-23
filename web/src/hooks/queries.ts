@@ -27,6 +27,8 @@ export const keys = {
   instanceSettings: ['instance', 'settings'] as const,
   memoList: (params: Record<string, string | undefined>) => ['memos', 'list', params] as const,
   memo: (uid: string) => ['memos', 'detail', uid] as const,
+  // Under the 'memos' prefix so useInvalidateMemos refreshes it with every edit.
+  dory: ['memos', 'dory'] as const,
   comments: (uid: string) => ['memos', 'comments', uid] as const,
   shares: (uid: string) => ['memos', 'shares', uid] as const,
   sharedMemo: (token: string) => ['shares', token] as const,
@@ -189,6 +191,21 @@ export function useSharedMemo(token: string) {
   });
 }
 
+export interface DoryPageData {
+  fading: MemoDto[];
+  bottles: MemoDto[];
+  forgottenCount: number;
+}
+
+/** Dory's Memory: everything fading (soonest first) + bottles still at sea. */
+export function useDoryPage() {
+  return useQuery({
+    queryKey: keys.dory,
+    queryFn: () => api<DoryPageData>('GET', '/api/v1/memos/dory'),
+    staleTime: 30_000,
+  });
+}
+
 export function useInvalidateMemos() {
   const client = useQueryClient();
   return () => {
@@ -206,6 +223,8 @@ export interface CreateMemoInput {
   content: string;
   visibility?: string;
   dory?: boolean;
+  doryWindow?: string;
+  surfaceAt?: number;
   attachmentUids?: string[];
 }
 
