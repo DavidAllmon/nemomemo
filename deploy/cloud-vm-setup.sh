@@ -53,6 +53,14 @@ if ! grep -q 'services+=(demo cloud)' "$DEPLOY/update.sh"; then
   echo "patched $DEPLOY/update.sh"
 fi
 
+# --- snapshot restore worker (in-app snapshot browser's host-side half) ---
+command -v jq >/dev/null 2>&1 || apt-get install -y jq
+if [[ ! -f /etc/cron.d/nemomemo-restore ]]; then
+  echo '* * * * * root /opt/nemomemo/deploy/restore-cloud.sh >> /opt/nemomemo-deploy/restore.log 2>&1' \
+    > /etc/cron.d/nemomemo-restore
+  echo "installed restore cron"
+fi
+
 docker compose -f "$COMPOSE" config --quiet
 docker compose -f "$COMPOSE" up -d --build cloud
 
