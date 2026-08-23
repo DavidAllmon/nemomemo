@@ -36,6 +36,16 @@ export function compileFilter(node: FilterNode, nowEpoch: number): CompiledFilte
       case 'not':
         return `(NOT ${walk(n.operand)})`;
       case 'contentMatch': {
+        if (n.mode === 'contains') {
+          const match = toFtsMatchQuery(n.value);
+          if (match != null) {
+            params.push(match);
+            return `(memo.id IN (SELECT rowid FROM memo_fts WHERE memo_fts MATCH ?))`;
+          }
+        }
+        // startsWith/endsWith are positional (FTS can't express them), and
+        // token-free strings (punctuation, emoji) have nothing to MATCH —
+        // both keep the LIKE scan.
         const escaped = n.value.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_');
         const pattern =
           n.mode === 'contains'
