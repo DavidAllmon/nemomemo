@@ -2,7 +2,8 @@ import { MessageCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { EmptyState, LoadingState } from '@/components/EmptyState.js';
-import { CommentEditor, type CommentPrefill } from '@/components/editor/CommentEditor.js';
+import type { CommentPrefill } from '@/components/editor/CommentEditor.js';
+import { LazyCommentEditor } from '@/components/editor/lazy.js';
 import { MemoCard } from '@/components/memo/MemoCard.js';
 import { useComments, useMemo_, useViewer } from '@/hooks/queries.js';
 import { cn } from '@/lib/utils.js';
@@ -81,7 +82,7 @@ export function MemoDetailPage() {
             </div>
           ))}
           {viewer && memo.forgetAt == null ? (
-            <CommentEditor memoUid={uid} parentVisibility={memo.visibility} prefill={prefill} />
+            <LazyCommentEditor memoUid={uid} parentVisibility={memo.visibility} prefill={prefill} />
           ) : null}
           {!viewer && memo.forgetAt == null ? (
             <p className="rounded-xl bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground">

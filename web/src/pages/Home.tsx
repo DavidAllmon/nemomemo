@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 import { FilterChipBar } from '@/components/filters/FilterChipBar.js';
-import { MemoEditor } from '@/components/editor/MemoEditor.js';
+import { LazyMemoEditor } from '@/components/editor/lazy.js';
 import { MemoFeed, ViewOptionsButton } from '@/components/memo/MemoFeed.js';
 import { BUILT_IN_TASKS_VIEW } from '@/components/layout/ViewsList.js';
 import { useMemoFilters } from '@/hooks/use-memo-filters.js';
@@ -26,7 +26,7 @@ export function HomePage() {
   return (
     <div>
       <div className="mb-4 rounded-2xl border border-border bg-card p-4">
-        <MemoEditor />
+        <LazyMemoEditor />
       </div>
       <div className="mb-2 flex items-center justify-between">
         <h1 className="font-display text-sm font-bold text-muted-foreground">

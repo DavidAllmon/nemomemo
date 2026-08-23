@@ -5,7 +5,7 @@ import type { MemoDto } from '@nemomemo/shared';
 import { DoryBadge } from '@/components/memo/DoryBadge.js';
 import { MemoActionMenu } from '@/components/memo/MemoActionMenu.js';
 import { MemoContent } from '@/components/memo/MemoContent.js';
-import { MemoEditor } from '@/components/editor/MemoEditor.js';
+import { LazyMemoEditor } from '@/components/editor/lazy.js';
 import { ReactionBar } from '@/components/memo/ReactionBar.js';
 import { Avatar } from '@/components/ui/misc.js';
 import { Tip } from '@/components/ui/overlays.js';
@@ -133,7 +133,7 @@ export function MemoCard({
   if (editing) {
     return (
       <article className="rounded-2xl border border-border bg-card p-4">
-        <MemoEditor memo={memo} onDone={() => setEditing(false)} />
+        <LazyMemoEditor memo={memo} onDone={() => setEditing(false)} />
       </article>
     );
   }

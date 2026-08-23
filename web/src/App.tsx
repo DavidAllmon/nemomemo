@@ -1,24 +1,29 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import { Suspense, lazy, type ReactNode } from 'react';
 import { LoadingState } from '@/components/EmptyState.js';
 import { AppShell } from '@/components/layout/AppShell.js';
 import { useInstanceProfile, useViewer } from '@/hooks/queries.js';
-import { AboutPage } from '@/pages/About.js';
-import { ArchivedPage } from '@/pages/Archived.js';
-import { AttachmentsPage } from '@/pages/Attachments.js';
-import { AuthPage } from '@/pages/Auth.js';
-import { DoryMemoryPage } from '@/pages/DoryMemory.js';
-import { ExplorePage } from '@/pages/Explore.js';
-import { HomePage } from '@/pages/Home.js';
-import { InboxPage } from '@/pages/Inbox.js';
-import { MemoDetailPage } from '@/pages/MemoDetail.js';
-import { NotFoundPage } from '@/pages/NotFound.js';
-import { ProfilePage } from '@/pages/Profile.js';
-import { SettingsPage } from '@/pages/Settings.js';
-import { SharePage } from '@/pages/Share.js';
-import { VerifyEmailPage } from '@/pages/VerifyEmail.js';
-import { ForgotPasswordPage, ResetPasswordPage } from '@/pages/ResetPassword.js';
-import { ViewsPage } from '@/pages/Views.js';
+
+// Route-level code splitting: each page loads on first visit, keeping the
+// initial bundle to the shell. The heavy editor/highlighter chunks split
+// separately (see components/editor/lazy.tsx and MemoContent).
+const AboutPage = lazy(() => import('@/pages/About.js').then((m) => ({ default: m.AboutPage })));
+const ArchivedPage = lazy(() => import('@/pages/Archived.js').then((m) => ({ default: m.ArchivedPage })));
+const AttachmentsPage = lazy(() => import('@/pages/Attachments.js').then((m) => ({ default: m.AttachmentsPage })));
+const AuthPage = lazy(() => import('@/pages/Auth.js').then((m) => ({ default: m.AuthPage })));
+const DoryMemoryPage = lazy(() => import('@/pages/DoryMemory.js').then((m) => ({ default: m.DoryMemoryPage })));
+const ExplorePage = lazy(() => import('@/pages/Explore.js').then((m) => ({ default: m.ExplorePage })));
+const HomePage = lazy(() => import('@/pages/Home.js').then((m) => ({ default: m.HomePage })));
+const InboxPage = lazy(() => import('@/pages/Inbox.js').then((m) => ({ default: m.InboxPage })));
+const MemoDetailPage = lazy(() => import('@/pages/MemoDetail.js').then((m) => ({ default: m.MemoDetailPage })));
+const NotFoundPage = lazy(() => import('@/pages/NotFound.js').then((m) => ({ default: m.NotFoundPage })));
+const ProfilePage = lazy(() => import('@/pages/Profile.js').then((m) => ({ default: m.ProfilePage })));
+const SettingsPage = lazy(() => import('@/pages/Settings.js').then((m) => ({ default: m.SettingsPage })));
+const SharePage = lazy(() => import('@/pages/Share.js').then((m) => ({ default: m.SharePage })));
+const VerifyEmailPage = lazy(() => import('@/pages/VerifyEmail.js').then((m) => ({ default: m.VerifyEmailPage })));
+const ForgotPasswordPage = lazy(() => import('@/pages/ResetPassword.js').then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPassword.js').then((m) => ({ default: m.ResetPasswordPage })));
+const ViewsPage = lazy(() => import('@/pages/Views.js').then((m) => ({ default: m.ViewsPage })));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { data: viewer, isLoading } = useViewer();
@@ -34,7 +39,8 @@ export function App() {
   const { data: profile } = useInstanceProfile();
 
   return (
-    <Routes>
+    <Suspense fallback={<LoadingState />}>
+      <Routes>
       <Route path="/auth" element={<AuthPage mode="signin" />} />
       <Route path="/auth/signup" element={<AuthPage mode="signup" />} />
       <Route path="/memos/shares/:token" element={<SharePage />} />
@@ -105,6 +111,7 @@ export function App() {
         <Route path="/memos/:uid" element={<MemoDetailPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }

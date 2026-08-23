@@ -1,8 +1,7 @@
 import 'highlight.js/styles/github.css';
 import { Check, Copy } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Markdown from 'react-markdown';
-import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 import { toggleTaskAt } from '@nemomemo/shared';
 import type { Node, Parent, Text } from 'mdast';
@@ -105,6 +104,29 @@ function CodeBlock({ children, ...props }: { children?: ReactNode }) {
   );
 }
 
+type RehypeHighlight = typeof import('rehype-highlight').default;
+
+// highlight.js is a large chunk most feeds never need — fetch it only once a
+// memo with a fenced code block actually renders, then reuse module-wide.
+let loadedHighlight: RehypeHighlight | null = null;
+
+function useRehypeHighlight(content: string): RehypeHighlight | null {
+  const wantsHighlight = content.includes('```');
+  const [plugin, setPlugin] = useState<RehypeHighlight | null>(loadedHighlight);
+  useEffect(() => {
+    if (!wantsHighlight || plugin != null) return;
+    let cancelled = false;
+    void import('rehype-highlight').then((module) => {
+      loadedHighlight = module.default;
+      if (!cancelled) setPlugin(() => module.default);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [wantsHighlight, plugin]);
+  return wantsHighlight ? plugin : null;
+}
+
 export function MemoContent({
   content,
   onContentChange,
@@ -117,12 +139,17 @@ export function MemoContent({
 }) {
   const { toggleChip } = useMemoFilters();
   const plugins = useMemo(() => [remarkGfm, remarkTagsMentions], []);
+  const rehypeHighlight = useRehypeHighlight(content);
+  const rehypePlugins = useMemo(
+    () => (rehypeHighlight ? [rehypeCheckboxOffsets, rehypeHighlight] : [rehypeCheckboxOffsets]),
+    [rehypeHighlight],
+  );
 
   return (
     <div className={cn('memo-content text-[15px]', className)}>
       <Markdown
         remarkPlugins={plugins}
-        rehypePlugins={[rehypeCheckboxOffsets, rehypeHighlight]}
+        rehypePlugins={rehypePlugins}
         components={{
           a({ href, children, ...props }) {
             if (href?.startsWith('#tag:')) {
