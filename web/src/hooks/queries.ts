@@ -11,6 +11,7 @@ import type {
   InstanceMemoSetting,
   InstanceProfileDto,
   MemoDto,
+  MemoHistoryResponse,
   MemoListResponse,
   MemoViewDto,
   ShareDto,
@@ -30,6 +31,7 @@ export const keys = {
   // Under the 'memos' prefix so useInvalidateMemos refreshes it with every edit.
   dory: ['memos', 'dory'] as const,
   trash: ['memos', 'trash'] as const,
+  history: (uid: string) => ['memos', 'history', uid] as const,
   comments: (uid: string) => ['memos', 'comments', uid] as const,
   shares: (uid: string) => ['memos', 'shares', uid] as const,
   sharedMemo: (token: string) => ['shares', token] as const,
@@ -305,6 +307,29 @@ export function useEmptyTrash() {
   return useMutation({
     mutationFn: () => api<{ purged: number }>('POST', '/api/v1/memos/trash/empty', {}),
     onSuccess: invalidate,
+  });
+}
+
+// ---------- Edit history ----------
+
+export function useMemoHistory(uid: string, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.history(uid),
+    queryFn: () => api<MemoHistoryResponse>('GET', `/api/v1/memos/${uid}/history`),
+    enabled,
+  });
+}
+
+export function useRestoreRevision(uid: string) {
+  const client = useQueryClient();
+  const invalidate = useInvalidateMemos();
+  return useMutation({
+    mutationFn: (revisionId: number) =>
+      api<{ memo: MemoDto }>('POST', `/api/v1/memos/${uid}/history/${revisionId}/restore`, {}),
+    onSuccess: ({ memo }) => {
+      client.setQueryData(keys.memo(memo.uid), memo);
+      invalidate();
+    },
   });
 }
 

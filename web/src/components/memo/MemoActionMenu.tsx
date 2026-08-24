@@ -6,6 +6,7 @@ import {
   Download,
   EllipsisVertical,
   Fish,
+  History,
   Link2,
   ListChecks,
   Pencil,
@@ -39,6 +40,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/overlays.js';
 import { useDeleteMemo, useUpdateMemo, useViewer } from '@/hooks/queries.js';
+import { MemoHistoryDialog } from '@/components/memo/MemoHistoryDialog.js';
 import { ShareDialog } from '@/components/memo/ShareDialog.js';
 import { epochToLocalInput, localInputToEpoch } from '@/lib/utils.js';
 
@@ -62,6 +64,7 @@ export function MemoActionMenu({ memo, onEdit }: { memo: MemoDto; onEdit?: () =>
   const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [remindOpen, setRemindOpen] = useState(false);
   const [remindInput, setRemindInput] = useState('');
   const [repeatInput, setRepeatInput] = useState<RemindRepeat | ''>('');
@@ -139,6 +142,11 @@ export function MemoActionMenu({ memo, onEdit }: { memo: MemoDto; onEdit?: () =>
             >
               <AlarmClock className="size-4" />
               {memo.remindAt != null ? 'Change the nudge…' : 'Nudge me about this'}
+            </DropdownMenuItem>
+          ) : null}
+          {isCreator ? (
+            <DropdownMenuItem onSelect={() => setHistoryOpen(true)}>
+              <History className="size-4" /> History
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuSub>
@@ -295,6 +303,9 @@ export function MemoActionMenu({ memo, onEdit }: { memo: MemoDto; onEdit?: () =>
       </Dialog>
 
       {shareOpen ? <ShareDialog memo={memo} open={shareOpen} onOpenChange={setShareOpen} /> : null}
+      {historyOpen ? (
+        <MemoHistoryDialog memo={memo} open={historyOpen} onOpenChange={setHistoryOpen} />
+      ) : null}
     </>
   );
 }
