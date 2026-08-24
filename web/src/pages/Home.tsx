@@ -1,4 +1,5 @@
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { FilterChipBar } from '@/components/filters/FilterChipBar.js';
 import { LazyMemoEditor } from '@/components/editor/lazy.js';
 import { OnThisDay } from '@/components/home/OnThisDay.js';
@@ -12,6 +13,17 @@ export function HomePage() {
   const { data: settings } = useUserSettings(!!viewer);
   const { expression } = useMemoFilters();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  // Set by the `c` shortcut when it had to navigate here first. Consumed once:
+  // coming back to this history entry later shouldn't grab the cursor again.
+  const [composeRequested] = useState(
+    () => (location.state as { compose?: boolean } | null)?.compose === true,
+  );
+  useEffect(() => {
+    if (composeRequested) navigate(location.pathname + location.search, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [composeRequested]);
 
   const viewId = searchParams.get('view');
   const view =
@@ -27,7 +39,7 @@ export function HomePage() {
   return (
     <div>
       <div className="mb-4 rounded-2xl border border-border bg-card p-4">
-        <LazyMemoEditor />
+        <LazyMemoEditor autoFocus={composeRequested} />
       </div>
       <OnThisDay />
       <div className="mb-2 flex items-center justify-between">

@@ -3,9 +3,11 @@ import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { NemoLogo, Wordmark } from '@/components/NemoLogo.js';
 import { SearchDialog } from '@/components/filters/SearchDialog.js';
+import { ShortcutsDialog } from '@/components/ShortcutsDialog.js';
 import { Sidebar } from '@/components/layout/Sidebar.js';
 import { Button } from '@/components/ui/button.js';
 import { useCloudBilling, useInstanceProfile, useViewer } from '@/hooks/queries.js';
+import { useShortcuts } from '@/hooks/use-shortcuts.js';
 import { cn } from '@/lib/utils.js';
 
 /** Hosted reefs only: reefkeepers see when a payment needs attention. */
@@ -133,7 +135,10 @@ function EmailNudgeBanner() {
 export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const location = useLocation();
+
+  useShortcuts({ onSearch: () => setSearchOpen(true), onHelp: () => setHelpOpen(true) });
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -200,6 +205,7 @@ export function AppShell() {
       </main>
 
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      <ShortcutsDialog open={helpOpen} onOpenChange={setHelpOpen} />
     </div>
   );
 }

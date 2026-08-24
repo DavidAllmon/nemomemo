@@ -163,9 +163,18 @@ export function MemoCard({
 
   return (
     <article
-      className="flex flex-col gap-2.5 rounded-2xl border border-border bg-card px-4 py-3 transition-opacity"
+      data-memo-card
+      data-memo-uid={memo.uid}
+      tabIndex={-1}
+      className="flex flex-col gap-2.5 rounded-2xl border border-border bg-card px-4 py-3 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       style={{ opacity: doryOpacity(memo.forgetAt) }}
     >
+      {/* The `e` shortcut clicks this: Edit itself lives inside a dropdown. */}
+      {isCreator ? (
+        <button data-memo-edit tabIndex={-1} className="sr-only" onClick={() => setEditing(true)}>
+          Edit this memo
+        </button>
+      ) : null}
       <header className="flex items-center gap-2.5">
         <Link to={`/u/${memo.creator.username}`}>
           <Avatar name={memo.creator.nickname} avatarUrl={memo.creator.avatarUrl} />

@@ -161,10 +161,12 @@ export const RichEditor = forwardRef<
     onSubmit?: () => void;
     onChangeMarkdown?: (markdown: string) => void;
     onFiles?: (files: File[]) => void;
+    /** Take focus as soon as the editor exists (the `c` shortcut's landing pad). */
+    autoFocus?: boolean;
     extraToolbar?: ReactNode;
   }
 >(function RichEditor(
-  { initialMarkdown = '', placeholder, variant, onSubmit, onChangeMarkdown, onFiles, extraToolbar },
+  { initialMarkdown = '', placeholder, variant, onSubmit, onChangeMarkdown, onFiles, autoFocus, extraToolbar },
   ref,
 ) {
   const { data: viewer } = useViewer();
@@ -203,6 +205,7 @@ export const RichEditor = forwardRef<
     ],
     content: initialMarkdown,
     contentType: 'markdown',
+    autofocus: autoFocus ? 'end' : false,
     onUpdate({ editor }) {
       onChangeMarkdown?.(serializeMarkdown(editor as Editor));
     },

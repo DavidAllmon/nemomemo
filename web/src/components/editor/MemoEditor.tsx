@@ -1,5 +1,5 @@
 import { Earth, Fish, Hourglass, Image as ImageIcon, Lock, Paperclip, Users, X } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { DORY_WINDOWS, type DoryWindow, type MemoDto, type Visibility } from '@nemomemo/shared';
 import { Bubbles } from '@/components/Bubbles.js';
 import { VoiceControls } from '@/components/editor/VoiceControls.js';
@@ -52,7 +52,16 @@ function loadDraft(): string {
   }
 }
 
-export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => void }) {
+export function MemoEditor({
+  memo,
+  onDone,
+  autoFocus,
+}: {
+  memo?: MemoDto;
+  onDone?: () => void;
+  /** Focus on mount — set when the `c` shortcut brought you here. */
+  autoFocus?: boolean;
+}) {
   const isEdit = !!memo;
   // Comments inherit the parent's visibility and can't be Dory memos — editing
   // one shows neither control and never patches those fields.
@@ -64,6 +73,15 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
   const upload = useUploadAttachment();
 
   const editorRef = useRef<RichEditorHandle>(null);
+
+  // `c` pressed while this editor is already on screen. Arriving from another
+  // page instead goes through router state -> the autoFocus prop, because a
+  // one-shot event would fire long before this lazy chunk finishes mounting.
+  useEffect(() => {
+    const focus = () => editorRef.current?.focus();
+    window.addEventListener('nemo:compose', focus);
+    return () => window.removeEventListener('nemo:compose', focus);
+  }, []);
   // The markdown the editor was loaded with: saving identical output skips the
   // content field so serializer normalization never counts as an "edit".
   const loadedMarkdown = useRef(memo?.content ?? loadDraft());
@@ -165,6 +183,7 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
         initialMarkdown={loadedMarkdown.current}
         placeholder="Any thoughts… 🫧"
         variant="full"
+        autoFocus={autoFocus}
         onSubmit={save}
         onFiles={(files) => void uploadFiles(files)}
         onChangeMarkdown={(markdown) => {
