@@ -92,6 +92,46 @@ describe('tag rename — rewrites content, keeps history', () => {
   });
 });
 
+describe('tag rename — settings ride along', () => {
+  it('a renamed tag keeps its color and its pin under the new name', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    await createMemo(app, cookie, { content: 'a #reef and #reef/notes memo' });
+    await jsonRequest(
+      app,
+      'PATCH',
+      '/api/v1/users/-/settings',
+      { general: { tagColors: { reef: 'coral', 'reef/notes': 'kelp' }, pinnedTags: ['reef'] } },
+      cookie,
+    );
+    await rename(app, cookie, 'reef', 'lagoon');
+    const read = await jsonRequest(app, 'GET', '/api/v1/users/-/settings', undefined, cookie);
+    const { general } = (await read.json()) as {
+      general: { tagColors: Record<string, string>; pinnedTags: string[] };
+    };
+    expect(general.tagColors).toEqual({ lagoon: 'coral', 'lagoon/notes': 'kelp' });
+    expect(general.pinnedTags).toEqual(['lagoon']);
+  });
+
+  it('merging into an existing colored tag keeps the target color', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    await createMemo(app, cookie, { content: 'one #reef' });
+    await createMemo(app, cookie, { content: 'two #lagoon' });
+    await jsonRequest(
+      app,
+      'PATCH',
+      '/api/v1/users/-/settings',
+      { general: { tagColors: { reef: 'coral', lagoon: 'kelp' } } },
+      cookie,
+    );
+    await rename(app, cookie, 'reef', 'lagoon');
+    const read = await jsonRequest(app, 'GET', '/api/v1/users/-/settings', undefined, cookie);
+    const { general } = (await read.json()) as { general: { tagColors: Record<string, string> } };
+    expect(general.tagColors).toEqual({ lagoon: 'kelp' });
+  });
+});
+
 describe('tag colors — a per-member palette', () => {
   it('persists tagColors through user settings', async () => {
     const { app } = makeTestApp();

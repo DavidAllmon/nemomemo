@@ -1,9 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { Settings as SettingsIcon } from 'lucide-react';
+import { Pencil, Settings as SettingsIcon } from 'lucide-react';
 import { useRef, useState } from 'react';
-import type { Visibility } from '@nemomemo/shared';
+import { TAG_COLOR_NAMES, type TagColor, type Visibility } from '@nemomemo/shared';
 import { Button } from '@/components/ui/button.js';
 import { Avatar, Input } from '@/components/ui/misc.js';
+import { Dialog, DialogClose, DialogContent } from '@/components/ui/overlays.js';
+import { SWATCH_CLASSES, tagGlyphClass } from '@/lib/tag-colors.js';
 import { fileToAvatarDataUrl } from '@/lib/avatar.js';
 import { useTheme, type Theme } from '@/context/theme.js';
 import {
@@ -13,6 +15,8 @@ import {
   useInstanceProfile,
   useInstanceSettings,
   useMembers,
+  useRenameTag,
+  useTags,
   useUpdateUserSettings,
   useUserSettings,
   useViewer,
@@ -21,7 +25,7 @@ import {
 import { api, ApiError, apiUpload } from '@/lib/api.js';
 import { cn } from '@/lib/utils.js';
 
-type Section = 'account' | 'preferences' | 'members' | 'instance' | 'backups' | 'billing';
+type Section = 'account' | 'preferences' | 'tags' | 'members' | 'instance' | 'backups' | 'billing';
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -146,26 +150,6 @@ function PreferencesSection() {
   const { theme, setTheme } = useTheme();
   const { data: settings } = useUserSettings();
   const updateSettings = useUpdateUserSettings();
-  const { status, flash } = useStatus();
-  const [renameFrom, setRenameFrom] = useState('');
-  const [renameTo, setRenameTo] = useState('');
-  const queryClient = useQueryClient();
-
-  const renameTag = async () => {
-    try {
-      const result = await api<{ changed: number }>('POST', '/api/v1/users/-/tags/rename', {
-        from: renameFrom,
-        to: renameTo,
-      });
-      await queryClient.invalidateQueries({ queryKey: ['memos'] });
-      await queryClient.invalidateQueries({ queryKey: keys.tags });
-      flash(`Renamed in ${result.changed} memo(s)`);
-      setRenameFrom('');
-      setRenameTo('');
-    } catch (error) {
-      flash(error instanceof ApiError ? error.message : 'Could not rename');
-    }
-  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -201,32 +185,151 @@ function PreferencesSection() {
         </select>
       </SectionCard>
 
-      <SectionCard title="Rename a tag">
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            placeholder="old-tag"
-            className="w-40"
-            value={renameFrom}
-            onChange={(e) => setRenameFrom(e.target.value)}
-          />
-          <span className="text-muted-foreground">→</span>
-          <Input
-            placeholder="new-tag"
-            className="w-40"
-            value={renameTo}
-            onChange={(e) => setRenameTo(e.target.value)}
-          />
-          <Button size="sm" disabled={!renameFrom || !renameTo} onClick={() => void renameTag()}>
-            Rename everywhere
-          </Button>
-          {status ? <span className="text-xs font-semibold text-ocean">{status}</span> : null}
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Rewrites the tag in every memo you own, including nested tags like{' '}
-          <code className="font-mono">old-tag/idea</code>.
-        </p>
-      </SectionCard>
     </div>
+  );
+}
+
+function TagsSection() {
+  const { data: tags } = useTags(true);
+  const { data: settings } = useUserSettings();
+  const updateSettings = useUpdateUserSettings();
+  const renameTag = useRenameTag();
+  const { status, flash } = useStatus();
+  const [editing, setEditing] = useState<string | null>(null);
+  const [renameTo, setRenameTo] = useState('');
+  const [merge, setMerge] = useState<{ from: string; to: string } | null>(null);
+
+  const entries = Object.entries(tags ?? {}).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const tagColors = settings?.general.tagColors ?? {};
+
+  const setColor = (tag: string, color: TagColor) => {
+    const next = { ...tagColors };
+    // `ocean` is the default coat — picking it just clears the entry.
+    if (color === 'ocean') delete next[tag];
+    else next[tag] = color;
+    updateSettings.mutate({ general: { tagColors: next } });
+  };
+
+  const doRename = (from: string, to: string) => {
+    renameTag.mutate(
+      { from, to },
+      {
+        onSuccess: ({ changed }) => {
+          flash(`Now #${to} in ${changed} memo(s)`);
+          setEditing(null);
+          setRenameTo('');
+          setMerge(null);
+        },
+        onError: (error) => {
+          setMerge(null);
+          flash(error instanceof ApiError ? error.message : 'Could not rename');
+        },
+      },
+    );
+  };
+
+  const submitRename = (from: string) => {
+    const to = renameTo.trim().replace(/^#/, '');
+    if (!to || to === from) return;
+    if (tags && to in tags) setMerge({ from, to });
+    else doRename(from, to);
+  };
+
+  return (
+    <SectionCard title="Your tags">
+      {entries.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No tags yet — write <code className="font-mono">#something</code> in a memo and it&apos;ll
+          swim up here.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-1">
+          {entries.map(([name, count]) => (
+            <div key={name} className="flex flex-wrap items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-accent/50">
+              <span className={cn('min-w-0 truncate text-sm font-semibold', tagGlyphClass(tagColors[name]))}>
+                #{name}
+              </span>
+              <span className="text-xs tabular-nums text-muted-foreground">{count}</span>
+              <span className="ml-auto flex items-center gap-1">
+                {TAG_COLOR_NAMES.map((color) => (
+                  <button
+                    key={color}
+                    aria-label={`Paint #${name} ${color}`}
+                    aria-pressed={(tagColors[name] ?? 'ocean') === color}
+                    onClick={() => setColor(name, color)}
+                    className={cn(
+                      'size-4 rounded-full border border-border/60 transition-transform hover:scale-110',
+                      SWATCH_CLASSES[color],
+                      (tagColors[name] ?? 'ocean') === color && 'ring-2 ring-ring ring-offset-1 ring-offset-card',
+                    )}
+                  />
+                ))}
+                <button
+                  aria-label={`Rename #${name}`}
+                  onClick={() => {
+                    setEditing(editing === name ? null : name);
+                    setRenameTo(name);
+                  }}
+                  className="ml-1 rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <Pencil className="size-3.5" />
+                </button>
+              </span>
+              {editing === name ? (
+                <span className="flex w-full items-center gap-2 pl-1">
+                  <Input
+                    autoFocus
+                    className="h-8 w-44"
+                    value={renameTo}
+                    onChange={(e) => setRenameTo(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') submitRename(name);
+                      if (e.key === 'Escape') setEditing(null);
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    disabled={renameTag.isPending || !renameTo.trim() || renameTo.trim().replace(/^#/, '') === name}
+                    onClick={() => submitRename(name)}
+                  >
+                    {tags && renameTo.trim().replace(/^#/, '') in tags ? 'Merge' : 'Rename'}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                    Cancel
+                  </Button>
+                </span>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="mt-3 text-xs text-muted-foreground">
+        Renaming rewrites the tag in every memo you own, nested tags included — and each rewritten
+        memo keeps its old words in <span className="font-semibold">⋯ → History</span>. Colors are
+        yours alone; other members see their own.
+      </p>
+      {status ? <p className="mt-1 text-xs font-semibold text-ocean">{status}</p> : null}
+
+      <Dialog open={merge != null} onOpenChange={(open) => (open ? null : setMerge(null))}>
+        <DialogContent
+          title={merge ? `Merge #${merge.from} into #${merge.to}?` : ''}
+          description={
+            merge
+              ? `#${merge.to} already has ${tags?.[merge.to] ?? 0} memo(s). Merging pours every #${merge.from} memo into it — each rewritten memo keeps its old words in History, so nothing is lost.`
+              : ''
+          }
+        >
+          <div className="flex justify-end gap-2">
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button disabled={renameTag.isPending} onClick={() => merge && doRename(merge.from, merge.to)}>
+              Merge them
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </SectionCard>
   );
 }
 
@@ -688,6 +791,7 @@ export function SettingsPage() {
   const sections: { id: Section; label: string; adminOnly?: boolean }[] = [
     { id: 'account', label: 'Account' },
     { id: 'preferences', label: 'Preferences' },
+    { id: 'tags', label: 'Tags' },
     { id: 'members', label: 'Members', adminOnly: true },
     { id: 'instance', label: 'Reef', adminOnly: true },
     { id: 'backups', label: 'Backups', adminOnly: true },
@@ -717,6 +821,7 @@ export function SettingsPage() {
       </nav>
       {section === 'account' ? <AccountSection /> : null}
       {section === 'preferences' ? <PreferencesSection /> : null}
+      {section === 'tags' ? <TagsSection /> : null}
       {section === 'members' && isAdmin ? <MembersSection /> : null}
       {section === 'instance' && isAdmin ? <InstanceSection /> : null}
       {section === 'backups' && isAdmin ? <BackupsSection isCloud={Boolean(cloudBilling)} /> : null}

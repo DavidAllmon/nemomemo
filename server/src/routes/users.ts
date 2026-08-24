@@ -89,7 +89,30 @@ export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
       }
       return changed;
     });
-    return c.json({ changed: rename() });
+    const changed = rename();
+
+    // Sidebar settings follow the tag to its new name: colors and pins move
+    // over; on a merge, the target tag's own color wins.
+    const general = getUserGeneral(db, viewer.id);
+    const renameKey = (key: string) =>
+      key === from || key.startsWith(from + '/') ? to + key.slice(from.length) : key;
+    const tagColors: Record<string, (typeof general.tagColors)[string]> = {};
+    for (const [key, color] of Object.entries(general.tagColors)) {
+      if (renameKey(key) === key) tagColors[key] = color;
+    }
+    for (const [key, color] of Object.entries(general.tagColors)) {
+      const next = renameKey(key);
+      if (next !== key && !(next in tagColors)) tagColors[next] = color;
+    }
+    const pinnedTags = [...new Set(general.pinnedTags.map(renameKey))];
+    if (
+      JSON.stringify(tagColors) !== JSON.stringify(general.tagColors) ||
+      JSON.stringify(pinnedTags) !== JSON.stringify(general.pinnedTags)
+    ) {
+      setUserGeneral(db, viewer.id, { tagColors, pinnedTags });
+    }
+
+    return c.json({ changed });
   });
 
   app.get('/-/settings', (c) => {

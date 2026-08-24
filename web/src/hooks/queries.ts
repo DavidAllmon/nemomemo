@@ -310,6 +310,21 @@ export function useEmptyTrash() {
   });
 }
 
+/** Rename (or, when `to` already exists, merge) a tag across every memo you own. */
+export function useRenameTag() {
+  const client = useQueryClient();
+  const invalidate = useInvalidateMemos();
+  return useMutation({
+    mutationFn: ({ from, to }: { from: string; to: string }) =>
+      api<{ changed: number }>('POST', '/api/v1/users/-/tags/rename', { from, to }),
+    onSuccess: () => {
+      invalidate();
+      // Colors and pins follow the tag server-side; refetch them too.
+      void client.invalidateQueries({ queryKey: keys.userSettings });
+    },
+  });
+}
+
 // ---------- Edit history ----------
 
 export function useMemoHistory(uid: string, enabled: boolean) {
