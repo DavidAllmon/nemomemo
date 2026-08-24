@@ -98,13 +98,14 @@ ride-alongs — shipped across 2026-08-23/24.
 
 The wave that makes 1,000 memos better than 100 — and makes people willing to keep
 important things here. Trash + history + tag tools share one story: *nothing is ever
-lost unless you asked Dory*. **Trash shipped v1.24.0; memo edit history is next.**
+lost unless you asked Dory*. **Trash (v1.24.0), edit history (v1.25.0), and tag
+management (v1.26.0) shipped; bulk select is next.**
 
 | Item | Why & how | Effort |
 | --- | --- | --- |
 | **Trash (undo delete)** | ✅ **v1.24.0** — migration 0008 `deleted_at` as a fourth guard (`buildMemoListWhere` + both `acl.ts` functions, hidden from the creator too); `/trash` with restore, delete-forever, and empty; `purgeMemos()` is now the one hard-delete cascade and the 7-day sweep is step 5 of the scheduler tick. | M |
-| ⭐ NEW **Memo edit history** | New `memo_revision` table (memo_id FK cascade, content, created_ts); memo update writes the prior content first; prune to last 20 / 90 days via the scheduler. Diff + one-click restore in the memo ⋯ menu. Revisions readable only through `checkMemoRead` on the parent, so Dory expiry and visibility can never leak old text. Also the support story for "my memo changed". | M |
-| ⭐ NEW **Tag management (rename / merge / color)** | Settings → Tags: rename rewrites the tag token in memo *content* (source of truth) and re-runs `buildPayload()` per memo in one transaction; merge = rename onto an existing tag; color stored per user, shown in chips/sidebar. Prereq ride-along: code-health #1 (dedupe the shared⇄web tag regex) so there's exactly one tokenizer to trust. Tag rot is the #1 reason memo apps get abandoned at month six. | M |
+| ⭐ NEW **Memo edit history** | ✅ **v1.25.0** — `memo_revision` (migration 0009, FK cascade); content edits write the prior words in-transaction; prune (keep 20 / 90 days) is the scheduler's sixth pass; history + one-click restore in ⋯ → History, creator-only AND behind `checkMemoRead`. | M |
+| ⭐ NEW **Tag management (rename / merge / color)** | ✅ **v1.26.0** — Settings → Tags: rename rewrites content + payload per memo in one transaction AND captures a revision each (renames are History-covered); merge = rename onto an existing tag with a confirm; 8-color per-user palette (`tagColors` in user settings) shown in chips + sidebar; colors/pins follow a rename. Code-health #1 shipped as the prereq (one tokenizer in shared). | M |
 | **Bulk select** | Multi-select → archive/tag/delete at once; tag-merge UI reuses pieces of this. | M |
 | **Memo templates** | One-tap skeletons (daily journal, standup, meeting note, recipe), stored per user like saved views. | M |
 | **Paste-a-URL → markdown link** · **Slash commands in editor** | Editor polish batch (`/task`, `/table`, `/dory`) while the editor files are open. | S / M |
@@ -172,7 +173,7 @@ Kept warm, not committed. Promote by moving into a wave.
 
 ## Code health (from `docs/AUDIT-2026-08-22.md` — still open)
 
-1. **S** Dedupe tag/mention regexes (shared ⇄ web) — **now a prereq for Wave 3 tag management**.
+1. ~~**S** Dedupe tag/mention regexes (shared ⇄ web)~~ ✅ v1.26.0 — `TAG_REGEX`/`MENTION_REGEX`/`isValidTagName` exported from shared.
 2. **M** Move `/-/tags` + `/:u/stats` aggregation into SQL `json_each` (removes the 10k cap) — do before any reef grows large; Wave 2's payload work is the natural moment.
 3. **S** Extract `assertOwner` into `services/acl.ts`.
 4. **M** Route-level code splitting (1.4MB chunk → lazy routes; editor/highlighter chunks) — do before Wave 2 adds gallery/tasks/calendar routes.
