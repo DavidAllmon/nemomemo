@@ -69,7 +69,8 @@ export default function Layout({ children }: { children: ReactNode }) {
             url: SITE_URL,
           }}
         />
-        <RootProvider>{children}</RootProvider>
+        {/* The whole site lives in the Terminal Reef's deep water — docs included. */}
+        <RootProvider theme={{ forcedTheme: 'dark', defaultTheme: 'dark' }}>{children}</RootProvider>
       </body>
     </html>
   );

@@ -146,8 +146,12 @@ Dory's Memory: fading + bottles + forgotten counter), `/views` (auth),
 
 - `src/app/(marketing)/` — home, features, pricing, compare (+ per-competitor pages
   `compare/{memos,notion,google-keep,obsidian}`), use-cases, changelog, privacy,
-  terms, blog. Marketing pages use the fixed dark "Deep Sea" palette via the
-  `.reef-deep` token block in `global.css` (docs keep the light/dark toggle).
+  terms, blog. The WHOLE site — marketing AND docs — wears the fixed dark
+  "Terminal Reef" palette: `.reef-deep` token block + `--color-fd-*` overrides
+  in `global.css`, theme forced dark in the root `RootProvider` (the docs
+  light/dark toggle is disabled). Docs headings are mono with `#`/`##`/`###`
+  prefixes via CSS scoped to `#nd-page` / `#nd-sidebar` etc. — same idiom as
+  `.reef-prose` for blog posts.
   `src/app/docs/[[...slug]]` renders MDX from `site/content/docs/`
   (loader in `src/lib/source.ts`; sidebar order `meta.json`).
 - **Blog is a Fumadocs MDX collection**: posts in `site/content/blog/*.mdx`
