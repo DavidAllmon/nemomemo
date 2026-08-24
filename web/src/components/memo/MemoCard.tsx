@@ -176,9 +176,18 @@ export function MemoCard({
       className="flex flex-col gap-2.5 rounded-2xl border border-border bg-card px-4 py-3 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       style={{ opacity: doryOpacity(memo.forgetAt) }}
     >
-      {/* The `e` shortcut clicks this: Edit itself lives inside a dropdown. */}
+      {/* The `e` shortcut clicks this, since Edit itself lives inside a dropdown.
+          `hidden`, not `sr-only`: HTMLElement.click() fires on a display:none
+          element, sr-only is position:absolute (it escaped the main scroller and
+          stretched the page), and screen readers already get Edit from the menu. */}
       {isCreator && !readOnly ? (
-        <button data-memo-edit tabIndex={-1} className="sr-only" onClick={() => setEditing(true)}>
+        <button
+          data-memo-edit
+          aria-hidden
+          tabIndex={-1}
+          className="hidden"
+          onClick={() => setEditing(true)}
+        >
           Edit this memo
         </button>
       ) : null}

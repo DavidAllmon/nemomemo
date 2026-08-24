@@ -92,8 +92,11 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
   };
 
   return (
-    <div className="flex h-full flex-col gap-4 overflow-hidden p-4">
-      <div className="flex items-center justify-between">
+    /* Brand and account stay pinned; everything that can grow — nav, calendar,
+       views, tags — shares the one scroll area between them. Short laptop
+       viewports used to clip the account menu clean off the bottom. */
+    <div className="flex h-full flex-col overflow-hidden p-4">
+      <div className="flex shrink-0 items-center justify-between pb-4">
         <Link to={viewer ? '/' : '/explore'} className="flex items-center gap-1.5">
           <NemoLogo className="size-7" />
           <Wordmark />
@@ -103,54 +106,57 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
         </Button>
       </div>
 
-      <nav className="flex flex-col gap-0.5">
-        {viewer ? <NavItem to="/" icon={<House className="size-4" />} label="Home" /> : null}
-        <NavItem to="/explore" icon={<Compass className="size-4" />} label="Explore" />
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+        <nav className="flex flex-col gap-0.5">
+          {viewer ? <NavItem to="/" icon={<House className="size-4" />} label="Home" /> : null}
+          <NavItem to="/explore" icon={<Compass className="size-4" />} label="Explore" />
+          {viewer ? (
+            <>
+              <NavItem to="/calendar" icon={<CalendarDays className="size-4" />} label="Calendar" />
+              <NavItem to="/archived" icon={<Archive className="size-4" />} label="Archived" />
+              <NavItem to="/dory" icon={<Fish className="size-4" />} label="Dory" />
+              <NavItem to="/trash" icon={<Trash2 className="size-4" />} label="Trash" />
+              <NavItem to="/attachments" icon={<Paperclip className="size-4" />} label="Attachments" />
+              <NavItem
+                to="/inbox"
+                icon={<Bell className="size-4" />}
+                label="Inbox"
+                badge={inbox?.unreadCount || undefined}
+              />
+              {/* Imperative, so a button rather than a NavLink. */}
+              <button
+                onClick={() =>
+                  goFish.mutate(undefined, {
+                    onSuccess: (memo) => navigate(`/memos/${memo.uid}`),
+                  })
+                }
+                disabled={goFish.isPending}
+                title="Swim up a random memo"
+                className="flex items-center gap-2.5 rounded-xl px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+              >
+                <Shuffle className="size-4" />
+                <span className="flex-1 text-left">Go fish</span>
+              </button>
+            </>
+          ) : (
+            <NavItem to="/about" icon={<Info className="size-4" />} label="About" />
+          )}
+        </nav>
+
         {viewer ? (
           <>
-            <NavItem to="/calendar" icon={<CalendarDays className="size-4" />} label="Calendar" />
-            <NavItem to="/archived" icon={<Archive className="size-4" />} label="Archived" />
-            <NavItem to="/dory" icon={<Fish className="size-4" />} label="Dory" />
-            <NavItem to="/trash" icon={<Trash2 className="size-4" />} label="Trash" />
-            <NavItem to="/attachments" icon={<Paperclip className="size-4" />} label="Attachments" />
-            <NavItem
-              to="/inbox"
-              icon={<Bell className="size-4" />}
-              label="Inbox"
-              badge={inbox?.unreadCount || undefined}
-            />
-            {/* Imperative, so a button rather than a NavLink. */}
-            <button
-              onClick={() =>
-                goFish.mutate(undefined, {
-                  onSuccess: (memo) => navigate(`/memos/${memo.uid}`),
-                })
-              }
-              disabled={goFish.isPending}
-              title="Swim up a random memo"
-              className="flex items-center gap-2.5 rounded-xl px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
-            >
-              <Shuffle className="size-4" />
-              <span className="flex-1 text-left">Go fish</span>
-            </button>
+            <CalendarHeatmap username={viewer.username} />
+            <ViewsList />
+            <div>
+              <TagTree />
+            </div>
           </>
-        ) : (
-          <NavItem to="/about" icon={<Info className="size-4" />} label="About" />
-        )}
-      </nav>
+        ) : null}
+      </div>
 
-      {viewer ? (
-        <>
-          <CalendarHeatmap username={viewer.username} />
-          <ViewsList />
-          {/* Only the tags section scrolls when it overflows. */}
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <TagTree />
-          </div>
-        </>
-      ) : null}
-
-      <div className="mt-auto shrink-0 pt-2">
+      {/* Hairline marks where the scrolling middle ends and the pinned
+          account row begins — without it a clipped tag row reads as a glitch. */}
+      <div className="shrink-0 border-t border-border pt-3">
         {viewer ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

@@ -193,8 +193,11 @@ export function AppShell() {
         <Sidebar onSearch={() => setSearchOpen(true)} />
       </aside>
       {/* Main area spans to the window's right edge so the page scrollbar sits
-          flush right; content centers within it. */}
-      <main className="min-w-0 flex-1 px-3 py-4 md:h-dvh md:overflow-y-auto md:px-6">
+          flush right; content centers within it. `relative` makes this the
+          containing block for its absolutely-positioned descendants, so they get
+          clipped by its own scroller instead of stretching the document and
+          dragging the sidebar up with them. */}
+      <main className="relative min-w-0 flex-1 px-3 py-4 md:h-dvh md:overflow-y-auto md:px-6">
         {/* Reading column by default; the calendar grid needs the extra room. */}
         <div className={cn('mx-auto w-full', location.pathname === '/calendar' ? 'max-w-5xl' : 'max-w-2xl')}>
           <PastDueBanner />
