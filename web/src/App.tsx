@@ -11,6 +11,7 @@ const AboutPage = lazy(() => import('@/pages/About.js').then((m) => ({ default: 
 const ArchivedPage = lazy(() => import('@/pages/Archived.js').then((m) => ({ default: m.ArchivedPage })));
 const AttachmentsPage = lazy(() => import('@/pages/Attachments.js').then((m) => ({ default: m.AttachmentsPage })));
 const AuthPage = lazy(() => import('@/pages/Auth.js').then((m) => ({ default: m.AuthPage })));
+const CalendarPage = lazy(() => import('@/pages/Calendar.js').then((m) => ({ default: m.CalendarPage })));
 const DoryMemoryPage = lazy(() => import('@/pages/DoryMemory.js').then((m) => ({ default: m.DoryMemoryPage })));
 const ExplorePage = lazy(() => import('@/pages/Explore.js').then((m) => ({ default: m.ExplorePage })));
 const HomePage = lazy(() => import('@/pages/Home.js').then((m) => ({ default: m.HomePage })));
@@ -81,6 +82,14 @@ export function App() {
           element={
             <RequireAuth>
               <TasksPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/calendar"
+          element={
+            <RequireAuth>
+              <CalendarPage />
             </RequireAuth>
           }
         />

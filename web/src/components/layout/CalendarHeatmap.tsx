@@ -1,8 +1,9 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMemoFilters } from '@/hooks/use-memo-filters.js';
 import { useUserStats } from '@/hooks/queries.js';
-import { localDayKey } from '@/lib/time-travel.js';
+import { localDayKey, streakFrom } from '@/lib/time-travel.js';
 import { cn } from '@/lib/utils.js';
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -29,11 +30,21 @@ export function CalendarHeatmap({ username }: { username: string }) {
   const max = Math.max(1, ...counts.values());
   const selectedDay = chips.find((chip) => chip.type === 'displayTime')?.value;
   const todayKey = localDayKey(now);
+  const streak = useMemo(
+    () => streakFrom(stats?.memoCreatedTimestamps ?? [], new Date()),
+    [stats],
+  );
 
   return (
     <section aria-label="Activity" className="select-none">
       <div className="mb-1 flex items-center justify-between px-1">
-        <span className="text-xs font-bold text-muted-foreground">{monthLabel}</span>
+        <Link
+          to={`/calendar?month=${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}`}
+          title="Open the month view"
+          className="text-xs font-bold text-muted-foreground hover:text-foreground"
+        >
+          {monthLabel}
+        </Link>
         <span className="flex gap-0.5">
           <button
             aria-label="Previous month"
@@ -113,6 +124,14 @@ export function CalendarHeatmap({ username }: { username: string }) {
           </span>
         ))}
       </div>
+      {streak.current > 0 ? (
+        <p className="mt-1.5 px-1 text-[11px] font-semibold text-muted-foreground">
+          🔥 {streak.current}-day streak
+          {streak.longest > streak.current ? (
+            <span className="font-normal text-muted-foreground/70"> · best {streak.longest}</span>
+          ) : null}
+        </p>
+      ) : null}
     </section>
   );
 }

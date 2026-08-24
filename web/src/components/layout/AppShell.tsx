@@ -6,6 +6,7 @@ import { SearchDialog } from '@/components/filters/SearchDialog.js';
 import { Sidebar } from '@/components/layout/Sidebar.js';
 import { Button } from '@/components/ui/button.js';
 import { useCloudBilling, useInstanceProfile, useViewer } from '@/hooks/queries.js';
+import { cn } from '@/lib/utils.js';
 
 /** Hosted reefs only: reefkeepers see when a payment needs attention. */
 function PastDueBanner() {
@@ -189,7 +190,8 @@ export function AppShell() {
       {/* Main area spans to the window's right edge so the page scrollbar sits
           flush right; content centers within it. */}
       <main className="min-w-0 flex-1 px-3 py-4 md:h-dvh md:overflow-y-auto md:px-6">
-        <div className="mx-auto w-full max-w-2xl">
+        {/* Reading column by default; the calendar grid needs the extra room. */}
+        <div className={cn('mx-auto w-full', location.pathname === '/calendar' ? 'max-w-5xl' : 'max-w-2xl')}>
           <PastDueBanner />
           <WhatsNewBanner />
           <EmailNudgeBanner />

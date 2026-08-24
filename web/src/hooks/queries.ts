@@ -144,6 +144,8 @@ export interface MemoListParams {
   filter?: string;
   orderBy?: 'created_ts' | 'updated_ts';
   dir?: 'asc' | 'desc';
+  /** Rows per page; the server clamps to MAX_PAGE_SIZE (200). */
+  pageSize?: number;
 }
 
 function listQueryString(params: MemoListParams, pageToken?: string): string {
@@ -154,6 +156,7 @@ function listQueryString(params: MemoListParams, pageToken?: string): string {
   if (params.filter) search.set('filter', params.filter);
   if (params.orderBy) search.set('orderBy', params.orderBy);
   if (params.dir) search.set('dir', params.dir);
+  if (params.pageSize) search.set('pageSize', String(params.pageSize));
   if (pageToken) search.set('pageToken', pageToken);
   return search.toString();
 }

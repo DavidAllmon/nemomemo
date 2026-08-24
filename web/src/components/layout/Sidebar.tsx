@@ -1,6 +1,7 @@
 import {
   Archive,
   Bell,
+  CalendarDays,
   Compass,
   Fish,
   House,
@@ -104,6 +105,7 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
         <NavItem to="/explore" icon={<Compass className="size-4" />} label="Explore" />
         {viewer ? (
           <>
+            <NavItem to="/calendar" icon={<CalendarDays className="size-4" />} label="Calendar" />
             <NavItem to="/archived" icon={<Archive className="size-4" />} label="Archived" />
             <NavItem to="/dory" icon={<Fish className="size-4" />} label="Dory" />
             <NavItem to="/attachments" icon={<Paperclip className="size-4" />} label="Attachments" />

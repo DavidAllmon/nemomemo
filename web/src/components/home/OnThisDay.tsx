@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils.js';
 
 /** How much of Home this card is allowed to take before it stops being a nudge. */
 const MAX_ANCHORS = 2;
-const MAX_PER_ANCHOR = 3;
+const MAX_PER_ANCHOR = 2;
 
 const STORAGE_KEY = 'nemo-on-this-day';
 
