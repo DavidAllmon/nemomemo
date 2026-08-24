@@ -2,16 +2,10 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useMemoFilters } from '@/hooks/use-memo-filters.js';
 import { useUserStats } from '@/hooks/queries.js';
+import { localDayKey } from '@/lib/time-travel.js';
 import { cn } from '@/lib/utils.js';
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-function dayKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
 
 export function CalendarHeatmap({ username }: { username: string }) {
   const { data: stats } = useUserStats(username);
@@ -21,7 +15,7 @@ export function CalendarHeatmap({ username }: { username: string }) {
   const counts = useMemo(() => {
     const map = new Map<string, number>();
     for (const ts of stats?.memoCreatedTimestamps ?? []) {
-      const key = dayKey(new Date(ts * 1000));
+      const key = localDayKey(new Date(ts * 1000));
       map.set(key, (map.get(key) ?? 0) + 1);
     }
     return map;
@@ -34,7 +28,7 @@ export function CalendarHeatmap({ username }: { username: string }) {
   const leadingBlanks = monthStart.getDay();
   const max = Math.max(1, ...counts.values());
   const selectedDay = chips.find((chip) => chip.type === 'displayTime')?.value;
-  const todayKey = dayKey(now);
+  const todayKey = localDayKey(now);
 
   return (
     <section aria-label="Activity" className="select-none">
@@ -78,7 +72,7 @@ export function CalendarHeatmap({ username }: { username: string }) {
         })}
         {Array.from({ length: daysInMonth }, (_, i) => {
           const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), i + 1);
-          const key = dayKey(date);
+          const key = localDayKey(date);
           const count = counts.get(key) ?? 0;
           const intensity =
             count === 0
