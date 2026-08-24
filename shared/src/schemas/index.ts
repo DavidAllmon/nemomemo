@@ -238,6 +238,17 @@ export interface MemoListResponse {
   nextPageToken: string | null;
 }
 
+export interface MemoRevisionDto {
+  id: number;
+  content: string;
+  /** When this content was replaced by an edit (epoch seconds). */
+  createdTs: number;
+}
+
+export interface MemoHistoryResponse {
+  revisions: MemoRevisionDto[];
+}
+
 export interface ShareDto {
   token: string;
   createdTs: number;

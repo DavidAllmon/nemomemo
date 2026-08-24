@@ -49,3 +49,7 @@ export const APP_NAME = 'NemoMemo';
 
 /** How long a deleted memo waits in the trash before the scheduler purges it. */
 export const TRASH_RETENTION_SECONDS = 7 * 86_400;
+
+/** Edit history: how many revisions each memo keeps, and for how long. */
+export const REVISION_KEEP_COUNT = 20;
+export const REVISION_RETENTION_SECONDS = 90 * 86_400;
