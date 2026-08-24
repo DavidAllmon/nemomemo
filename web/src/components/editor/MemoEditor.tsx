@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { DORY_WINDOWS, type DoryWindow, type MemoDto, type Visibility } from '@nemomemo/shared';
 import { Bubbles } from '@/components/Bubbles.js';
 import { VoiceControls } from '@/components/editor/VoiceControls.js';
-import { RichEditor, type RichEditorHandle } from '@/components/editor/RichEditor.js';
+import { RichEditor, type RichEditorHandle, type SlashCommand } from '@/components/editor/RichEditor.js';
 import { TemplatesMenu } from '@/components/editor/TemplatesMenu.js';
 import { BottleDialog } from '@/components/memo/BottleDialog.js';
 import { Button } from '@/components/ui/button.js';
@@ -173,6 +173,23 @@ export function MemoEditor({
     }
   };
 
+  // `/dory` in the editor flips the memo's Dory flag — state the editor itself
+  // can't reach, so it arrives as a host-provided slash command.
+  const slashCommands: SlashCommand[] =
+    isComment || memo?.pinned
+      ? []
+      : [
+          {
+            label: 'Dory memo',
+            detail: dory ? 'she remembers it again' : 'forgets after 24 hours',
+            run: () => {
+              setDory((current) => !current);
+              setDoryWindow('24h');
+              setWindowTouched(true);
+            },
+          },
+        ];
+
   const pending = create.isPending || update.isPending;
   const canSave = (hasContent || attachments.length > 0) && uploading === 0 && !pending;
   const VisibilityIcon = VISIBILITY_OPTIONS.find((o) => o.value === effectiveVisibility)!.icon;
@@ -186,6 +203,7 @@ export function MemoEditor({
         variant="full"
         autoFocus={autoFocus}
         onSubmit={save}
+        extraSlashCommands={slashCommands}
         onFiles={(files) => void uploadFiles(files)}
         onChangeMarkdown={(markdown) => {
           setHasContent(markdown.trim().length > 0);

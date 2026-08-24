@@ -126,6 +126,40 @@ function suggestionRenderer(): ReturnType<NonNullable<SuggestionOptions<Suggesti
   };
 }
 
+export interface SlashCommand extends SuggestionItem {
+  run: (editor: Editor) => void;
+}
+
+/**
+ * Notion-style `/` commands at the start of a line. The typed `/query` is
+ * deleted, then the item's action runs — schema operations only, so the
+ * markdown round-trip stays untouched.
+ */
+function makeSlashCommands(getItems: (query: string) => SlashCommand[]): Extension {
+  return Extension.create({
+    name: 'slashCommands',
+    addProseMirrorPlugins() {
+      return [
+        Suggestion<SlashCommand>({
+          editor: this.editor,
+          char: '/',
+          pluginKey: new PluginKey('slashCommands'),
+          startOfLine: true,
+          allowSpaces: false,
+          items: ({ query }) => getItems(query),
+          command: ({ editor, range, props }) => {
+            editor.chain().focus().deleteRange(range).run();
+            props.run(editor as Editor);
+          },
+          render: suggestionRenderer,
+        }),
+      ];
+    },
+  });
+}
+
+const PASTED_URL = /^https?:\/\/\S+$/;
+
 /** Build one plain-text suggestion source (`@` for members, `#` for tags). */
 function makeSuggestion(
   name: string,
@@ -164,9 +198,21 @@ export const RichEditor = forwardRef<
     /** Take focus as soon as the editor exists (the `c` shortcut's landing pad). */
     autoFocus?: boolean;
     extraToolbar?: ReactNode;
+    /** Host-provided `/` commands (e.g. /dory needs the editor's memo state). */
+    extraSlashCommands?: SlashCommand[];
   }
 >(function RichEditor(
-  { initialMarkdown = '', placeholder, variant, onSubmit, onChangeMarkdown, onFiles, autoFocus, extraToolbar },
+  {
+    initialMarkdown = '',
+    placeholder,
+    variant,
+    onSubmit,
+    onChangeMarkdown,
+    onFiles,
+    autoFocus,
+    extraToolbar,
+    extraSlashCommands,
+  },
   ref,
 ) {
   const { data: viewer } = useViewer();
@@ -185,6 +231,8 @@ export const RichEditor = forwardRef<
 
   const submitRef = useRef<(() => void) | undefined>(onSubmit);
   submitRef.current = onSubmit;
+  const extraSlashRef = useRef<SlashCommand[]>(extraSlashCommands ?? []);
+  extraSlashRef.current = extraSlashCommands ?? [];
 
   const editor = useEditor({
     extensions: [
@@ -202,6 +250,19 @@ export const RichEditor = forwardRef<
       makeSuggestion('tagSuggestion', '#', (query) =>
         dataRef.current.tags.filter((t) => t.label.toLowerCase().startsWith(query.toLowerCase())).slice(0, 8),
       ),
+      makeSlashCommands((query) => {
+        const builtIn: SlashCommand[] = [
+          { label: 'To-do list', detail: 'task', run: (e) => e.chain().focus().toggleTaskList().run() },
+          { label: 'Bullet list', detail: 'list', run: (e) => e.chain().focus().toggleBulletList().run() },
+          { label: 'Heading', detail: 'heading', run: (e) => e.chain().focus().toggleHeading({ level: 1 }).run() },
+          { label: 'Code block', detail: 'code', run: (e) => e.chain().focus().toggleCodeBlock().run() },
+          { label: 'Quote', detail: 'quote', run: (e) => e.chain().focus().toggleBlockquote().run() },
+        ];
+        const q = query.toLowerCase();
+        return [...builtIn, ...extraSlashRef.current]
+          .filter((item) => item.label.toLowerCase().includes(q) || item.detail?.toLowerCase().includes(q))
+          .slice(0, 8);
+      }),
     ],
     content: initialMarkdown,
     contentType: 'markdown',
@@ -261,6 +322,13 @@ export const RichEditor = forwardRef<
         if (files.length > 0 && onFiles) {
           event.preventDefault();
           onFiles(files);
+          return;
+        }
+        // Paste a URL over selected words -> the selection becomes a link.
+        const text = event.clipboardData.getData('text/plain').trim();
+        if (PASTED_URL.test(text) && !editor.state.selection.empty) {
+          event.preventDefault();
+          editor.chain().focus().setLink({ href: text }).run();
         }
       }}
       onDrop={(event) => {
