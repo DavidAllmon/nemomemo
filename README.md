@@ -117,12 +117,23 @@ Open http://localhost:5173 — same first-account-becomes-admin flow.
 
 ## Configuration
 
-| Env var | Default | Purpose |
-| --- | --- | --- |
-| `NEMOMEMO_PORT` | `5230` | HTTP port |
-| `NEMOMEMO_DATA` | `./data` | Data directory (SQLite DB + uploads) |
-| `DORY_TTL_SECONDS` | `86400` | How long Dory remembers (lower it to watch her forget) |
-| `NEMOMEMO_WEB_DIST` | — | Path to the built SPA (production) |
+Nothing is required — NemoMemo runs with no configuration at all. Everything optional
+lives in one env file, and [**`.env.example`**](.env.example) is the annotated list:
+every setting with its default, commented out, grouped by what it turns on (email,
+image text search, voice transcripts, live dictation).
+
+```bash
+cp .env.example .env      # then uncomment what you want
+```
+
+Apply it with `--env-file .env` (Docker), `env_file: [.env]` (Compose),
+`NEMOMEMO_ENV_FILE=.env` (install script), or `set -a; . ./.env; set +a` (source).
+Full reference with prose for each feature:
+[Deploy → Configuration](https://trynemomemo.com/docs/deploy#configuration).
+
+> Docker users: leave `NEMOMEMO_DATA`, `NEMOMEMO_PORT` and `NEMOMEMO_WEB_DIST` alone —
+> the image sets them, and repointing `NEMOMEMO_DATA` writes your memos outside the
+> mounted volume. Change the port *mapping* instead.
 
 Instance-level settings (public mode, sign-ups, reaction set, reef name) live in
 **Settings → Reef** once you're signed in as admin.

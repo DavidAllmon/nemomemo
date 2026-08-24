@@ -39,6 +39,10 @@ volume. Prefer a different port or names? Set `NEMOMEMO_PORT`, `NEMOMEMO_VOLUME`
 `NEMOMEMO_CONTAINER`, or `NEMOMEMO_IMAGE` in your environment first, e.g.
 `NEMOMEMO_PORT=5231 curl -fsSL https://trynemomemo.com/install.sh | sh`.
 
+Turning on email, transcripts or dictation? Put those in an env file and point
+the script at it with `NEMOMEMO_ENV_FILE` — see
+[Turning features on](#turning-features-on) below.
+
 (Piping a script to your shell is a trust decision — the script is short and lives in
 the repo at [`install.sh`](https://github.com/DavidAllmon/nemomemo/blob/main/install.sh)
 / [`install.ps1`](https://github.com/DavidAllmon/nemomemo/blob/main/install.ps1), so
@@ -55,7 +59,8 @@ docker run -d --name nemomemo --restart unless-stopped \
   ghcr.io/davidallmon/nemomemo:latest
 ```
 
-Then open `http://localhost:5230`.
+Then open `http://localhost:5230`. Add `--env-file .env` to that command when you
+want any of the optional features.
 
 ### Option C — Docker Compose
 
@@ -67,6 +72,7 @@ services:
       - "5230:5230"
     volumes:
       - nemomemo-data:/app/data
+    env_file: [.env]          # optional — delete this line if you have no .env
     restart: unless-stopped
 volumes:
   nemomemo-data:
@@ -87,6 +93,50 @@ NEMOMEMO_WEB_DIST=web/dist node server/dist/index.js
 ```
 
 Want one-click cloud hosting instead? See [Deploy](/docs/deploy#one-click-cloud-deploys).
+
+## Turning features on
+
+NemoMemo needs no configuration to run — everything below is optional, and the
+reef works fine without any of it. When you do want something, it comes from
+**one env file**. Copy the annotated template from the repo:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/DavidAllmon/nemomemo/main/.env.example
+cp .env.example .env
+```
+
+Uncomment what you want (every setting is commented out to start), then apply it:
+
+| How you installed | How to apply `.env` |
+| --- | --- |
+| Install script | `NEMOMEMO_ENV_FILE=.env curl -fsSL https://trynemomemo.com/install.sh \| sh` |
+| Docker | add `--env-file .env` to `docker run` |
+| Compose | `env_file: [.env]` on the service, then `docker compose up -d` |
+| From source | `set -a; . ./.env; set +a` before starting the server |
+
+**Already running?** Environment variables are fixed when a container is created,
+so adding them means recreating it. Your memos live in the data volume, not the
+container, so this keeps everything:
+
+```bash
+docker rm -f nemomemo
+NEMOMEMO_ENV_FILE=.env curl -fsSL https://trynemomemo.com/install.sh | sh
+```
+
+(On Compose, `docker compose up -d` does the recreate for you.)
+
+The full list of settings — with defaults and what each one does — is in
+[Deploy → Configuration](/docs/deploy#configuration). Two worth knowing before
+you start:
+
+- **Email needs all four** `NEMOMEMO_SMTP_HOST`, `_USER`, `_PASS` and `_FROM`
+  together. Set three and email stays off without complaining, because NemoMemo
+  is designed to run happily without mail.
+- **Docker users should leave `NEMOMEMO_DATA` alone.** The image already points it
+  at `/app/data`, which is your mounted volume. Overriding it to a relative path
+  writes your memos inside the container instead, where the next upgrade
+  discards them. To change the port you're visiting, change the port *mapping*
+  (`-p 8080:5230`), not the variable.
 
 ## 2. Create the reef keeper
 

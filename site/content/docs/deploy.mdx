@@ -40,6 +40,8 @@ docker run -d --name nemomemo \
   ghcr.io/davidallmon/nemomemo:latest
 ```
 
+Add `--env-file .env` for any of the optional settings below.
+
 Everything lives in the `/app/data` volume: `nemomemo.db` (SQLite) and `uploads/`.
 Images are published for **amd64 and arm64** (Raspberry Pi 4/5 works). Tags: `latest`
 tracks main; version tags appear on releases.
@@ -62,6 +64,7 @@ services:
       - "5230:5230"
     volumes:
       - nemomemo-data:/app/data
+    env_file: [.env]          # optional — delete this line if you have no .env
     restart: unless-stopped
 volumes:
   nemomemo-data:
@@ -82,13 +85,36 @@ app — never the marketing/docs site).
 
 ## Configuration
 
+Nothing here is required — NemoMemo runs with no configuration at all. When you do
+want something, it all comes from one env file. Start from the annotated template
+in the repo, which lists every setting below with its default, commented out:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/DavidAllmon/nemomemo/main/.env.example
+cp .env.example .env
+```
+
+Then apply it: `--env-file .env` on `docker run`, `env_file: [.env]` on a Compose
+service, `NEMOMEMO_ENV_FILE=.env` for the install script, or
+`set -a; . ./.env; set +a` from source. Recreating a container to pick up new
+variables is safe — your memos live in the data volume, not the container.
+
+<Callout type="warn">
+  **Docker and Compose users: leave the first three alone.** The image already sets
+  `NEMOMEMO_PORT`, `NEMOMEMO_DATA` and `NEMOMEMO_WEB_DIST` correctly. Pointing
+  `NEMOMEMO_DATA` at a relative path writes your memos inside the container rather
+  than the mounted volume, and the next upgrade throws them away. To serve on a
+  different port, change the mapping (`-p 8080:5230`) instead. Those three are for
+  from-source installs.
+</Callout>
+
 | Env var | Default | Purpose |
 | --- | --- | --- |
 | `NEMOMEMO_PORT` (or `PORT`) | `5230` | HTTP port |
 | `NEMOMEMO_DATA` | `./data` | Data directory |
 | `DORY_TTL_SECONDS` | `86400` | How long Dory remembers |
 | `NEMOMEMO_WEB_DIST` | — | Path to the built SPA (source installs) |
-| `NEMOMEMO_SMTP_HOST` | — | SMTP server for outbound email (optional — see below) |
+| `NEMOMEMO_SMTP_HOST` | — | SMTP server for outbound email (optional — needs all four of HOST/USER/PASS/FROM; see below) |
 | `NEMOMEMO_SMTP_PORT` | `587` | SMTP port (`465` switches to implicit TLS) |
 | `NEMOMEMO_SMTP_USER` | — | SMTP login |
 | `NEMOMEMO_SMTP_PASS` | — | SMTP password / API key |

@@ -5,12 +5,21 @@
 # Runs the app in Docker (Desktop) with a persistent data volume. Re-running
 # upgrades in place (the data volume is kept). Overridable via environment:
 #   $env:NEMOMEMO_PORT / NEMOMEMO_VOLUME / NEMOMEMO_CONTAINER / NEMOMEMO_IMAGE
+#
+# Feature settings (email, OCR, transcripts, dictation) come from an env file —
+# start from .env.example in the repo:
+#   $env:NEMOMEMO_ENV_FILE='.\nemomemo.env'; irm https://trynemomemo.com/install.ps1 | iex
 $ErrorActionPreference = 'Stop'
 
 $Port   = if ($env:NEMOMEMO_PORT)      { $env:NEMOMEMO_PORT }      else { '5230' }
 $Volume = if ($env:NEMOMEMO_VOLUME)    { $env:NEMOMEMO_VOLUME }    else { 'nemomemo-data' }
 $Name   = if ($env:NEMOMEMO_CONTAINER) { $env:NEMOMEMO_CONTAINER } else { 'nemomemo' }
 $Image  = if ($env:NEMOMEMO_IMAGE)     { $env:NEMOMEMO_IMAGE }     else { 'ghcr.io/davidallmon/nemomemo:latest' }
+$EnvFile = $env:NEMOMEMO_ENV_FILE
+if ($EnvFile -and -not (Test-Path $EnvFile)) {
+  Write-Host "🐡 No env file at $EnvFile. Create it (start from .env.example) or clear `$env:NEMOMEMO_ENV_FILE."
+  exit 1
+}
 
 Write-Host "🐠 NemoMemo installer"
 
@@ -36,7 +45,11 @@ if ($existing) {
   docker pull $Image
 }
 
-docker run -d --name $Name --restart unless-stopped -p "${Port}:5230" -v "${Volume}:/app/data" $Image *> $null
+if ($EnvFile) {
+  docker run -d --name $Name --restart unless-stopped -p "${Port}:5230" -v "${Volume}:/app/data" --env-file $EnvFile $Image *> $null
+} else {
+  docker run -d --name $Name --restart unless-stopped -p "${Port}:5230" -v "${Volume}:/app/data" $Image *> $null
+}
 if ($LASTEXITCODE -ne 0) {
   Write-Host "🐡 docker run failed — is port $Port free? Pick another and re-run:"
   Write-Host "   `$env:NEMOMEMO_PORT='5231'; irm https://trynemomemo.com/install.ps1 | iex"

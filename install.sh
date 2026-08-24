@@ -7,15 +7,24 @@
 # in place (the data volume is kept). Overridable via environment:
 #   NEMOMEMO_PORT=5230  NEMOMEMO_VOLUME=nemomemo-data
 #   NEMOMEMO_CONTAINER=nemomemo  NEMOMEMO_IMAGE=ghcr.io/davidallmon/nemomemo:latest
+#
+# Feature settings (email, OCR, transcripts, dictation) come from an env file —
+# start from .env.example in the repo:
+#   NEMOMEMO_ENV_FILE=./nemomemo.env curl -fsSL https://trynemomemo.com/install.sh | sh
 set -eu
 
 PORT="${NEMOMEMO_PORT:-5230}"
 VOLUME="${NEMOMEMO_VOLUME:-nemomemo-data}"
 NAME="${NEMOMEMO_CONTAINER:-nemomemo}"
 IMAGE="${NEMOMEMO_IMAGE:-ghcr.io/davidallmon/nemomemo:latest}"
+ENV_FILE="${NEMOMEMO_ENV_FILE:-}"
 
 say() { printf '%s\n' "$*"; }
 fail() { printf '🐡 %s\n' "$*" >&2; exit 1; }
+
+if [ -n "$ENV_FILE" ] && [ ! -f "$ENV_FILE" ]; then
+  fail "No env file at $ENV_FILE. Create it (start from .env.example) or unset NEMOMEMO_ENV_FILE."
+fi
 
 say "🐠 NemoMemo installer"
 
@@ -48,8 +57,13 @@ else
   docker pull "$IMAGE"
 fi
 
-docker run -d --name "$NAME" --restart unless-stopped \
-  -p "$PORT:5230" -v "$VOLUME:/app/data" "$IMAGE" >/dev/null
+if [ -n "$ENV_FILE" ]; then
+  docker run -d --name "$NAME" --restart unless-stopped \
+    -p "$PORT:5230" -v "$VOLUME:/app/data" --env-file "$ENV_FILE" "$IMAGE" >/dev/null
+else
+  docker run -d --name "$NAME" --restart unless-stopped \
+    -p "$PORT:5230" -v "$VOLUME:/app/data" "$IMAGE" >/dev/null
+fi
 
 started=1
 if command -v curl >/dev/null 2>&1; then
