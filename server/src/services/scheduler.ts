@@ -1,14 +1,16 @@
 import type { Db } from '../db/index.js';
 import { nowSeconds } from '../lib/time.js';
 import { sweepDoryMemos } from './dory-sweeper.js';
+import { sweepTrash } from './trash-sweeper.js';
 import { reminderMessage, trySend, type Mailer } from './email.js';
 import { snippet } from './memo-service.js';
 import { getInstanceGeneral } from './settings.js';
 
 /**
  * The reef's one clock: a minute tick that surfaces bottles, fires reminders,
- * warns about imminent Dory expiries, and runs the Dory sweep. New time-based
- * work belongs in this tick — not in another interval.
+ * warns about imminent Dory expiries, runs the Dory sweep, and empties the
+ * expired end of the trash. New time-based work belongs in this tick — not in
+ * another interval.
  */
 export interface SchedulerDeps {
   uploadsDir: string;
@@ -20,6 +22,7 @@ export interface SchedulerTickResult {
   reminded: number;
   warned: number;
   forgotten: number;
+  purged: number;
 }
 
 /** How long before expiry the "Dory is about to forget…" notice fires. */
@@ -126,10 +129,13 @@ export function runSchedulerTick(db: Db, deps: SchedulerDeps, now = nowSeconds()
   });
   const warned = warnExpiring();
 
-  // 4) The sweep itself (also bumps per-user forgotten counters).
+  // 4) The Dory sweep itself (also bumps per-user forgotten counters).
   const forgotten = sweepDoryMemos(db, deps.uploadsDir);
 
-  return { surfaced, reminded: reminders.length, warned, forgotten };
+  // 5) The trash: anything that has outstayed its week is really gone now.
+  const purged = sweepTrash(db, deps.uploadsDir, undefined, now);
+
+  return { surfaced, reminded: reminders.length, warned, forgotten, purged };
 }
 
 export function startScheduler(db: Db, deps: SchedulerDeps, intervalMs = 60_000): NodeJS.Timeout {

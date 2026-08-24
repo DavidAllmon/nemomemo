@@ -2,6 +2,7 @@ import {
   DORY_WINDOW_SECONDS,
   FilterParseError,
   SHARE_EXPIRY_PRESETS,
+  TRASH_RETENTION_SECONDS,
   createCommentRequestSchema,
   createMemoRequestSchema,
   createShareRequestSchema,
@@ -33,6 +34,7 @@ import { requireViewer, type AppEnv } from '../middleware/auth.js';
 import { checkMemoRead } from '../services/acl.js';
 import { buildMarkdownExport, markdownFilename, renderMemoMarkdown } from '../services/export-service.js';
 import { notifyComment, notifyMentions, notifyThreadParticipants } from '../services/inbox-service.js';
+import { purgeMemos } from '../services/purge.js';
 import {
   assertTimeRules,
   buildMemoDtos,
@@ -166,6 +168,37 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
       bottles: buildMemoDtos(db, bottles.map(rawToMemoRow), viewer),
       forgottenCount: viewer.doryForgottenCount,
     });
+  });
+
+  // ---------- Trash ----------
+  // Deleted memos wait here for TRASH_RETENTION_SECONDS; the scheduler purges
+  // them after that. Static paths: MUST stay registered before '/:uid'.
+  app.get('/trash', (c) => {
+    const viewer = requireViewer(c);
+    // Comments ride along with their parent rather than standing as entries.
+    const rows = db.$client
+      .prepare(
+        `SELECT * FROM memo WHERE creator_id = ? AND deleted_at IS NOT NULL
+           AND NOT EXISTS (
+             SELECT 1 FROM memo_relation r WHERE r.memo_id = memo.id AND r.type = 'COMMENT'
+           )
+         ORDER BY deleted_at DESC, id DESC LIMIT 200`,
+      )
+      .all(viewer.id) as Record<string, unknown>[];
+    return c.json({
+      memos: buildMemoDtos(db, rows.map(rawToMemoRow), viewer),
+      retentionSeconds: TRASH_RETENTION_SECONDS,
+    });
+  });
+
+  app.post('/trash/empty', (c) => {
+    const viewer = requireViewer(c);
+    const ids = (
+      db.$client
+        .prepare('SELECT id FROM memo WHERE creator_id = ? AND deleted_at IS NOT NULL')
+        .all(viewer.id) as { id: number }[]
+    ).map((row) => row.id);
+    return c.json({ purged: purgeMemos(db, config.uploadsDir, ids) });
   });
 
   // ---------- Go fish ----------
@@ -347,20 +380,52 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
   });
 
   // ---------- Delete ----------
-  app.delete('/:uid', (c) => {
-    const memo = ownedMemo(c, c.req.param('uid'));
-    // Also delete comment memos hanging off this one (their relation rows cascade,
-    // but the comment memo itself would be orphaned).
-    const commentRelations = db
+  /** Comment memos hanging off a memo — they travel with it, always. */
+  const commentIdsOf = (memoId: number): number[] =>
+    db
       .select()
       .from(memoRelations)
-      .where(and(eq(memoRelations.relatedMemoId, memo.id), eq(memoRelations.type, 'COMMENT')))
-      .all();
-    db.delete(memos).where(eq(memos.id, memo.id)).run();
-    for (const relation of commentRelations) {
-      db.delete(memos).where(eq(memos.id, relation.memoId)).run();
+      .where(and(eq(memoRelations.relatedMemoId, memoId), eq(memoRelations.type, 'COMMENT')))
+      .all()
+      .map((relation) => relation.memoId);
+
+  app.delete('/:uid', (c) => {
+    const memo = ownedMemo(c, c.req.param('uid'));
+
+    // "Delete forever": straight past the trash, from the trash page or the menu.
+    if (c.req.query('permanent') === '1') {
+      purgeMemos(db, config.uploadsDir, [memo.id]);
+      return c.json({ ok: true, trashed: false });
     }
-    return c.json({ ok: true });
+
+    // Soft: the memo and its comments go to the creator's trash together. An
+    // already-trashed memo keeps its original clock — deleting twice must not
+    // extend the stay.
+    if (memo.deletedAt == null) {
+      const commentIds = commentIdsOf(memo.id);
+      const now = nowSeconds();
+      const mark = db.$client.transaction(() => {
+        const stmt = db.$client.prepare('UPDATE memo SET deleted_at = ? WHERE id = ?');
+        stmt.run(now, memo.id);
+        for (const id of commentIds) stmt.run(now, id);
+      });
+      mark();
+    }
+    return c.json({ ok: true, trashed: true });
+  });
+
+  app.post('/:uid/restore', (c) => {
+    const memo = ownedMemo(c, c.req.param('uid'));
+    if (memo.deletedAt == null) throw apiError('INVALID_ARGUMENT', "That memo isn't in the trash");
+    const commentIds = commentIdsOf(memo.id);
+    const restore = db.$client.transaction(() => {
+      const stmt = db.$client.prepare('UPDATE memo SET deleted_at = NULL WHERE id = ?');
+      stmt.run(memo.id);
+      for (const id of commentIds) stmt.run(id);
+    });
+    restore();
+    const restored = getMemoByUid(db, memo.uid)!;
+    return c.json({ memo: buildMemoDtos(db, [restored], c.get('viewer'))[0] });
   });
 
   // ---------- Comments ----------

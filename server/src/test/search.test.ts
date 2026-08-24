@@ -60,14 +60,23 @@ describe('memo_fts stays in sync via triggers', () => {
     expect(ftsIds(db, '"anemone"')).toHaveLength(1);
   });
 
-  it('re-indexes on content update and de-indexes on delete', async () => {
+  it('re-indexes on content update and de-indexes on a permanent delete', async () => {
     const { app, db } = makeTestApp();
     const cookie = await signup(app, 'nemo');
     const memo = await createMemo(app, cookie, { content: 'barnacle' });
     await jsonRequest(app, 'PATCH', `/api/v1/memos/${memo.uid}`, { content: 'kelp forest' }, cookie);
     expect(ftsIds(db, '"barnacle"')).toHaveLength(0);
     expect(ftsIds(db, '"kelp"')).toHaveLength(1);
+
+    // A plain delete is a move to the trash: the row still exists, so it stays
+    // indexed. Unfindability comes from the deleted_at guard on the query, not
+    // from the index (see trash.test.ts, "cannot be found by search").
     await jsonRequest(app, 'DELETE', `/api/v1/memos/${memo.uid}`, undefined, cookie);
+    expect(ftsIds(db, '"kelp"')).toHaveLength(1);
+    expect(await search(app, 'content.contains("kelp")', cookie)).toEqual([]);
+
+    // Emptying the trash really does drop the row, and the trigger follows.
+    await jsonRequest(app, 'DELETE', `/api/v1/memos/${memo.uid}?permanent=1`, undefined, cookie);
     expect(ftsIds(db, '"kelp"')).toHaveLength(0);
   });
 });

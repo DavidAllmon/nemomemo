@@ -154,3 +154,183 @@ describe('trash — a deleted memo is gone from every read path', () => {
     expect(result).toMatchObject({ surfaced: 0, reminded: 0, warned: 0 });
   });
 });
+
+describe('trash — delete, restore, purge', () => {
+  async function trashList(app: App, cookie: string): Promise<{ memos: MemoDto[]; retentionSeconds: number }> {
+    const response = await jsonRequest(app, 'GET', '/api/v1/memos/trash', undefined, cookie);
+    expect(response.status).toBe(200);
+    return (await response.json()) as { memos: MemoDto[]; retentionSeconds: number };
+  }
+
+  it('moves a deleted memo to the trash instead of destroying it', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const memo = await createMemo(app, cookie, { content: 'second thoughts' });
+    const response = await jsonRequest(app, 'DELETE', `/api/v1/memos/${memo.uid}`, undefined, cookie);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ ok: true, trashed: true });
+
+    expect(await list(app, 'scope=home', cookie)).toHaveLength(0);
+    const trashed = await trashList(app, cookie);
+    expect(trashed.memos.map((m) => m.uid)).toEqual([memo.uid]);
+    expect(trashed.memos[0]!.deletedAt).toBeGreaterThan(0);
+    expect(trashed.retentionSeconds).toBe(7 * 86_400);
+  });
+
+  it('takes comments along, and lists only the parent in the trash', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const parent = await createMemo(app, cookie, { content: 'parent' });
+    await jsonRequest(app, 'POST', `/api/v1/memos/${parent.uid}/comments`, { content: 'a reply' }, cookie);
+    await jsonRequest(app, 'DELETE', `/api/v1/memos/${parent.uid}`, undefined, cookie);
+    expect((await trashList(app, cookie)).memos.map((m) => m.uid)).toEqual([parent.uid]);
+  });
+
+  it('restores a memo and its comments together', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const parent = await createMemo(app, cookie, { content: 'parent' });
+    await jsonRequest(app, 'POST', `/api/v1/memos/${parent.uid}/comments`, { content: 'a reply' }, cookie);
+    await jsonRequest(app, 'DELETE', `/api/v1/memos/${parent.uid}`, undefined, cookie);
+
+    const restore = await jsonRequest(app, 'POST', `/api/v1/memos/${parent.uid}/restore`, {}, cookie);
+    expect(restore.status).toBe(200);
+    expect(((await restore.json()) as { memo: MemoDto }).memo.deletedAt).toBeNull();
+
+    expect((await list(app, 'scope=home', cookie)).map((m) => m.uid)).toEqual([parent.uid]);
+    const comments = await jsonRequest(app, 'GET', `/api/v1/memos/${parent.uid}/comments`, undefined, cookie);
+    expect(((await comments.json()) as { memos: MemoDto[] }).memos).toHaveLength(1);
+    expect((await trashList(app, cookie)).memos).toHaveLength(0);
+  });
+
+  it('restores an archived memo back to the archive, not the feed', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const memo = await createMemo(app, cookie, { content: 'shelved' });
+    await jsonRequest(app, 'PATCH', `/api/v1/memos/${memo.uid}`, { rowStatus: 'ARCHIVED' }, cookie);
+    await jsonRequest(app, 'DELETE', `/api/v1/memos/${memo.uid}`, undefined, cookie);
+    await jsonRequest(app, 'POST', `/api/v1/memos/${memo.uid}/restore`, {}, cookie);
+    expect(await list(app, 'scope=home', cookie)).toHaveLength(0);
+    expect((await list(app, 'state=ARCHIVED', cookie)).map((m) => m.uid)).toEqual([memo.uid]);
+  });
+
+  it('refuses to restore a memo that is not in the trash', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const memo = await createMemo(app, cookie, { content: 'right here' });
+    const response = await jsonRequest(app, 'POST', `/api/v1/memos/${memo.uid}/restore`, {}, cookie);
+    expect(response.status).toBe(400);
+  });
+
+  it('purges a trashed memo for good with ?permanent=1', async () => {
+    const { app, db } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const memo = await createMemo(app, cookie, { content: 'really gone' });
+    await jsonRequest(app, 'DELETE', `/api/v1/memos/${memo.uid}`, undefined, cookie);
+    const purge = await jsonRequest(app, 'DELETE', `/api/v1/memos/${memo.uid}?permanent=1`, undefined, cookie);
+    expect(await purge.json()).toMatchObject({ ok: true, trashed: false });
+    expect((await trashList(app, cookie)).memos).toHaveLength(0);
+    expect(db.$client.prepare('SELECT count(*) AS n FROM memo').get()).toMatchObject({ n: 0 });
+  });
+
+  it('purges a live memo outright with ?permanent=1 (no trash stop-over)', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const memo = await createMemo(app, cookie, { content: 'skip the bin' });
+    await jsonRequest(app, 'DELETE', `/api/v1/memos/${memo.uid}?permanent=1`, undefined, cookie);
+    expect((await trashList(app, cookie)).memos).toHaveLength(0);
+    expect((await jsonRequest(app, 'GET', `/api/v1/memos/${memo.uid}`, undefined, cookie)).status).toBe(404);
+  });
+
+  it('deleting twice does not extend the stay', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const memo = await createMemo(app, cookie, { content: 'once' });
+    await jsonRequest(app, 'DELETE', `/api/v1/memos/${memo.uid}`, undefined, cookie);
+    const first = (await trashList(app, cookie)).memos[0]!.deletedAt;
+    await jsonRequest(app, 'DELETE', `/api/v1/memos/${memo.uid}`, undefined, cookie);
+    const after = await trashList(app, cookie);
+    expect(after.memos).toHaveLength(1);
+    expect(after.memos[0]!.deletedAt).toBe(first);
+  });
+
+  it('empties the viewer\'s trash and nobody else\'s', async () => {
+    const { app } = makeTestApp();
+    const marlin = await signup(app, 'marlin');
+    const dory = await signup(app, 'dory');
+    for (const content of ['one', 'two']) {
+      const memo = await createMemo(app, marlin, { content });
+      await jsonRequest(app, 'DELETE', `/api/v1/memos/${memo.uid}`, undefined, marlin);
+    }
+    const hers = await createMemo(app, dory, { content: 'dory\'s' });
+    await jsonRequest(app, 'DELETE', `/api/v1/memos/${hers.uid}`, undefined, dory);
+
+    const emptied = await jsonRequest(app, 'POST', '/api/v1/memos/trash/empty', {}, marlin);
+    expect(await emptied.json()).toMatchObject({ purged: 2 });
+    expect((await trashList(app, marlin)).memos).toHaveLength(0);
+    expect((await trashList(app, dory)).memos).toHaveLength(1);
+  });
+
+  it('keeps trash private and owner-only', async () => {
+    const { app } = makeTestApp();
+    const marlin = await signup(app, 'marlin');
+    const dory = await signup(app, 'dory');
+    const memo = await createMemo(app, marlin, { content: 'mine', visibility: 'PUBLIC' });
+    expect((await jsonRequest(app, 'DELETE', `/api/v1/memos/${memo.uid}`, undefined, dory)).status).toBe(403);
+    await jsonRequest(app, 'DELETE', `/api/v1/memos/${memo.uid}`, undefined, marlin);
+    expect((await jsonRequest(app, 'POST', `/api/v1/memos/${memo.uid}/restore`, {}, dory)).status).toBe(403);
+    expect((await jsonRequest(app, 'GET', '/api/v1/memos/trash')).status).toBe(401);
+    expect((await trashList(app, dory)).memos).toHaveLength(0);
+  });
+
+  it("an admin's delete lands in the creator's trash", async () => {
+    const { app } = makeTestApp();
+    const admin = await signup(app, 'reefkeeper'); // first user is ADMIN
+    const dory = await signup(app, 'dory');
+    const hers = await createMemo(app, dory, { content: 'moderated', visibility: 'PUBLIC' });
+    expect((await jsonRequest(app, 'DELETE', `/api/v1/memos/${hers.uid}`, undefined, admin)).status).toBe(200);
+    expect((await trashList(app, admin)).memos).toHaveLength(0);
+    expect((await trashList(app, dory)).memos.map((m) => m.uid)).toEqual([hers.uid]);
+  });
+
+  it('sweeps memos that have outstayed the retention window', async () => {
+    const { app, db, config } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const old = await createMemo(app, cookie, { content: 'eight days ago' });
+    const fresh = await createMemo(app, cookie, { content: 'an hour ago' });
+    await jsonRequest(app, 'DELETE', `/api/v1/memos/${old.uid}`, undefined, cookie);
+    await jsonRequest(app, 'DELETE', `/api/v1/memos/${fresh.uid}`, undefined, cookie);
+    trash(db, old.uid, now() - 8 * 86_400);
+
+    const { sweepTrash } = await import('../services/trash-sweeper.js');
+    expect(sweepTrash(db, config.uploadsDir)).toBe(1);
+    expect((await trashList(app, cookie)).memos.map((m) => m.uid)).toEqual([fresh.uid]);
+  });
+
+  it('runs the sweep inside the one scheduler tick', async () => {
+    const { app, db, config } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const memo = await createMemo(app, cookie, { content: 'long forgotten' });
+    await jsonRequest(app, 'DELETE', `/api/v1/memos/${memo.uid}`, undefined, cookie);
+    trash(db, memo.uid, now() - 8 * 86_400);
+
+    const { runSchedulerTick } = await import('../services/scheduler.js');
+    expect(runSchedulerTick(db, { uploadsDir: config.uploadsDir, mailer: null })).toMatchObject({ purged: 1 });
+    expect(db.$client.prepare('SELECT count(*) AS n FROM memo').get()).toMatchObject({ n: 0 });
+  });
+
+  it('keeps a trashed memo out of the Dory forgotten count', async () => {
+    const { app, db, config } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const memo = await createMemo(app, cookie, { content: 'trashed then expired', dory: true, doryWindow: '1h' });
+    await jsonRequest(app, 'DELETE', `/api/v1/memos/${memo.uid}`, undefined, cookie);
+    db.$client.prepare('UPDATE memo SET forget_at = ? WHERE uid = ?').run(now() - 60, memo.uid);
+
+    const { runSchedulerTick } = await import('../services/scheduler.js');
+    expect(runSchedulerTick(db, { uploadsDir: config.uploadsDir, mailer: null })).toMatchObject({ forgotten: 0 });
+    const user = db.$client.prepare('SELECT dory_forgotten_count AS n FROM user WHERE username = ?').get('marlin');
+    expect(user).toMatchObject({ n: 0 });
+    // Still in the trash, waiting for its week to run out.
+    expect((await trashList(app, cookie)).memos.map((m) => m.uid)).toEqual([memo.uid]);
+  });
+});
