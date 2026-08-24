@@ -14,6 +14,7 @@ import {
   Shuffle,
   Sun,
   SunMoon,
+  Trash2,
   User,
 } from 'lucide-react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
@@ -110,6 +111,7 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
             <NavItem to="/calendar" icon={<CalendarDays className="size-4" />} label="Calendar" />
             <NavItem to="/archived" icon={<Archive className="size-4" />} label="Archived" />
             <NavItem to="/dory" icon={<Fish className="size-4" />} label="Dory" />
+            <NavItem to="/trash" icon={<Trash2 className="size-4" />} label="Trash" />
             <NavItem to="/attachments" icon={<Paperclip className="size-4" />} label="Attachments" />
             <NavItem
               to="/inbox"

@@ -207,8 +207,8 @@ export function MemoActionMenu({ memo, onEdit }: { memo: MemoDto; onEdit?: () =>
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent
-          title="Delete this memo?"
-          description="This can't be undone — attachments, comments, and links go with it."
+          title="Move this memo to the trash?"
+          description="It waits there for 7 days — comments and attachments go with it — then it's gone for good."
         >
           <div className="flex justify-end gap-2">
             <DialogClose asChild>
@@ -227,7 +227,7 @@ export function MemoActionMenu({ memo, onEdit }: { memo: MemoDto; onEdit?: () =>
                 });
               }}
             >
-              Delete memo
+              Move to trash
             </Button>
           </div>
         </DialogContent>

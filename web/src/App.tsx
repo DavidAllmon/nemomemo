@@ -21,6 +21,7 @@ const NotFoundPage = lazy(() => import('@/pages/NotFound.js').then((m) => ({ def
 const ProfilePage = lazy(() => import('@/pages/Profile.js').then((m) => ({ default: m.ProfilePage })));
 const SettingsPage = lazy(() => import('@/pages/Settings.js').then((m) => ({ default: m.SettingsPage })));
 const SharePage = lazy(() => import('@/pages/Share.js').then((m) => ({ default: m.SharePage })));
+const TrashPage = lazy(() => import('@/pages/Trash.js').then((m) => ({ default: m.TrashPage })));
 const TasksPage = lazy(() => import('@/pages/Tasks.js').then((m) => ({ default: m.TasksPage })));
 const VerifyEmailPage = lazy(() => import('@/pages/VerifyEmail.js').then((m) => ({ default: m.VerifyEmailPage })));
 const ForgotPasswordPage = lazy(() => import('@/pages/ResetPassword.js').then((m) => ({ default: m.ForgotPasswordPage })));
@@ -82,6 +83,14 @@ export function App() {
           element={
             <RequireAuth>
               <TasksPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/trash"
+          element={
+            <RequireAuth>
+              <TrashPage />
             </RequireAuth>
           }
         />

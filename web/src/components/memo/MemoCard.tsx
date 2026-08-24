@@ -135,12 +135,19 @@ export function MemoCard({
   showCommentsLink = true,
   shareToken,
   compact,
+  readOnly,
   onReply,
 }: {
   memo: MemoDto;
   showCommentsLink?: boolean;
   shareToken?: string;
   compact?: boolean;
+  /**
+   * Show the memo without any way to act on it — the trash, where archiving,
+   * pinning or ticking a box would silently do nothing. The page hosting the
+   * card owns the actions instead.
+   */
+  readOnly?: boolean;
   /** When set, the footer shows a Reply button (used on comment cards). */
   onReply?: () => void;
 }) {
@@ -170,7 +177,7 @@ export function MemoCard({
       style={{ opacity: doryOpacity(memo.forgetAt) }}
     >
       {/* The `e` shortcut clicks this: Edit itself lives inside a dropdown. */}
-      {isCreator ? (
+      {isCreator && !readOnly ? (
         <button data-memo-edit tabIndex={-1} className="sr-only" onClick={() => setEditing(true)}>
           Edit this memo
         </button>
@@ -212,7 +219,7 @@ export function MemoCard({
         <Tip label={VISIBILITY_META[memo.visibility].label}>
           <Visibility className="size-3.5 text-muted-foreground" />
         </Tip>
-        {viewer || shareToken == null ? (
+        {!readOnly && (viewer || shareToken == null) ? (
           <MemoActionMenu memo={memo} onEdit={isCreator ? () => setEditing(true) : undefined} />
         ) : null}
       </header>
@@ -221,7 +228,7 @@ export function MemoCard({
         content={memo.content}
         className={cn(compact && 'max-h-64 overflow-hidden')}
         onContentChange={
-          isCreator && memo.rowStatus === 'NORMAL'
+          isCreator && !readOnly && memo.rowStatus === 'NORMAL'
             ? (next) => update.mutate({ uid: memo.uid, content: next })
             : undefined
         }
@@ -230,29 +237,31 @@ export function MemoCard({
       <AttachmentPanel memo={memo} shareToken={shareToken} />
       <RelationPanel memo={memo} />
 
-      <footer className="flex items-center gap-2">
-        <ReactionBar memo={memo} />
-        {onReply ? (
-          <button
-            onClick={onReply}
-            className="ml-auto flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
-          >
-            <Reply className="size-3.5" />
-            Reply
-          </button>
-        ) : null}
-        {showCommentsLink ? (
-          <Link
-            to={`/memos/${memo.uid}#comments`}
-            className="ml-auto flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
-          >
-            <MessageCircle className="size-3.5" />
-            {memo.commentCount > 0
-              ? `${memo.commentCount} ${memo.commentCount === 1 ? 'comment' : 'comments'}`
-              : 'Comment'}
-          </Link>
-        ) : null}
-      </footer>
+      {readOnly ? null : (
+        <footer className="flex items-center gap-2">
+          <ReactionBar memo={memo} />
+          {onReply ? (
+            <button
+              onClick={onReply}
+              className="ml-auto flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
+            >
+              <Reply className="size-3.5" />
+              Reply
+            </button>
+          ) : null}
+          {showCommentsLink ? (
+            <Link
+              to={`/memos/${memo.uid}#comments`}
+              className="ml-auto flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
+            >
+              <MessageCircle className="size-3.5" />
+              {memo.commentCount > 0
+                ? `${memo.commentCount} ${memo.commentCount === 1 ? 'comment' : 'comments'}`
+                : 'Comment'}
+            </Link>
+          ) : null}
+        </footer>
+      )}
     </article>
   );
 }

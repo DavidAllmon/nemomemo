@@ -29,6 +29,7 @@ export const keys = {
   memo: (uid: string) => ['memos', 'detail', uid] as const,
   // Under the 'memos' prefix so useInvalidateMemos refreshes it with every edit.
   dory: ['memos', 'dory'] as const,
+  trash: ['memos', 'trash'] as const,
   comments: (uid: string) => ['memos', 'comments', uid] as const,
   shares: (uid: string) => ['memos', 'shares', uid] as const,
   sharedMemo: (token: string) => ['shares', token] as const,
@@ -260,10 +261,49 @@ export function useRandomMemo() {
   });
 }
 
+/** Move a memo to the trash (or, with `permanent`, skip the trash entirely). */
 export function useDeleteMemo() {
   const invalidate = useInvalidateMemos();
   return useMutation({
-    mutationFn: (uid: string) => api<{ ok: boolean }>('DELETE', `/api/v1/memos/${uid}`),
+    mutationFn: (input: string | { uid: string; permanent?: boolean }) => {
+      const { uid, permanent } = typeof input === 'string' ? { uid: input, permanent: false } : input;
+      return api<{ ok: boolean; trashed: boolean }>(
+        'DELETE',
+        `/api/v1/memos/${uid}${permanent ? '?permanent=1' : ''}`,
+      );
+    },
+    onSuccess: invalidate,
+  });
+}
+
+// ---------- Trash ----------
+
+export interface TrashResponse {
+  memos: MemoDto[];
+  /** How long a memo waits before the scheduler purges it, in seconds. */
+  retentionSeconds: number;
+}
+
+export function useTrash(enabled = true) {
+  return useQuery({
+    queryKey: keys.trash,
+    queryFn: () => api<TrashResponse>('GET', '/api/v1/memos/trash'),
+    enabled,
+  });
+}
+
+export function useRestoreMemo() {
+  const invalidate = useInvalidateMemos();
+  return useMutation({
+    mutationFn: (uid: string) => api<{ memo: MemoDto }>('POST', `/api/v1/memos/${uid}/restore`, {}),
+    onSuccess: invalidate,
+  });
+}
+
+export function useEmptyTrash() {
+  const invalidate = useInvalidateMemos();
+  return useMutation({
+    mutationFn: () => api<{ purged: number }>('POST', '/api/v1/memos/trash/empty', {}),
     onSuccess: invalidate,
   });
 }
