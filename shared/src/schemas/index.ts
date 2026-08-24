@@ -131,6 +131,8 @@ export const memoViewSchema = z.object({
 export const userGeneralSettingSchema = z.object({
   defaultVisibility: z.enum(VISIBILITIES).default('PRIVATE'),
   theme: z.enum(['system', 'shallows', 'deep-sea']).default('system'),
+  /** Tags the member keeps at the top of the sidebar. */
+  pinnedTags: z.array(z.string().min(1).max(128)).max(20).default([]),
 });
 
 export const updateUserSettingsRequestSchema = z.object({

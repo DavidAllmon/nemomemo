@@ -381,6 +381,30 @@ export function useUpdateUserSettings() {
   });
 }
 
+/**
+ * Pin/unpin one tag. Reads the freshest list from the cache and writes it back
+ * optimistically, so two clicks in quick succession compose instead of the
+ * second one overwriting the first from a stale render closure.
+ */
+export function useTogglePinnedTag() {
+  const client = useQueryClient();
+  const update = useUpdateUserSettings();
+  return (tag: string) => {
+    const current = client.getQueryData<{ general: UserGeneralSetting; memoViews: MemoViewDto[] }>(
+      keys.userSettings,
+    );
+    const pinned = current?.general.pinnedTags ?? [];
+    const next = pinned.includes(tag) ? pinned.filter((name) => name !== tag) : [...pinned, tag];
+    if (current) {
+      client.setQueryData(keys.userSettings, {
+        ...current,
+        general: { ...current.general, pinnedTags: next },
+      });
+    }
+    update.mutate({ general: { pinnedTags: next } });
+  };
+}
+
 // ---------- Inbox ----------
 
 export function useInbox(status: 'UNREAD' | 'READ' | 'ARCHIVED', enabled = true) {
