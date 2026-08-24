@@ -15,6 +15,14 @@ written down.
   When adding any new query that returns memo rows, grep for that expression and copy
   the pattern. Missing it = expired memos leak until the sweeper deletes them
   (and the sweeper only deletes; reads must not depend on it).
+- **Every memo query needs the trash guard too** (since v1.24.0):
+  `deleted_at IS NULL`. Unlike the bottle guard this one hides the memo from its
+  **creator** as well — `/memos/trash` queries `deleted_at` directly instead. It lives
+  in `buildMemoListWhere` and in BOTH `acl.ts` functions, so anything routed through
+  those inherits it; hand-rolled WHEREs do not (the comments query needed it added by
+  hand). `server/src/test/trash.test.ts` walks 13 read paths — extend it when you add
+  a surface. The hard delete itself is `purgeMemos()` in `services/purge.ts`, the one
+  cascade shared by permanent delete, the Dory sweep, and the trash sweep.
 - **Feed queries need the bottle guard too** (since v1.15.0):
   `surface_at IS NULL OR surface_at <= now`. A pending bottle is hidden from EVERY
   feed — including the owner's (that's the feature; the owner finds it on /dory).
@@ -29,9 +37,10 @@ written down.
 - **The scheduler is the reef's one clock** (`services/scheduler.ts`, minute tick):
   surfaces bottles (BOTTLE_ARRIVED), fires reminders (REMINDER + optional email;
   recurring `remind_every` advances with single-nudge catch-up), warns in the final
-  hour (DORY_WARNING, deduped via NOT EXISTS on inbox), then runs the dory sweep
-  (which bumps `user.dory_forgotten_count`). New time-based work belongs in this
-  tick — do not add another interval.
+  hour (DORY_WARNING, deduped via NOT EXISTS on inbox), runs the dory sweep (which
+  bumps `user.dory_forgotten_count` and skips trashed memos), then purges the expired
+  end of the trash. Five passes, one tick — new time-based work belongs here, not in
+  another interval.
 - **Comments are memos** with a `COMMENT` row in `memo_relation`. They inherit the
   parent's visibility *at read time*, die with the parent, and feed queries exclude
   them via `NOT EXISTS` on that relation. A new feed-like query must do the same or

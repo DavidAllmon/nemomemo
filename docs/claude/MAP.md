@@ -2,7 +2,7 @@
 
 Where everything lives. Monorepo: pnpm workspace, four packages — `shared/` (keystone),
 `server/`, `web/`, `site/` (separate product, never in the app Docker image).
-Verified against v1.6.0 (2026-08-22).
+Verified against v1.24.0 (2026-08-24).
 
 ## shared/ — `@nemomemo/shared`
 
@@ -33,7 +33,7 @@ storage caps, member caps, and restore.
 | File | Endpoints |
 | --- | --- |
 | `auth.ts` | POST signup (first user = ADMIN; bcrypt-before-checks race guard), signin, signout; GET me |
-| `memos.ts` | GET/POST `/memos` (list: scope home/explore/profile, filter DSL, pinned-first, page tokens; create: payload extraction, dory windows, bottles, linking, mention notifications); GET `/memos/export/markdown` (per-user zip: .md + frontmatter + attachments; power-user URL, no UI); GET `/memos/dory` (Dory's Memory: fading + bottles + forgotten counter); GET/PATCH/DELETE `/memos/:uid` (PATCH also: doryWindow/surfaceAt/remindAt/remindEvery); GET `/memos/:uid/markdown` (single .md download, read-ACL); GET/POST comments; POST/DELETE reactions; POST/GET shares |
+| `memos.ts` | GET/POST `/memos` (list: scope home/explore/profile, filter DSL, pinned-first, page tokens; create: payload extraction, dory windows, bottles, linking, mention notifications); GET `/memos/export/markdown` (per-user zip: .md + frontmatter + attachments; power-user URL, no UI); GET `/memos/dory` (Dory's Memory: fading + bottles + forgotten counter); GET `/memos/trash` + POST `/memos/trash/empty` + POST `/memos/:uid/restore` (trash; DELETE `/:uid` is now a soft delete, `?permanent=1` purges); GET `/memos/random` (Go fish); GET/PATCH/DELETE `/memos/:uid` (PATCH also: doryWindow/surfaceAt/remindAt/remindEvery); GET `/memos/:uid/markdown` (single .md download, read-ACL); GET/POST comments; POST/DELETE reactions; POST/GET shares |
 | `shares.ts` | GET `/shares/:token` (public, relations/comments stripped); DELETE (revoke) |
 | `users.ts` | `/-/mentionable`, `/-/tags` (10k cap), `/-/tags/rename`, `/-/settings` GET/PATCH, `/-/account` PATCH — **all before** `/:username` (route-order trap); GET `/users` + POST + `/:username/admin` PATCH/DELETE (admin); GET `/:username`, `/:username/stats` |
 | `instance.ts` | GET profile (version/publicMode/needsSetup), settings (admin), settings/memo (public reaction set); GET backup (admin zip stream: sqlite snapshot + uploads); POST restore (admin, self-host only); PATCH settings |
@@ -44,13 +44,15 @@ storage caps, member caps, and restore.
 
 | File | Role |
 | --- | --- |
-| `acl.ts` | THE access-control chokepoint: `checkMemoRead` (API + file server; dory expiry, share tokens, archived, visibility), `canGlimpseMemo` (embedded stubs/snippets) |
+| `acl.ts` | THE access-control chokepoint: `checkMemoRead` (API + file server; trash, dory expiry, bottles, share tokens, archived, visibility), `canGlimpseMemo` (embedded stubs/snippets) |
 | `memo-service.ts` | DTO assembly + list queries: `buildMemoDtos` (batched, no N+1), `listMemoRows` (hand-built parameterized SQL, `limit+1` hasMore), `buildPayload`, `getMemoByUid`, `getParentMemo`, `linkAttachments`, `setReferenceRelations`, `assertDoryRules`, `newUid` |
 | `filter-sql.ts` | Filter AST → parameterized WHERE (`compileFilter`; tags via `json_each`, properties via `json_extract`, frozen now) |
 | `settings.ts` | Zod-validated JSON settings (instance GENERAL/MEMO, user GENERAL/MEMO_VIEWS) with safe fallbacks |
 | `inbox-service.ts` | `notifyMentions` (skips self/unknown/archived/PRIVATE), `notifyComment` (owner), `notifyThreadParticipants` (earlier commenters → MEMO_THREAD, mention-deduped) |
-| `scheduler.ts` | **The reef's one clock** (minute tick, `runSchedulerTick`/`startScheduler`): surfaces bottles → fires reminders (+ email) → dory warnings → dory sweep. New time-based work goes here, not a new interval |
-| `dory-sweeper.ts` | `sweepDoryMemos` (one pass of the scheduler tick): deletes expired memos + orphaned comments + attachment files, bumps `dory_forgotten_count`, transactional |
+| `scheduler.ts` | **The reef's one clock** (minute tick, `runSchedulerTick`/`startScheduler`): surfaces bottles → fires reminders (+ email) → dory warnings → dory sweep → trash sweep. New time-based work goes here, not a new interval |
+| `dory-sweeper.ts` | `sweepDoryMemos` (one pass of the scheduler tick): purges expired memos (skipping trashed ones), bumps `dory_forgotten_count` |
+| `purge.ts` | `purgeMemos` — THE hard delete: comment memos + attachment rows in one transaction, files unlinked after commit. Three callers: permanent delete, dory sweep, trash sweep |
+| `trash-sweeper.ts` | `sweepTrash` — purges memos deleted more than `TRASH_RETENTION_SECONDS` (7d) ago; step 5 of the scheduler tick |
 | `export-service.ts` | `buildMarkdownExport`: the viewer's own memos as `memos/YYYY-MM-DD-<uid>.md` (comments under `comments/` with `comment_on:`), YAML frontmatter (created/updated/visibility/pinned/archived/forgets/tags/attachments), attachment files + inline `/file/attachments/` links rewritten relative; every row through `checkMemoRead` |
 
 ### Middleware (`src/middleware/`)
@@ -109,6 +111,7 @@ ViewSetting → Tooltip → BrowserRouter → App. No Redux/Zustand.
 `/auth`, `/auth/signup`, `/memos/shares/:token` (outside AppShell); inside AppShell:
 `/` Home (auth), `/explore`, `/u/:username`, `/archived` (auth), `/dory` (auth —
 Dory's Memory: fading + bottles + forgotten counter), `/views` (auth),
+`/calendar` (auth — month grid, `?month=&day=`), `/trash` (auth),
 `/attachments` (auth), `/inbox` (auth), `/settings` (auth), `/about`, `/memos/:uid`
 (public; server enforces visibility), `*` NotFound. `RequireAuth` redirects to
 `/auth?redirect=<path>`.
@@ -132,6 +135,13 @@ Dory's Memory: fading + bottles + forgotten counter), `/views` (auth),
   + `useInvalidateMemos()` (shared cache-buster). API calls only via `lib/api.ts`
   (`api`, `apiUpload`, `fileUrl`) — no fetch anywhere else.
 - `hooks/use-memo-filters.ts` — bridges `?filter=` URL param ↔ chips ↔ feed queries
+- `hooks/use-shortcuts.ts` — the one global keydown listener (`c` `/` `j` `k` `e`
+  `Enter` `Esc` `?`); bails on modifiers, editable targets, and open dialogs. The feed
+  cursor is the DOM's (`[data-memo-card]`), not React state
+- `lib/time-travel.ts` — local-calendar math for the calendar / "On this day" /
+  streaks (`localDayKey`, `dayRange`, `monthRange`, `anniversaryAnchors`,
+  `anchorsToFilter`, `streakFrom`), with its own vitest suite. The timezone lives in
+  the browser on purpose — historical DST offsets a server can't know
 - `lib/filter-chips.ts` — memos-compatible URL mini-format ↔ `FilterChip[]` ↔
   `chipsToExpression()` (compiles to the shared grammar). Saved views (`pages/Views.tsx`)
   bypass chips: raw expressions validated with shared `validateFilter`.

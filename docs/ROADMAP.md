@@ -73,10 +73,11 @@ The dory-sweeper became the general minute-tick **scheduler service**
 | **Dory statistics** | ✅ v1.15.0 — `user.dory_forgotten_count`, shown on /dory |
 | **Recurring Dory reminders** | ✅ v1.15.0 — `remind_every` DAILY/WEEKLY/MONTHLY, single-nudge catch-up after downtime |
 
-## Wave 2 — Findability (make everything in the reef searchable)
+## Wave 2 — Findability (make everything in the reef searchable) ✅ SHIPPED v1.16.0–v1.23.0
 
-FTS5 is the foundation; then three committed features feed it so that *images, audio,
-and tasks* become findable, not just typed text.
+FTS5 was the foundation; the committed features fed it so that *images, audio, and
+tasks* became findable, not just typed text. The whole wave — committed items and
+ride-alongs — shipped across 2026-08-23/24.
 
 | Item | Why & how | Effort |
 | --- | --- | --- |
@@ -86,20 +87,22 @@ and tasks* become findable, not just typed text.
 | ⭐ NEW **OCR on image attachments** | On image upload, extract text (tesseract.js WASM keeps the Docker image slim; `NEMOMEMO_OCR=0` to opt out) into a new `attachment.extracted_text` column → FTS. Screenshots, whiteboards, and receipts become searchable. Docs: deploy.mdx env table. | M |
 | **Voice memos** | Record button producing an audio attachment (playback already works). Capture while walking; prereq for transcription. | M |
 | ⭐ NEW **Voice transcription** | Transcribe voice memos into `extracted_text` → FTS, transcript shown under the player. `NEMOMEMO_TRANSCRIBE_URL/KEY` pointing at any OpenAI-compatible `/audio/transcriptions` endpoint — Cloud sets it fleet-wide, self-hosters can point at a local whisper.cpp server or leave it off. Docs: deploy.mdx. | M |
-| **"On this day" resurfacing** | Memos from a year/month ago on Home; journalers' favorite; pairs with the heatmap. | S–M |
-| **Random memo ("Go fish")** · **Pinned tags in sidebar** · **Streaks** | Small retrieval delights; ride along whenever the feed/sidebar files are open. | S each |
-| **Calendar month view** | The heatmap's big sibling: click a month, see the timeline as a calendar. | M |
-| **Keyboard shortcuts** | `c` compose, `/` search, `j/k` feed, `e` edit, `?` cheat sheet — lands best once search is worth invoking. | S–M |
+| **"On this day" resurfacing** | ✅ v1.22.0 — a self-hiding card above Home's feed: a month, six months, or a year ago today, at most 2 anniversaries × 2 memos, collapsible. | S–M |
+| **Calendar month view** | ✅ v1.22.0 — `/calendar`: a month grid with memo headlines in the cells, click a day to read/edit it, no day picked shows the month as a timeline. State in the URL. | M |
+| **Streaks** | ✅ v1.22.0 — consecutive writing days under the sidebar heatmap (+ on the calendar); silent until you have one. | S |
+| **Keyboard shortcuts** | ✅ v1.23.0 — `c` compose, `/` search, `j/k` feed, `e` edit, `Enter` open, `Esc` release, `?` cheat sheet. One listener, off while you're typing. | S–M |
+| **Random memo ("Go fish")** | ✅ v1.23.0 — `GET /memos/random`, guards inherited from `buildMemoListWhere`. | S |
+| **Pinned tags in sidebar** | ✅ v1.23.0 — star a tag, up to 20, stored per member in user settings. | S |
 
 ## Wave 3 — Trust & garden-tending (protect the year-two user)
 
 The wave that makes 1,000 memos better than 100 — and makes people willing to keep
 important things here. Trash + history + tag tools share one story: *nothing is ever
-lost unless you asked Dory*.
+lost unless you asked Dory*. **Trash shipped v1.24.0; memo edit history is next.**
 
 | Item | Why & how | Effort |
 | --- | --- | --- |
-| **Trash (undo delete)** | Deleted memos linger 7 days (`deleted_at` + scheduler sweep) before hard delete. The safety net people expect; do first — history builds on the same mindset. | M |
+| **Trash (undo delete)** | ✅ **v1.24.0** — migration 0008 `deleted_at` as a fourth guard (`buildMemoListWhere` + both `acl.ts` functions, hidden from the creator too); `/trash` with restore, delete-forever, and empty; `purgeMemos()` is now the one hard-delete cascade and the 7-day sweep is step 5 of the scheduler tick. | M |
 | ⭐ NEW **Memo edit history** | New `memo_revision` table (memo_id FK cascade, content, created_ts); memo update writes the prior content first; prune to last 20 / 90 days via the scheduler. Diff + one-click restore in the memo ⋯ menu. Revisions readable only through `checkMemoRead` on the parent, so Dory expiry and visibility can never leak old text. Also the support story for "my memo changed". | M |
 | ⭐ NEW **Tag management (rename / merge / color)** | Settings → Tags: rename rewrites the tag token in memo *content* (source of truth) and re-runs `buildPayload()` per memo in one transaction; merge = rename onto an existing tag; color stored per user, shown in chips/sidebar. Prereq ride-along: code-health #1 (dedupe the shared⇄web tag regex) so there's exactly one tokenizer to trust. Tag rot is the #1 reason memo apps get abandoned at month six. | M |
 | **Bulk select** | Multi-select → archive/tag/delete at once; tag-merge UI reuses pieces of this. | M |
