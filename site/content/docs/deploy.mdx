@@ -98,6 +98,8 @@ app — never the marketing/docs site).
 | `NEMOMEMO_TRANSCRIBE_URL` | — | OpenAI-compatible `/audio/transcriptions` endpoint for voice memo transcripts (optional — see below) |
 | `NEMOMEMO_TRANSCRIBE_KEY` | — | API key for that endpoint (omit for keyless local servers) |
 | `NEMOMEMO_TRANSCRIBE_MODEL` | `whisper-1` | Model name sent to the endpoint |
+| `NEMOMEMO_DICTATE_KEY` | — | OpenAI API key that turns on live dictation in the editor (optional — see below) |
+| `NEMOMEMO_DICTATE_MODEL` | `gpt-live-transcribe` | OpenAI Realtime transcription model for dictation |
 
 ## Image text search (OCR)
 
@@ -110,6 +112,26 @@ The first image after a fresh install downloads the OCR language data (a few MB)
 into `data/ocr-cache` and reuses it from then on. If your reef runs air-gapped
 with no outbound network, set `NEMOMEMO_OCR=0` — everything else works exactly
 the same, images just aren't searchable by their contents.
+
+## Live dictation (optional)
+
+Since v1.21 the editor has a microphone button: tap it, talk, and your words
+appear in the memo as you speak — tap again to stop. It needs an OpenAI API
+key, because dictation uses OpenAI's Realtime transcription service:
+
+```bash
+NEMOMEMO_DICTATE_KEY=sk-...
+```
+
+Your API key stays on your server. When someone starts dictating, the reef
+mints a single-use key that expires in minutes, and the browser streams audio
+straight to OpenAI with only that. Audio is transcribed live and isn't stored
+by your reef — only the text you keep in the memo.
+
+Without a key, the microphone button records a **voice clip** instead (no
+setup, no external services) — the audio attaches to your memo and plays back
+inline. With dictation on, voice clips move to the little arrow next to the
+microphone, so you can always do either.
 
 ## Voice transcription (optional)
 

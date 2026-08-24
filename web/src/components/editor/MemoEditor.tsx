@@ -2,8 +2,7 @@ import { Earth, Fish, Hourglass, Image as ImageIcon, Lock, Paperclip, Users, X }
 import { useRef, useState } from 'react';
 import { DORY_WINDOWS, type DoryWindow, type MemoDto, type Visibility } from '@nemomemo/shared';
 import { Bubbles } from '@/components/Bubbles.js';
-import { DictationButton } from '@/components/editor/DictationButton.js';
-import { RecordButton } from '@/components/editor/RecordButton.js';
+import { VoiceControls } from '@/components/editor/VoiceControls.js';
 import { RichEditor, type RichEditorHandle } from '@/components/editor/RichEditor.js';
 import { BottleDialog } from '@/components/memo/BottleDialog.js';
 import { Button } from '@/components/ui/button.js';
@@ -193,17 +192,15 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
                 }}
               />
             </label>
-            {profile?.dictationEnabled ? (
-              <DictationButton
-                onPreview={setDictationPreview}
-                onFinalText={(text) => {
-                  editorRef.current?.insertText(text);
-                  setHasContent(true);
-                }}
-              />
-            ) : (
-              <RecordButton onFile={(file) => void uploadFiles([file])} />
-            )}
+            <VoiceControls
+              dictationEnabled={profile?.dictationEnabled ?? false}
+              onPreview={setDictationPreview}
+              onFinalText={(text) => {
+                editorRef.current?.insertText(text);
+                setHasContent(true);
+              }}
+              onFile={(file) => void uploadFiles([file])}
+            />
           </>
         }
       />
