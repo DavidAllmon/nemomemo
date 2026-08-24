@@ -3,13 +3,10 @@ import { Check, Copy } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { toggleTaskAt } from '@nemomemo/shared';
+import { MENTION_REGEX, TAG_REGEX, toggleTaskAt } from '@nemomemo/shared';
 import type { Node, Parent, Text } from 'mdast';
 import { useMemoFilters } from '@/hooks/use-memo-filters.js';
 import { cn } from '@/lib/utils.js';
-
-const TAG_REGEX = /(^|[\s(])#([\p{L}\p{N}_][\p{L}\p{N}_-]*(?:\/[\p{L}\p{N}_][\p{L}\p{N}_-]*)*)/gu;
-const MENTION_REGEX = /(^|[\s(])@([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,30}[a-zA-Z0-9])?)/g;
 
 /** Split text nodes so `#tag` and `@user` become link nodes we can style. */
 function remarkTagsMentions() {

@@ -13,10 +13,22 @@ export function parseMarkdown(content: string): Root {
 /**
  * Tag grammar: `#` followed by letters/numbers/underscore, may contain `/` for
  * hierarchy and `-` inside segments. Mirrors memos' pragmatic subset.
+ *
+ * THE one tokenizer — server and web both import these; don't fork copies.
+ * Both regexes are `g`-flagged: use them with `matchAll` only (`.test()`/
+ * `.exec()` would leak lastIndex state across callers).
  */
-const TAG_REGEX = /(^|[\s(])#([\p{L}\p{N}_][\p{L}\p{N}_-]*(?:\/[\p{L}\p{N}_][\p{L}\p{N}_-]*)*)/gu;
-const MENTION_REGEX = /(^|[\s(])@([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,30}[a-zA-Z0-9])?)/g;
+export const TAG_REGEX = /(^|[\s(])#([\p{L}\p{N}_][\p{L}\p{N}_-]*(?:\/[\p{L}\p{N}_][\p{L}\p{N}_-]*)*)/gu;
+export const MENTION_REGEX = /(^|[\s(])@([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,30}[a-zA-Z0-9])?)/g;
 const URL_REGEX = /https?:\/\/\S+/;
+
+/** Anchored form of the tag grammar, for validating a whole tag name. */
+const TAG_NAME_REGEX = /^[\p{L}\p{N}_][\p{L}\p{N}_-]*(?:\/[\p{L}\p{N}_][\p{L}\p{N}_-]*)*$/u;
+
+/** Would the inline tokenizer match exactly this name after a `#`? */
+export function isValidTagName(name: string): boolean {
+  return TAG_NAME_REGEX.test(name);
+}
 
 export interface MemoProperty {
   hasLink: boolean;

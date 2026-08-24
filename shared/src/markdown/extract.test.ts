@@ -7,6 +7,7 @@ import {
   setAllTasks,
   toggleTaskAt,
   withImpliedAncestors,
+  isValidTagName,
 } from './extract.js';
 
 describe('extractProps', () => {
@@ -109,5 +110,19 @@ describe('renameTagInContent', () => {
   it('does not rewrite inside code fences', () => {
     const doc = '```\n#work\n```\n#work';
     expect(renameTagInContent(doc, 'work', 'job')).toBe('```\n#work\n```\n#job');
+  });
+});
+
+describe('isValidTagName', () => {
+  it('accepts the tag grammar, hierarchy included', () => {
+    for (const name of ['reef', 'reef/notes', 'héllo', 'a-b_c', 'a/b/c', '日記', 'v2']) {
+      expect(isValidTagName(name), name).toBe(true);
+    }
+  });
+
+  it('rejects anything the inline tokenizer would never match', () => {
+    for (const name of ['', 'a/', 'a//b', '-a', 'a b', '#a', '/a', 'a/-b']) {
+      expect(isValidTagName(name), name).toBe(false);
+    }
   });
 });

@@ -1,6 +1,7 @@
 import {
   adminCreateUserRequestSchema,
   adminUpdateUserRequestSchema,
+  isValidTagName,
   renameTagRequestSchema,
   renameTagInContent,
   updateAccountRequestSchema,
@@ -64,7 +65,7 @@ export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
   app.post('/-/tags/rename', zValidator('json', renameTagRequestSchema), (c) => {
     const viewer = requireViewer(c);
     const { from, to } = c.req.valid('json');
-    if (!/^[\p{L}\p{N}_][\p{L}\p{N}_/-]*$/u.test(to)) {
+    if (!isValidTagName(to)) {
       throw apiError('INVALID_ARGUMENT', 'New tag name contains invalid characters');
     }
     const own = db.select().from(memos).where(eq(memos.creatorId, viewer.id)).all();
