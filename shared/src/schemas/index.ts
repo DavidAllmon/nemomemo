@@ -82,6 +82,13 @@ export const updateMemoRequestSchema = z.object({
   relatedMemoUids: z.array(z.string()).max(20).optional(),
 });
 
+export const bulkMemoRequestSchema = z.object({
+  uids: z.array(z.string().min(1)).min(1).max(100),
+  action: z.enum(['archive', 'unarchive', 'trash', 'tag']),
+  /** Required when action = 'tag'. */
+  tag: z.string().min(1).max(128).optional(),
+});
+
 export const createCommentRequestSchema = z.object({
   content: z.string().min(1).max(CONTENT_LENGTH_LIMIT),
 });

@@ -3,7 +3,10 @@ import {
   FilterParseError,
   SHARE_EXPIRY_PRESETS,
   TRASH_RETENTION_SECONDS,
+  bulkMemoRequestSchema,
   createCommentRequestSchema,
+  extractProps,
+  isValidTagName,
   createMemoRequestSchema,
   createShareRequestSchema,
   reactionRequestSchema,
@@ -224,6 +227,68 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
       : undefined;
     if (!raw) throw apiError('NOT_FOUND', 'Nothing to fish for yet — write a memo first');
     return c.json({ memo: buildMemoDtos(db, [rawToMemoRow(raw)], viewer)[0] });
+  });
+
+  // ---------- Bulk actions ----------
+  // Creator-only, one transaction, up to 100 memos. Rows that don't qualify
+  // (not yours, trashed, expired, already in the target state) are skipped,
+  // not errors — the response says how many actually changed.
+  // Static path: MUST stay registered before '/:uid'.
+  app.post('/bulk', zValidator('json', bulkMemoRequestSchema), (c) => {
+    const viewer = requireViewer(c);
+    const { uids, action, tag } = c.req.valid('json');
+    if (action === 'tag' && (!tag || !isValidTagName(tag))) {
+      throw apiError('INVALID_ARGUMENT', 'That tag name won\'t swim — letters, numbers, _ and -, with / between levels');
+    }
+    const now = nowSeconds();
+    const rows = db
+      .select()
+      .from(memos)
+      .where(and(inArray(memos.uid, [...new Set(uids)]), eq(memos.creatorId, viewer.id)))
+      .all();
+
+    const run = db.$client.transaction(() => {
+      let affected = 0;
+      const markTrash = db.$client.prepare('UPDATE memo SET deleted_at = ? WHERE id = ?');
+      for (const memo of rows) {
+        const expired = memo.forgetAt != null && memo.forgetAt <= now;
+        if (action === 'trash') {
+          // Already-trashed memos keep their original clock.
+          if (memo.deletedAt != null) continue;
+          markTrash.run(now, memo.id);
+          for (const id of commentIdsOf(memo.id)) markTrash.run(now, id);
+          affected++;
+          continue;
+        }
+        if (memo.deletedAt != null || expired) continue;
+        if (action === 'archive') {
+          if (memo.rowStatus === 'ARCHIVED') continue;
+          // Archiving rescues a memo from Dory: archive means "keep".
+          db.update(memos)
+            .set({ rowStatus: 'ARCHIVED', forgetAt: null })
+            .where(eq(memos.id, memo.id))
+            .run();
+          affected++;
+        } else if (action === 'unarchive') {
+          if (memo.rowStatus === 'NORMAL') continue;
+          db.update(memos).set({ rowStatus: 'NORMAL' }).where(eq(memos.id, memo.id)).run();
+          affected++;
+        } else {
+          // tag: a content edit like any other — the old words go to History.
+          if (extractProps(memo.content).tags.includes(tag!)) continue;
+          const next = memo.content === '' ? `#${tag}` : `${memo.content.trimEnd()}\n\n#${tag}`;
+          captureRevision(db, memo.id, memo.content, now);
+          const { payload } = buildPayload(next);
+          db.update(memos)
+            .set({ content: next, payload, updatedTs: now })
+            .where(eq(memos.id, memo.id))
+            .run();
+          affected++;
+        }
+      }
+      return affected;
+    });
+    return c.json({ affected: run() });
   });
 
   // ---------- Create ----------
