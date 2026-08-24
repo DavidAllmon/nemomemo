@@ -159,6 +159,12 @@ setup, no external services) — the audio attaches to your memo and plays back
 inline. With dictation on, voice clips move to the little arrow next to the
 microphone, so you can always do either.
 
+Session requests are capped at **20 per 10 minutes per IP** — far more than anyone
+tapping the mic will reach, and enough to stop a script. That limits how many
+sessions get *minted*, though: audio streams from the browser straight to the
+provider, so if your reef is open to the public, put a spend cap on the API
+project too.
+
 ## Voice transcription (optional)
 
 Since v1.20 you can record voice memos right in the editor — they play back

@@ -15,7 +15,13 @@ export function clientIp(c: Context): string {
  * per-reef apps stay independent. Deliberately no external store: a restart
  * resetting the counters is an acceptable trade for zero infrastructure.
  */
-export function makeRateLimiter(options: { scope: string; windowMs: number; max: number }): MiddlewareHandler {
+export function makeRateLimiter(options: {
+  scope: string;
+  windowMs: number;
+  max: number;
+  /** Override the 429 copy — "attempts" only fits the auth paths. */
+  message?: string;
+}): MiddlewareHandler {
   const buckets = new Map<string, { count: number; resetAt: number }>();
   return async (c, next) => {
     const now = Date.now();
@@ -29,9 +35,13 @@ export function makeRateLimiter(options: { scope: string; windowMs: number; max:
     if (!bucket || bucket.resetAt <= now) {
       buckets.set(key, { count: 1, resetAt: now + options.windowMs });
     } else if (++bucket.count > options.max) {
-      throw apiError('RESOURCE_EXHAUSTED', 'Too many attempts — catch your breath and swim back in a minute', {
-        'retry-after': String(Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))),
-      });
+      throw apiError(
+        'RESOURCE_EXHAUSTED',
+        options.message ?? 'Too many attempts — catch your breath and swim back in a minute',
+        {
+          'retry-after': String(Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))),
+        },
+      );
     }
     await next();
   };
