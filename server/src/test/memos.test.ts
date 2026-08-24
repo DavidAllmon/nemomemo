@@ -243,3 +243,94 @@ describe('comments, reactions, inbox', () => {
     expect(items.items.some((item) => item.type === 'MEMO_MENTION')).toBe(true);
   });
 });
+
+describe('GET /api/v1/memos/random — Go fish', () => {
+  /** Draw many times so a leak can't hide behind luck. */
+  async function draw(
+    app: Parameters<typeof jsonRequest>[0],
+    cookie: string,
+    times = 20,
+  ): Promise<string[]> {
+    const uids: string[] = [];
+    for (let i = 0; i < times; i += 1) {
+      const response = await jsonRequest(app, 'GET', '/api/v1/memos/random', undefined, cookie);
+      if (response.status !== 200) throw new Error(`random failed: ${response.status}`);
+      uids.push(((await response.json()) as { memo: MemoDto }).memo.uid);
+    }
+    return uids;
+  }
+
+  it("returns one of the viewer's own memos", async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const mine = new Set<string>();
+    for (const content of ['one fish', 'two fish', 'red fish']) {
+      mine.add((await createMemo(app, cookie, { content })).uid);
+    }
+    const drawn = await draw(app, cookie);
+    expect(drawn.every((uid) => mine.has(uid))).toBe(true);
+    // 20 draws from 3 memos: seeing only one would be a 1-in-2-billion fluke.
+    expect(new Set(drawn).size).toBeGreaterThan(1);
+  });
+
+  it('404s for an empty reef', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const response = await jsonRequest(app, 'GET', '/api/v1/memos/random', undefined, cookie);
+    expect(response.status).toBe(404);
+  });
+
+  it('never fishes up an expired Dory memo', async () => {
+    const { app, db } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const keeper = await createMemo(app, cookie, { content: 'still here' });
+    const fading = await createMemo(app, cookie, { content: 'gone', dory: true, doryWindow: '1h' });
+    db.$client
+      .prepare('UPDATE memo SET forget_at = ? WHERE uid = ?')
+      .run(Math.floor(Date.now() / 1000) - 60, fading.uid);
+    expect(new Set(await draw(app, cookie))).toEqual(new Set([keeper.uid]));
+  });
+
+  it('never fishes up a bottle still at sea', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const keeper = await createMemo(app, cookie, { content: 'surfaced' });
+    await createMemo(app, cookie, {
+      content: 'at sea',
+      surfaceAt: Math.floor(Date.now() / 1000) + 3600,
+    });
+    expect(new Set(await draw(app, cookie))).toEqual(new Set([keeper.uid]));
+  });
+
+  it('never fishes up a comment', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const parent = await createMemo(app, cookie, { content: 'parent memo' });
+    await jsonRequest(app, 'POST', `/api/v1/memos/${parent.uid}/comments`, { content: 'a reply' }, cookie);
+    expect(new Set(await draw(app, cookie))).toEqual(new Set([parent.uid]));
+  });
+
+  it("never fishes up another member's memo", async () => {
+    const { app } = makeTestApp();
+    const marlin = await signup(app, 'marlin');
+    const dory = await signup(app, 'dory');
+    await createMemo(app, dory, { content: 'dory public', visibility: 'PUBLIC' });
+    const mine = await createMemo(app, marlin, { content: 'marlin private' });
+    expect(new Set(await draw(app, marlin))).toEqual(new Set([mine.uid]));
+  });
+
+  it('never fishes up an archived memo', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const keeper = await createMemo(app, cookie, { content: 'active' });
+    const shelved = await createMemo(app, cookie, { content: 'archived' });
+    await jsonRequest(app, 'PATCH', `/api/v1/memos/${shelved.uid}`, { rowStatus: 'ARCHIVED' }, cookie);
+    expect(new Set(await draw(app, cookie))).toEqual(new Set([keeper.uid]));
+  });
+
+  it('requires a viewer', async () => {
+    const { app } = makeTestApp();
+    const response = await jsonRequest(app, 'GET', '/api/v1/memos/random');
+    expect(response.status).toBe(401);
+  });
+});

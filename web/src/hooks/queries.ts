@@ -252,6 +252,14 @@ export function useUpdateMemo() {
   });
 }
 
+/** Go fish: one random memo from the viewer's own reef. */
+export function useRandomMemo() {
+  return useMutation({
+    mutationFn: async () =>
+      (await api<{ memo: MemoDto }>('GET', '/api/v1/memos/random')).memo,
+  });
+}
+
 export function useDeleteMemo() {
   const invalidate = useInvalidateMemos();
   return useMutation({

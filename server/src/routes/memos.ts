@@ -36,6 +36,7 @@ import { notifyComment, notifyMentions, notifyThreadParticipants } from '../serv
 import {
   assertTimeRules,
   buildMemoDtos,
+  buildMemoListWhere,
   buildPayload,
   getMemoByUid,
   getParentMemo,
@@ -165,6 +166,29 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
       bottles: buildMemoDtos(db, bottles.map(rawToMemoRow), viewer),
       forgottenCount: viewer.doryForgottenCount,
     });
+  });
+
+  // ---------- Go fish ----------
+  // One random memo from the viewer's own reef. The WHERE comes from
+  // buildMemoListWhere, so a fished memo can never be an expired Dory memo,
+  // a bottle still at sea, a comment, or somebody else's.
+  // Static path: MUST stay registered before '/:uid'.
+  app.get('/random', (c) => {
+    const viewer = requireViewer(c);
+    const built = buildMemoListWhere(
+      db,
+      { viewer, allowAnonymous: allowAnonymous(), state: 'NORMAL', scope: 'home' },
+      nowSeconds(),
+    );
+    const raw = built
+      ? (db.$client
+          .prepare(
+            `SELECT memo.* FROM memo WHERE ${built.where.join(' AND ')} ORDER BY RANDOM() LIMIT 1`,
+          )
+          .get(...(built.params as never[])) as Record<string, unknown> | undefined)
+      : undefined;
+    if (!raw) throw apiError('NOT_FOUND', 'Nothing to fish for yet — write a memo first');
+    return c.json({ memo: buildMemoDtos(db, [rawToMemoRow(raw)], viewer)[0] });
   });
 
   // ---------- Create ----------

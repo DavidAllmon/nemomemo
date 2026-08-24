@@ -11,6 +11,7 @@ import {
   Paperclip,
   Search,
   Settings,
+  Shuffle,
   Sun,
   SunMoon,
   User,
@@ -31,7 +32,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/overlays.js';
 import { useTheme, type Theme } from '@/context/theme.js';
-import { useInbox, useViewer } from '@/hooks/queries.js';
+import { useInbox, useRandomMemo, useViewer } from '@/hooks/queries.js';
 import { api } from '@/lib/api.js';
 import { cn } from '@/lib/utils.js';
 
@@ -79,6 +80,7 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
   const { data: viewer } = useViewer();
   const { data: inbox } = useInbox('UNREAD', !!viewer);
   const { theme, setTheme } = useTheme();
+  const goFish = useRandomMemo();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -115,6 +117,20 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
               label="Inbox"
               badge={inbox?.unreadCount || undefined}
             />
+            {/* Imperative, so a button rather than a NavLink. */}
+            <button
+              onClick={() =>
+                goFish.mutate(undefined, {
+                  onSuccess: (memo) => navigate(`/memos/${memo.uid}`),
+                })
+              }
+              disabled={goFish.isPending}
+              title="Swim up a random memo"
+              className="flex items-center gap-2.5 rounded-xl px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+            >
+              <Shuffle className="size-4" />
+              <span className="flex-1 text-left">Go fish</span>
+            </button>
           </>
         ) : (
           <NavItem to="/about" icon={<Info className="size-4" />} label="About" />
