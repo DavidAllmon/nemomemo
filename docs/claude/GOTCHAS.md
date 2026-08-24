@@ -103,6 +103,22 @@ Adding a filter field touches all three, or the feature is inconsistent:
   AST. The rehype plugin in `web/src/components/memo/MemoContent.tsx` stamps each
   checkbox with its parent `li`'s source offset (the checkbox hast node has no
   position), and `toggleTaskAt` from shared rewrites exactly `[ ]`↔`[x]`.
+- **The app shell scrolls `main`, never the document.** `AppShell` is a full-height
+  flex row: the `aside` is fixed height and `main` is the only scroller. Two ways to
+  break that, both silent and both already have:
+  1. An **absolutely-positioned descendant of `main`** escapes its overflow clip unless
+     `main` is a containing block — that's why `main` carries `relative`. Tailwind's
+     `sr-only` is `position: absolute`, so an innocuous visually-hidden element inside
+     a memo card stretched `documentElement.scrollHeight` to the last card's bottom and
+     the whole page scrolled, sidebar included. Keep `relative` on `main`; for hidden
+     click targets prefer `hidden` (`HTMLElement.click()` fires on `display: none`).
+  2. **Sidebar content outgrowing the viewport.** Only the brand row and the account
+     row are `shrink-0`; everything between them lives in one `min-h-0 flex-1
+     overflow-y-auto` scroller. Adding a fixed-height section *outside* that scroller
+     eats the space the scroller needs, and `Sidebar`'s `overflow-hidden` will clip
+     the account menu (Settings / Sign out) off the bottom rather than scroll it.
+  jsdom does no layout, so neither is unit-testable — check in a real browser at a
+  short viewport (~700px tall) after touching either component.
 - **No Redux/Zustand**: server state is TanStack Query, filter state lives in the URL,
   three small contexts (viewer/theme/view-setting). Don't introduce a store.
 - **Theming**: OKLCH CSS variables in `web/src/index.css` ("Shallows" light / "Deep
