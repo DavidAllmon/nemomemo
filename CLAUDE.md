@@ -104,6 +104,13 @@ manual steps, new admin flows) MUST update the public docs in `site/content/docs
 in the same release** — David's standing rule (2026-08-23). Check `deploy.mdx`
 (config), `admin.mdx` (admin flows), `getting-started.mdx` (first-run copy).
 
+**A new env var also gets a commented block in root `.env.example`** — that file is
+the single source self-hosters copy, and both installers load it via
+`NEMOMEMO_ENV_FILE`. The README deliberately has NO env table any more (it drifted
+to 3-of-16 vars); it points at `.env.example` instead, so there are exactly two
+places to keep honest: the template and `deploy.mdx`'s table. Verify with
+`comm -3` between `process.env.*` in `server/src` and the template.
+
 User-facing copy stays in the reef voice — playful, never at the expense of clarity:
 "This memo swam away" (404), "Just keep swimming" (empty states), Dory phrasing for
 ephemerality. Error messages say what happened and what to do next, then the fish.
