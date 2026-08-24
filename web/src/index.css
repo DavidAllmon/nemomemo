@@ -23,6 +23,19 @@
   --dory: oklch(0.55 0.15 255); /* blue tang */
   --dory-soft: oklch(0.93 0.04 255);
   --dory-tail: oklch(0.82 0.15 90); /* her yellow tail */
+  /* Tag palette (ocean + dory above double as tag colors) */
+  --tag-coral: oklch(0.6 0.14 40);
+  --tag-coral-soft: oklch(0.93 0.035 40);
+  --tag-kelp: oklch(0.55 0.11 150);
+  --tag-kelp-soft: oklch(0.93 0.035 150);
+  --tag-sand: oklch(0.58 0.12 85);
+  --tag-sand-soft: oklch(0.94 0.045 85);
+  --tag-anemone: oklch(0.58 0.14 350);
+  --tag-anemone-soft: oklch(0.93 0.035 350);
+  --tag-urchin: oklch(0.55 0.13 300);
+  --tag-urchin-soft: oklch(0.93 0.035 300);
+  --tag-teal: oklch(0.55 0.1 190);
+  --tag-teal-soft: oklch(0.93 0.035 190);
   --destructive: oklch(0.55 0.16 25);
   --destructive-foreground: oklch(0.99 0.01 85);
   --border: oklch(0.9 0.02 85);
@@ -51,6 +64,18 @@
   --dory: oklch(0.72 0.12 255);
   --dory-soft: oklch(0.28 0.06 255);
   --dory-tail: oklch(0.8 0.14 90);
+  --tag-coral: oklch(0.72 0.13 40);
+  --tag-coral-soft: oklch(0.28 0.05 40);
+  --tag-kelp: oklch(0.7 0.11 150);
+  --tag-kelp-soft: oklch(0.27 0.05 150);
+  --tag-sand: oklch(0.75 0.12 85);
+  --tag-sand-soft: oklch(0.28 0.05 85);
+  --tag-anemone: oklch(0.72 0.13 350);
+  --tag-anemone-soft: oklch(0.28 0.05 350);
+  --tag-urchin: oklch(0.72 0.12 300);
+  --tag-urchin-soft: oklch(0.28 0.05 300);
+  --tag-teal: oklch(0.72 0.1 190);
+  --tag-teal-soft: oklch(0.27 0.05 190);
   --destructive: oklch(0.62 0.17 25);
   --border: oklch(0.28 0.035 252);
   --input: var(--border);
@@ -77,6 +102,18 @@
     --dory: oklch(0.72 0.12 255);
     --dory-soft: oklch(0.28 0.06 255);
     --dory-tail: oklch(0.8 0.14 90);
+    --tag-coral: oklch(0.72 0.13 40);
+    --tag-coral-soft: oklch(0.28 0.05 40);
+    --tag-kelp: oklch(0.7 0.11 150);
+    --tag-kelp-soft: oklch(0.27 0.05 150);
+    --tag-sand: oklch(0.75 0.12 85);
+    --tag-sand-soft: oklch(0.28 0.05 85);
+    --tag-anemone: oklch(0.72 0.13 350);
+    --tag-anemone-soft: oklch(0.28 0.05 350);
+    --tag-urchin: oklch(0.72 0.12 300);
+    --tag-urchin-soft: oklch(0.28 0.05 300);
+    --tag-teal: oklch(0.72 0.1 190);
+    --tag-teal-soft: oklch(0.27 0.05 190);
     --destructive: oklch(0.62 0.17 25);
     --border: oklch(0.28 0.035 252);
     --input: var(--border);
@@ -105,6 +142,18 @@
   --color-dory: var(--dory);
   --color-dory-soft: var(--dory-soft);
   --color-dory-tail: var(--dory-tail);
+  --color-tag-coral: var(--tag-coral);
+  --color-tag-coral-soft: var(--tag-coral-soft);
+  --color-tag-kelp: var(--tag-kelp);
+  --color-tag-kelp-soft: var(--tag-kelp-soft);
+  --color-tag-sand: var(--tag-sand);
+  --color-tag-sand-soft: var(--tag-sand-soft);
+  --color-tag-anemone: var(--tag-anemone);
+  --color-tag-anemone-soft: var(--tag-anemone-soft);
+  --color-tag-urchin: var(--tag-urchin);
+  --color-tag-urchin-soft: var(--tag-urchin-soft);
+  --color-tag-teal: var(--tag-teal);
+  --color-tag-teal-soft: var(--tag-teal-soft);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);

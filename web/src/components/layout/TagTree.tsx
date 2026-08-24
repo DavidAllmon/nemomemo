@@ -1,7 +1,9 @@
 import { ChevronRight, List, ListTree, Star } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import type { TagColor } from '@nemomemo/shared';
 import { useMemoFilters } from '@/hooks/use-memo-filters.js';
 import { useTags, useTogglePinnedTag, useUserSettings, useViewer } from '@/hooks/queries.js';
+import { tagGlyphClass } from '@/lib/tag-colors.js';
 import { cn } from '@/lib/utils.js';
 
 interface TagNode {
@@ -53,6 +55,7 @@ function TagRow({
   leafOnly,
   active,
   pinned,
+  color,
   onToggleFilter,
   onTogglePin,
 }: {
@@ -62,6 +65,7 @@ function TagRow({
   leafOnly?: boolean;
   active: boolean;
   pinned: boolean;
+  color?: TagColor;
   onToggleFilter: (name: string) => void;
   onTogglePin: (name: string) => void;
 }) {
@@ -76,7 +80,7 @@ function TagRow({
         )}
         style={depth ? { paddingInlineStart: `${8 + depth * 14}px` } : undefined}
       >
-        <span className="font-bold text-ocean">#</span>
+        <span className={cn('font-bold', tagGlyphClass(color))}>#</span>
         <span className="truncate">
           <TagLabel name={name} leafOnly={leafOnly} />
         </span>
@@ -119,6 +123,7 @@ export function TagTree() {
   );
   const tree = useMemo(() => buildTree(tags ?? {}), [tags]);
 
+  const tagColors = settings?.general.tagColors;
   const stored = useMemo(() => settings?.general.pinnedTags ?? [], [settings]);
   // A tag whose last memo is gone drops out of the list rather than rendering a
   // dead row; the stored value stays put, so re-using the tag brings it back.
@@ -169,6 +174,7 @@ export function TagTree() {
             leafOnly
             active={activeTag === node.name}
             pinned={pinnedSet.has(node.name)}
+            color={tagColors?.[node.name]}
             onToggleFilter={toggleFilter}
             onTogglePin={togglePin}
           />
@@ -193,6 +199,7 @@ export function TagTree() {
                 count={tags?.[name] ?? 0}
                 active={activeTag === name}
                 pinned
+                color={tagColors?.[name]}
                 onToggleFilter={toggleFilter}
                 onTogglePin={togglePin}
               />
@@ -233,6 +240,7 @@ export function TagTree() {
                   count={count}
                   active={activeTag === name}
                   pinned={pinnedSet.has(name)}
+                  color={tagColors?.[name]}
                   onToggleFilter={toggleFilter}
                   onTogglePin={togglePin}
                 />

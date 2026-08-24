@@ -6,6 +6,8 @@ import remarkGfm from 'remark-gfm';
 import { MENTION_REGEX, TAG_REGEX, toggleTaskAt } from '@nemomemo/shared';
 import type { Node, Parent, Text } from 'mdast';
 import { useMemoFilters } from '@/hooks/use-memo-filters.js';
+import { useUserSettings, useViewer } from '@/hooks/queries.js';
+import { tagChipClass } from '@/lib/tag-colors.js';
 import { cn } from '@/lib/utils.js';
 
 /** Split text nodes so `#tag` and `@user` become link nodes we can style. */
@@ -135,6 +137,9 @@ export function MemoContent({
   className?: string;
 }) {
   const { toggleChip } = useMemoFilters();
+  const { data: viewer } = useViewer();
+  const { data: settings } = useUserSettings(!!viewer);
+  const tagColors = settings?.general.tagColors;
   const plugins = useMemo(() => [remarkGfm, remarkTagsMentions], []);
   const rehypeHighlight = useRehypeHighlight(content);
   const rehypePlugins = useMemo(
@@ -154,7 +159,10 @@ export function MemoContent({
               return (
                 <button
                   onClick={() => toggleChip({ type: 'tagSearch', value: tag })}
-                  className="inline-flex items-center rounded-full bg-ocean-soft px-1.5 py-0 align-baseline font-semibold !text-ocean !no-underline hover:opacity-80"
+                  className={cn(
+                    'inline-flex items-center rounded-full px-1.5 py-0 align-baseline font-semibold !no-underline hover:opacity-80',
+                    tagChipClass(tagColors?.[tag]),
+                  )}
                 >
                   {children}
                 </button>
