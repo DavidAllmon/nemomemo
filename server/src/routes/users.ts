@@ -20,6 +20,7 @@ import { emailChangedMessage, passwordChangedMessage, trySend, type Mailer } fro
 import { randomBytes } from 'node:crypto';
 import { nowSeconds } from '../lib/time.js';
 import { requireAdmin, requireViewer, type AppEnv } from '../middleware/auth.js';
+import { captureRevision } from '../services/revision-service.js';
 import {
   aggregateTagCounts,
   aggregateUserStats,
@@ -71,12 +72,16 @@ export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
     const own = db.select().from(memos).where(eq(memos.creatorId, viewer.id)).all();
     const rename = db.$client.transaction(() => {
       let changed = 0;
+      const now = nowSeconds();
       for (const memo of own) {
         const next = renameTagInContent(memo.content, from, to);
         if (next !== memo.content) {
+          // A rename is an edit like any other: the old words go to History
+          // first, so "my memo changed" always has an answer.
+          captureRevision(db, memo.id, memo.content, now);
           const { payload } = buildPayload(next);
           db.update(memos)
-            .set({ content: next, payload, updatedTs: nowSeconds() })
+            .set({ content: next, payload, updatedTs: now })
             .where(eq(memos.id, memo.id))
             .run();
           changed++;

@@ -53,3 +53,16 @@ export const TRASH_RETENTION_SECONDS = 7 * 86_400;
 /** Edit history: how many revisions each memo keeps, and for how long. */
 export const REVISION_KEEP_COUNT = 20;
 export const REVISION_RETENTION_SECONDS = 90 * 86_400;
+
+/** The reef palette a member can paint their tags with. */
+export const TAG_COLOR_NAMES = [
+  'ocean',
+  'coral',
+  'kelp',
+  'sand',
+  'dory',
+  'anemone',
+  'urchin',
+  'teal',
+] as const;
+export type TagColor = (typeof TAG_COLOR_NAMES)[number];

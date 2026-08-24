@@ -5,6 +5,7 @@ import {
   REMIND_REPEATS,
   ROLES,
   ROW_STATUSES,
+  TAG_COLOR_NAMES,
   USERNAME_REGEX,
   VISIBILITIES,
   type RemindRepeat,
@@ -133,6 +134,11 @@ export const userGeneralSettingSchema = z.object({
   theme: z.enum(['system', 'shallows', 'deep-sea']).default('system'),
   /** Tags the member keeps at the top of the sidebar. */
   pinnedTags: z.array(z.string().min(1).max(128)).max(20).default([]),
+  /** Per-tag paint from the reef palette; tags absent here wear the default. */
+  tagColors: z
+    .record(z.string().min(1).max(128), z.enum(TAG_COLOR_NAMES))
+    .refine((colors) => Object.keys(colors).length <= 200, 'Too many colored tags')
+    .default({}),
 });
 
 export const updateUserSettingsRequestSchema = z.object({
