@@ -64,6 +64,16 @@ describe('trash — a deleted memo is gone from every read path', () => {
     expect(response.status).toBe(404);
   });
 
+  it('hides its edit history — even from its author', async () => {
+    const { app, db } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const doomed = await createMemo(app, cookie, { content: 'first words' });
+    await jsonRequest(app, 'PATCH', `/api/v1/memos/${doomed.uid}`, { content: 'last words' }, cookie);
+    trash(db, doomed.uid);
+    const response = await jsonRequest(app, 'GET', `/api/v1/memos/${doomed.uid}/history`, undefined, cookie);
+    expect(response.status).toBe(404);
+  });
+
   it('is not resurrected by a share token', async () => {
     const { app, db } = makeTestApp();
     const cookie = await signup(app, 'marlin');

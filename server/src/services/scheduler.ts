@@ -1,6 +1,7 @@
 import type { Db } from '../db/index.js';
 import { nowSeconds } from '../lib/time.js';
 import { sweepDoryMemos } from './dory-sweeper.js';
+import { pruneRevisions } from './revision-service.js';
 import { sweepTrash } from './trash-sweeper.js';
 import { reminderMessage, trySend, type Mailer } from './email.js';
 import { snippet } from './memo-service.js';
@@ -8,9 +9,9 @@ import { getInstanceGeneral } from './settings.js';
 
 /**
  * The reef's one clock: a minute tick that surfaces bottles, fires reminders,
- * warns about imminent Dory expiries, runs the Dory sweep, and empties the
- * expired end of the trash. New time-based work belongs in this tick — not in
- * another interval.
+ * warns about imminent Dory expiries, runs the Dory sweep, empties the
+ * expired end of the trash, and prunes old edit-history revisions. New
+ * time-based work belongs in this tick — not in another interval.
  */
 export interface SchedulerDeps {
   uploadsDir: string;
@@ -23,6 +24,7 @@ export interface SchedulerTickResult {
   warned: number;
   forgotten: number;
   purged: number;
+  revisionsPruned: number;
 }
 
 /** How long before expiry the "Dory is about to forget…" notice fires. */
@@ -135,7 +137,10 @@ export function runSchedulerTick(db: Db, deps: SchedulerDeps, now = nowSeconds()
   // 5) The trash: anything that has outstayed its week is really gone now.
   const purged = sweepTrash(db, deps.uploadsDir, undefined, now);
 
-  return { surfaced, reminded: reminders.length, warned, forgotten, purged };
+  // 6) Edit history: age out old revisions, cap the pile per memo.
+  const revisionsPruned = pruneRevisions(db, now);
+
+  return { surfaced, reminded: reminders.length, warned, forgotten, purged, revisionsPruned };
 }
 
 export function startScheduler(db: Db, deps: SchedulerDeps, intervalMs = 60_000): NodeJS.Timeout {

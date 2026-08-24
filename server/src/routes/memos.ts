@@ -8,6 +8,7 @@ import {
   createShareRequestSchema,
   reactionRequestSchema,
   updateMemoRequestSchema,
+  type MemoHistoryResponse,
   type MemoListResponse,
   type ShareDto,
 } from '@nemomemo/shared';
@@ -35,6 +36,7 @@ import { checkMemoRead } from '../services/acl.js';
 import { buildMarkdownExport, markdownFilename, renderMemoMarkdown } from '../services/export-service.js';
 import { notifyComment, notifyMentions, notifyThreadParticipants } from '../services/inbox-service.js';
 import { purgeMemos } from '../services/purge.js';
+import { captureRevision, listRevisions } from '../services/revision-service.js';
 import {
   assertTimeRules,
   buildMemoDtos,
@@ -283,6 +285,62 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
     });
   });
 
+  // ---------- Edit history ----------
+  // Creator-only, and the memo itself must still be readable — so a trashed,
+  // expired, or otherwise hidden memo never leaks the words it used to hold.
+  // (Admins moderate; they never read a member's past drafts.)
+  const historyMemo = (c: Context<AppEnv>, uid: string): MemoRow => {
+    const viewer = requireViewer(c);
+    const memo = readableMemo(c, uid);
+    if (memo.creatorId !== viewer.id) {
+      throw apiError('FORBIDDEN', "Only the author can see this memo's past");
+    }
+    return memo;
+  };
+
+  app.get('/:uid/history', (c) => {
+    const memo = historyMemo(c, c.req.param('uid'));
+    const response: MemoHistoryResponse = {
+      revisions: listRevisions(db, memo.id).map((row) => ({
+        id: row.id,
+        content: row.content,
+        createdTs: row.created_ts,
+      })),
+    };
+    return c.json(response);
+  });
+
+  app.post('/:uid/history/:revisionId/restore', (c) => {
+    const viewer = requireViewer(c);
+    const memo = historyMemo(c, c.req.param('uid'));
+    const revision = db.$client
+      .prepare('SELECT id, content FROM memo_revision WHERE id = ? AND memo_id = ?')
+      .get(Number(c.req.param('revisionId')), memo.id) as { id: number; content: string } | undefined;
+    if (!revision) {
+      throw apiError('NOT_FOUND', 'That version drifted off — refresh the history and try again');
+    }
+    // Restoring what's already there would only mint a phantom revision.
+    if (revision.content === memo.content) {
+      return c.json({ memo: buildMemoDtos(db, [memo], viewer)[0] });
+    }
+    // The instance limit may have shrunk since this revision was written.
+    if (Buffer.byteLength(revision.content, 'utf8') > getInstanceMemoSetting(db).contentLengthLimit) {
+      throw apiError('INVALID_ARGUMENT', 'Memo content is too long');
+    }
+    const now = nowSeconds();
+    const { payload } = buildPayload(revision.content);
+    const restore = db.$client.transaction(() => {
+      captureRevision(db, memo.id, memo.content, now);
+      return db
+        .update(memos)
+        .set({ content: revision.content, payload, updatedTs: now })
+        .where(eq(memos.id, memo.id))
+        .returning()
+        .get();
+    });
+    return c.json({ memo: buildMemoDtos(db, [restore()], viewer)[0] });
+  });
+
   // ---------- Update ----------
   app.patch('/:uid', zValidator('json', updateMemoRequestSchema), (c) => {
     const viewer = requireViewer(c);
@@ -367,9 +425,17 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
     const nextSurfaceAt = 'surfaceAt' in patch ? (patch.surfaceAt ?? null) : memo.surfaceAt;
     assertTimeRules(nextPinned, nextForgetAt, nextSurfaceAt);
 
+    // A content change stores the words it replaces; revision and update
+    // commit together or not at all.
+    const applyPatch = () => db.update(memos).set(patch).where(eq(memos.id, memo.id)).returning().get();
     const updated =
       Object.keys(patch).length > 0
-        ? db.update(memos).set(patch).where(eq(memos.id, memo.id)).returning().get()
+        ? patch.content != null
+          ? db.$client.transaction(() => {
+              captureRevision(db, memo.id, memo.content, now);
+              return applyPatch();
+            })()
+          : applyPatch()
         : memo;
 
     if (body.attachmentUids != null) linkAttachments(db, memo.id, memo.creatorId, body.attachmentUids);
