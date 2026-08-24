@@ -94,13 +94,11 @@ ride-alongs — shipped across 2026-08-23/24.
 | **Random memo ("Go fish")** | ✅ v1.23.0 — `GET /memos/random`, guards inherited from `buildMemoListWhere`. | S |
 | **Pinned tags in sidebar** | ✅ v1.23.0 — star a tag, up to 20, stored per member in user settings. | S |
 
-## Wave 3 — Trust & garden-tending (protect the year-two user)
+## Wave 3 — Trust & garden-tending (protect the year-two user) ✅ SHIPPED v1.24.0–v1.29.0
 
 The wave that makes 1,000 memos better than 100 — and makes people willing to keep
 important things here. Trash + history + tag tools share one story: *nothing is ever
-lost unless you asked Dory*. **Trash (v1.24.0), edit history (v1.25.0), tag
-management (v1.26.0), bulk select (v1.27.0), and templates (v1.28.0) shipped; the
-editor-polish batch closes the wave.**
+lost unless you asked Dory*. **Complete (2026-08-24, six releases).**
 
 | Item | Why & how | Effort |
 | --- | --- | --- |
@@ -109,7 +107,7 @@ editor-polish batch closes the wave.**
 | ⭐ NEW **Tag management (rename / merge / color)** | ✅ **v1.26.0** — Settings → Tags: rename rewrites content + payload per memo in one transaction AND captures a revision each (renames are History-covered); merge = rename onto an existing tag with a confirm; 8-color per-user palette (`tagColors` in user settings) shown in chips + sidebar; colors/pins follow a rename. Code-health #1 shipped as the prereq (one tokenizer in shared). | M |
 | **Bulk select** | ✅ **v1.27.0** — Select mode on Home/Archived; `POST /memos/bulk` (archive/unarchive/trash/tag, ≤100, creator-only, one transaction); bulk-tag captures revisions; trash takes comments along. | M |
 | **Memo templates** | ✅ **v1.28.0** — Template button in the compose box: 4 built-ins with `{date}` + up to 20 custom per member (`MEMO_TEMPLATES` user setting, saved-views pattern). | M |
-| **Paste-a-URL → markdown link** · **Slash commands in editor** | Editor polish batch (`/task`, `/table`, `/dory`) while the editor files are open. | S / M |
+| **Paste-a-URL → markdown link** · **Slash commands in editor** | ✅ **v1.29.0** — `/` menu at line start (task/list/heading/code/quote/`/dory`); paste a URL over a selection to link it. `/table` deliberately deferred: tables aren't in the WYSIWYG schema, adding them is its own schema+serializer item. | S / M |
 
 ## Wave 4 — Capture & integrations (top of the funnel)
 
