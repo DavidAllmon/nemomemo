@@ -67,6 +67,16 @@ export const memoRelations = sqliteTable(
   (table) => [uniqueIndex('idx_memo_relation_unique').on(table.memoId, table.relatedMemoId, table.type)],
 );
 
+/** Edit history: the content each edit replaced, newest rows written last. */
+export const memoRevisions = sqliteTable('memo_revision', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  memoId: integer('memo_id')
+    .notNull()
+    .references(() => memos.id, { onDelete: 'cascade' }),
+  content: text('content').notNull(),
+  createdTs: integer('created_ts').notNull().$defaultFn(now),
+});
+
 export const attachments = sqliteTable('attachment', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   uid: text('uid').notNull().unique(),
