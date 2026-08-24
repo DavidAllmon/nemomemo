@@ -136,6 +136,13 @@ export const memoViewSchema = z.object({
   filter: z.string().min(1).max(1024),
 });
 
+/** A one-tap memo skeleton, stored per member like saved views. */
+export const memoTemplateSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1).max(64),
+  content: z.string().min(1).max(CONTENT_LENGTH_LIMIT),
+});
+
 export const userGeneralSettingSchema = z.object({
   defaultVisibility: z.enum(VISIBILITIES).default('PRIVATE'),
   theme: z.enum(['system', 'shallows', 'deep-sea']).default('system'),
@@ -151,6 +158,7 @@ export const userGeneralSettingSchema = z.object({
 export const updateUserSettingsRequestSchema = z.object({
   general: userGeneralSettingSchema.partial().optional(),
   memoViews: z.array(memoViewSchema).max(50).optional(),
+  memoTemplates: z.array(memoTemplateSchema).max(20).optional(),
 });
 
 export const instanceGeneralSettingSchema = z.object({
@@ -306,6 +314,7 @@ export interface InstanceProfileDto {
 export type SigninResponse = { user: UserDto };
 
 export type MemoViewDto = z.infer<typeof memoViewSchema>;
+export type MemoTemplateDto = z.infer<typeof memoTemplateSchema>;
 export type UserGeneralSetting = z.infer<typeof userGeneralSettingSchema>;
 export type InstanceGeneralSetting = z.infer<typeof instanceGeneralSettingSchema>;
 export type InstanceMemoSetting = z.infer<typeof instanceMemoSettingSchema>;

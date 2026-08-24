@@ -13,6 +13,7 @@ import type {
   MemoDto,
   MemoHistoryResponse,
   MemoListResponse,
+  MemoTemplateDto,
   MemoViewDto,
   ShareDto,
   UserDto,
@@ -458,11 +459,16 @@ export function useUser(username: string) {
   });
 }
 
+export interface UserSettingsResponse {
+  general: UserGeneralSetting;
+  memoViews: MemoViewDto[];
+  memoTemplates: MemoTemplateDto[];
+}
+
 export function useUserSettings(enabled = true) {
   return useQuery({
     queryKey: keys.userSettings,
-    queryFn: () =>
-      api<{ general: UserGeneralSetting; memoViews: MemoViewDto[] }>('GET', '/api/v1/users/-/settings'),
+    queryFn: () => api<UserSettingsResponse>('GET', '/api/v1/users/-/settings'),
     enabled,
     staleTime: 60_000,
   });
@@ -471,8 +477,11 @@ export function useUserSettings(enabled = true) {
 export function useUpdateUserSettings() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (patch: { general?: Partial<UserGeneralSetting>; memoViews?: MemoViewDto[] }) =>
-      api<{ general: UserGeneralSetting; memoViews: MemoViewDto[] }>('PATCH', '/api/v1/users/-/settings', patch),
+    mutationFn: (patch: {
+      general?: Partial<UserGeneralSetting>;
+      memoViews?: MemoViewDto[];
+      memoTemplates?: MemoTemplateDto[];
+    }) => api<UserSettingsResponse>('PATCH', '/api/v1/users/-/settings', patch),
     onSuccess: (data) => client.setQueryData(keys.userSettings, data),
   });
 }
@@ -486,9 +495,7 @@ export function useTogglePinnedTag() {
   const client = useQueryClient();
   const update = useUpdateUserSettings();
   return (tag: string) => {
-    const current = client.getQueryData<{ general: UserGeneralSetting; memoViews: MemoViewDto[] }>(
-      keys.userSettings,
-    );
+    const current = client.getQueryData<UserSettingsResponse>(keys.userSettings);
     const pinned = current?.general.pinnedTags ?? [];
     const next = pinned.includes(tag) ? pinned.filter((name) => name !== tag) : [...pinned, tag];
     if (current) {

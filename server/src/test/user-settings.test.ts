@@ -81,3 +81,55 @@ describe('user settings — pinned tags', () => {
     expect((await getSettings(app, dory)).general.pinnedTags).toEqual([]);
   });
 });
+
+describe('user settings — memo templates', () => {
+  const template = (id: string, title = 'Standup') => ({
+    id,
+    title,
+    content: '**Yesterday**\n\n- ',
+  });
+
+  it('defaults to an empty list', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const response = await jsonRequest(app, 'GET', '/api/v1/users/-/settings', undefined, cookie);
+    const json = (await response.json()) as { memoTemplates: unknown[] };
+    expect(json.memoTemplates).toEqual([]);
+  });
+
+  it('round-trips through PATCH', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const patch = await jsonRequest(
+      app,
+      'PATCH',
+      '/api/v1/users/-/settings',
+      { memoTemplates: [template('t1'), template('t2', 'Journal')] },
+      cookie,
+    );
+    expect(patch.status).toBe(200);
+    const read = await jsonRequest(app, 'GET', '/api/v1/users/-/settings', undefined, cookie);
+    const json = (await read.json()) as { memoTemplates: { id: string; title: string }[] };
+    expect(json.memoTemplates.map((t) => t.title)).toEqual(['Standup', 'Journal']);
+  });
+
+  it('rejects more than 20 templates and empty titles', async () => {
+    const { app } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const many = Array.from({ length: 21 }, (_, i) => template(`t${i}`));
+    expect(
+      (await jsonRequest(app, 'PATCH', '/api/v1/users/-/settings', { memoTemplates: many }, cookie)).status,
+    ).toBe(400);
+    expect(
+      (
+        await jsonRequest(
+          app,
+          'PATCH',
+          '/api/v1/users/-/settings',
+          { memoTemplates: [{ id: 'x', title: '', content: 'y' }] },
+          cookie,
+        )
+      ).status,
+    ).toBe(400);
+  });
+});

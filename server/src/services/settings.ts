@@ -2,10 +2,12 @@ import {
   DEFAULT_REACTIONS,
   instanceGeneralSettingSchema,
   instanceMemoSettingSchema,
+  memoTemplateSchema,
   memoViewSchema,
   userGeneralSettingSchema,
   type InstanceGeneralSetting,
   type InstanceMemoSetting,
+  type MemoTemplateDto,
   type MemoViewDto,
   type UserGeneralSetting,
 } from '@nemomemo/shared';
@@ -119,5 +121,17 @@ export function getMemoViews(db: Db, userId: number): MemoViewDto[] {
 export function setMemoViews(db: Db, userId: number, views: MemoViewDto[]): MemoViewDto[] {
   const next = memoViewsSchema.parse(views);
   writeUserSetting(db, userId, 'MEMO_VIEWS', next);
+  return next;
+}
+
+const memoTemplatesSchema = z.array(memoTemplateSchema);
+
+export function getMemoTemplates(db: Db, userId: number): MemoTemplateDto[] {
+  return readUserSetting(db, userId, 'MEMO_TEMPLATES', memoTemplatesSchema, []);
+}
+
+export function setMemoTemplates(db: Db, userId: number, templates: MemoTemplateDto[]): MemoTemplateDto[] {
+  const next = memoTemplatesSchema.parse(templates);
+  writeUserSetting(db, userId, 'MEMO_TEMPLATES', next);
   return next;
 }

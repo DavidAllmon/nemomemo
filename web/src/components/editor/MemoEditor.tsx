@@ -4,6 +4,7 @@ import { DORY_WINDOWS, type DoryWindow, type MemoDto, type Visibility } from '@n
 import { Bubbles } from '@/components/Bubbles.js';
 import { VoiceControls } from '@/components/editor/VoiceControls.js';
 import { RichEditor, type RichEditorHandle } from '@/components/editor/RichEditor.js';
+import { TemplatesMenu } from '@/components/editor/TemplatesMenu.js';
 import { BottleDialog } from '@/components/memo/BottleDialog.js';
 import { Button } from '@/components/ui/button.js';
 import {
@@ -357,6 +358,20 @@ export function MemoEditor({
               Bottle
             </button>
           </Tip>
+        )}
+
+        {isEdit || isComment ? null : (
+          <TemplatesMenu
+            hasContent={hasContent}
+            getMarkdown={() => editorRef.current?.getMarkdown() ?? ''}
+            onApply={(content) => {
+              const current = editorRef.current?.getMarkdown().trim() ?? '';
+              const next = current ? `${current.replace(/\s+$/, '')}\n\n${content}` : content;
+              editorRef.current?.setMarkdown(next);
+              editorRef.current?.focus();
+              setHasContent(true);
+            }}
+          />
         )}
 
         <BottleDialog

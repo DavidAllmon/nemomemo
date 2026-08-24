@@ -29,8 +29,10 @@ import {
 } from '../services/memo-service.js';
 import {
   getInstanceGeneral,
+  getMemoTemplates,
   getMemoViews,
   getUserGeneral,
+  setMemoTemplates,
   setMemoViews,
   setUserGeneral,
 } from '../services/settings.js';
@@ -120,6 +122,7 @@ export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
     return c.json({
       general: getUserGeneral(db, viewer.id),
       memoViews: getMemoViews(db, viewer.id),
+      memoTemplates: getMemoTemplates(db, viewer.id),
     });
   });
 
@@ -128,7 +131,10 @@ export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
     const body = c.req.valid('json');
     const general = body.general ? setUserGeneral(db, viewer.id, body.general) : getUserGeneral(db, viewer.id);
     const memoViews = body.memoViews ? setMemoViews(db, viewer.id, body.memoViews) : getMemoViews(db, viewer.id);
-    return c.json({ general, memoViews });
+    const memoTemplates = body.memoTemplates
+      ? setMemoTemplates(db, viewer.id, body.memoTemplates)
+      : getMemoTemplates(db, viewer.id);
+    return c.json({ general, memoViews, memoTemplates });
   });
 
   app.patch('/-/account', zValidator('json', updateAccountRequestSchema), async (c) => {
