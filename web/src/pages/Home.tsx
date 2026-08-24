@@ -51,6 +51,7 @@ export function HomePage() {
       <FilterChipBar />
       <MemoFeed
         params={{ scope: 'home', filter: combined || undefined }}
+        selectable
         emptyTitle="No memos yet"
         emptyHint="Just keep swimming — write your first thought above. 🫧"
       />

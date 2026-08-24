@@ -10,6 +10,7 @@ export function ArchivedPage() {
       <FilterChipBar />
       <MemoFeed
         params={{ scope: 'home', state: 'ARCHIVED', filter: expression }}
+        selectable
         emptyTitle="Nothing tucked away"
         emptyHint="Archived memos are kept safe here — even Dory can't forget them."
       />

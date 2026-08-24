@@ -310,6 +310,22 @@ export function useEmptyTrash() {
   });
 }
 
+export interface BulkMemoInput {
+  uids: string[];
+  action: 'archive' | 'unarchive' | 'trash' | 'tag';
+  tag?: string;
+}
+
+/** One transactional action over many of the viewer's own memos. */
+export function useBulkMemoAction() {
+  const invalidate = useInvalidateMemos();
+  return useMutation({
+    mutationFn: (input: BulkMemoInput) =>
+      api<{ affected: number }>('POST', '/api/v1/memos/bulk', input),
+    onSuccess: invalidate,
+  });
+}
+
 /** Rename (or, when `to` already exists, merge) a tag across every memo you own. */
 export function useRenameTag() {
   const client = useQueryClient();
