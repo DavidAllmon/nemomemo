@@ -32,6 +32,8 @@ export interface Config {
   ocr: { langs: string[] } | null;
   /** Voice transcription; null (NEMOMEMO_TRANSCRIBE_URL unset) disables it. */
   transcribe: { url: string; key: string | null; model: string } | null;
+  /** Live dictation via OpenAI Realtime; null (NEMOMEMO_DICTATE_KEY unset) disables it. */
+  dictate: { key: string; model: string } | null;
 }
 
 function ocrFromEnv(): { langs: string[] } | null {
@@ -52,6 +54,12 @@ function transcribeFromEnv(): { url: string; key: string | null; model: string }
     key: process.env.NEMOMEMO_TRANSCRIBE_KEY || null,
     model: process.env.NEMOMEMO_TRANSCRIBE_MODEL || 'whisper-1',
   };
+}
+
+function dictateFromEnv(): { key: string; model: string } | null {
+  const key = process.env.NEMOMEMO_DICTATE_KEY;
+  if (!key) return null;
+  return { key, model: process.env.NEMOMEMO_DICTATE_MODEL || 'gpt-live-transcribe' };
 }
 
 function smtpFromEnv(): SmtpConfig | null {
@@ -81,5 +89,6 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
     smtp: 'smtp' in overrides ? (overrides.smtp ?? null) : smtpFromEnv(),
     ocr: 'ocr' in overrides ? (overrides.ocr ?? null) : ocrFromEnv(),
     transcribe: 'transcribe' in overrides ? (overrides.transcribe ?? null) : transcribeFromEnv(),
+    dictate: 'dictate' in overrides ? (overrides.dictate ?? null) : dictateFromEnv(),
   };
 }

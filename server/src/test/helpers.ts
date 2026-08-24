@@ -23,7 +23,12 @@ export interface TestContext {
 
 export function makeTestApp(
   overrides: Partial<Config> = {},
-  options: { email?: boolean; ocrEngine?: OcrEngine; transcribeEngine?: OcrEngine } = {},
+  options: {
+    email?: boolean;
+    ocrEngine?: OcrEngine;
+    transcribeEngine?: OcrEngine;
+    dictationFetch?: typeof fetch;
+  } = {},
 ): TestContext {
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'nemomemo-test-'));
   const config = loadConfig({
@@ -33,6 +38,7 @@ export function makeTestApp(
     smtp: null,
     ocr: null, // never spin up real tesseract in tests
     transcribe: null, // never hit a real transcription endpoint in tests
+    dictate: null, // never mint real OpenAI sessions in tests
     ...overrides,
   });
   fs.mkdirSync(config.uploadsDir, { recursive: true });
@@ -50,7 +56,7 @@ export function makeTestApp(
   const transcribe = options.transcribeEngine
     ? new OcrQueue(db, config.uploadsDir, options.transcribeEngine)
     : null;
-  const app = makeApp(db, config, { mailer, ocr, transcribe });
+  const app = makeApp(db, config, { mailer, ocr, transcribe, dictationFetch: options.dictationFetch });
   return { app, db, config, sentMail, ocr, transcribe };
 }
 

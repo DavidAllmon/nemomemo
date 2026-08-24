@@ -82,6 +82,7 @@ export function instanceRoutes(db: Db, config: Config, mailer: Mailer | null): H
       allowRegistration: general.allowRegistration,
       needsSetup: userCount === 0,
       emailEnabled: mailer != null,
+      dictationEnabled: config.dictate != null,
     };
     return c.json(profile);
   });

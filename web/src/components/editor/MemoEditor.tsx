@@ -2,6 +2,7 @@ import { Earth, Fish, Hourglass, Image as ImageIcon, Lock, Paperclip, Users, X }
 import { useRef, useState } from 'react';
 import { DORY_WINDOWS, type DoryWindow, type MemoDto, type Visibility } from '@nemomemo/shared';
 import { Bubbles } from '@/components/Bubbles.js';
+import { DictationButton } from '@/components/editor/DictationButton.js';
 import { RecordButton } from '@/components/editor/RecordButton.js';
 import { RichEditor, type RichEditorHandle } from '@/components/editor/RichEditor.js';
 import { BottleDialog } from '@/components/memo/BottleDialog.js';
@@ -16,6 +17,7 @@ import {
 import { Spinner } from '@/components/ui/misc.js';
 import {
   useCreateMemo,
+  useInstanceProfile,
   useUpdateMemo,
   useUploadAttachment,
   useUserSettings,
@@ -80,6 +82,8 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
   );
   const [uploading, setUploading] = useState(0);
   const [burst, setBurst] = useState(0);
+  const { data: profile } = useInstanceProfile();
+  const [dictationPreview, setDictationPreview] = useState('');
 
   const effectiveVisibility = visibility ?? settings?.general.defaultVisibility ?? 'PRIVATE';
 
@@ -189,10 +193,27 @@ export function MemoEditor({ memo, onDone }: { memo?: MemoDto; onDone?: () => vo
                 }}
               />
             </label>
-            <RecordButton onFile={(file) => void uploadFiles([file])} />
+            {profile?.dictationEnabled ? (
+              <DictationButton
+                onPreview={setDictationPreview}
+                onFinalText={(text) => {
+                  editorRef.current?.insertText(text);
+                  setHasContent(true);
+                }}
+              />
+            ) : (
+              <RecordButton onFile={(file) => void uploadFiles([file])} />
+            )}
           </>
         }
       />
+
+      {dictationPreview ? (
+        <p aria-live="polite" className="px-1 text-sm italic text-muted-foreground">
+          {dictationPreview}
+          <span className="motion-safe:animate-pulse">🫧</span>
+        </p>
+      ) : null}
 
       {attachments.length > 0 || uploading > 0 ? (
         <div className="flex flex-wrap gap-1.5">

@@ -271,6 +271,8 @@ export interface InstanceProfileDto {
   allowRegistration: boolean;
   needsSetup: boolean;
   emailEnabled: boolean;
+  /** Live dictation (speech-to-text while composing) is configured. */
+  dictationEnabled?: boolean;
 }
 
 export type SigninResponse = { user: UserDto };

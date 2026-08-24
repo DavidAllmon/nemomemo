@@ -9,6 +9,7 @@ import { transcribeEngine } from './services/transcribe.js';
 import { viewerMiddleware, type AppEnv } from './middleware/auth.js';
 import { attachmentRoutes } from './routes/attachments.js';
 import { authRoutes } from './routes/auth.js';
+import { dictationRoutes } from './routes/dictation.js';
 import { fileRoutes } from './routes/file.js';
 import { inboxRoutes } from './routes/inbox.js';
 import { instanceRoutes } from './routes/instance.js';
@@ -35,6 +36,8 @@ export interface AppDeps {
   ocr?: OcrQueue | null;
   /** Voice transcription queue; defaults from config.transcribe. Explicit null disables it. */
   transcribe?: OcrQueue | null;
+  /** Outbound fetch for the dictation session mint; tests inject a fake. */
+  dictationFetch?: typeof fetch;
 }
 
 export function makeApp(db: Db, config: Config, deps: AppDeps = {}): Hono<AppEnv> {
@@ -88,6 +91,7 @@ export function makeApp(db: Db, config: Config, deps: AppDeps = {}): Hono<AppEnv
   api.route('/users', userRoutes(db, mailer));
   api.route('/inbox', inboxRoutes(db));
   api.route('/attachments', attachmentRoutes(db, config, ocr, transcribe));
+  api.route('/dictation', dictationRoutes(config, deps.dictationFetch));
 
   app.route('/api/v1', api);
   app.route('/file', fileRoutes(db, config));
