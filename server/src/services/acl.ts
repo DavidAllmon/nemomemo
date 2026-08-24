@@ -25,6 +25,10 @@ export function checkMemoRead(
 ): MemoReadDenial {
   const effective = parent ?? memo;
 
+  // Trash: deleted means gone from every read path — its creator and share
+  // tokens included. The creator's only door back in is /memos/trash.
+  if (memo.deletedAt != null || effective.deletedAt != null) return 'NOT_FOUND';
+
   // Dory: an expired memo is gone the instant its time is up, even if the
   // sweeper hasn't run yet — and a comment dies with its expired parent.
   // Not even a share token resurrects it.
@@ -74,6 +78,7 @@ export function checkMemoRead(
  */
 export function canGlimpseMemo(memo: MemoRow, viewer: UserRow | null, nowEpoch?: number): boolean {
   const now = nowEpoch ?? Math.floor(Date.now() / 1000);
+  if (memo.deletedAt != null) return false;
   if (memo.forgetAt != null && memo.forgetAt <= now) return false;
   if (memo.surfaceAt != null && memo.surfaceAt > now) return viewer?.id === memo.creatorId;
   if (memo.rowStatus === 'ARCHIVED') return viewer?.id === memo.creatorId;

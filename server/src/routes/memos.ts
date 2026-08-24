@@ -382,6 +382,7 @@ export function memoRoutes(db: Db, config: Config): Hono<AppEnv> {
                 eq(memos.rowStatus, 'NORMAL'),
                 inArray(memos.id, commentIds),
                 or(isNull(memos.forgetAt), gt(memos.forgetAt, nowSeconds())),
+                isNull(memos.deletedAt),
               ),
             )
             .orderBy(asc(memos.createdTs), asc(memos.id))

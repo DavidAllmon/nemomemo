@@ -49,6 +49,8 @@ export const memos = sqliteTable('memo', {
   // Keep in sync with the CHECK constraint in migration 0005.
   remindEvery: text('remind_every', { enum: ['DAILY', 'WEEKLY', 'MONTHLY'] }),
   surfaceAt: integer('surface_at'),
+  /** Trash: set when deleted; the scheduler purges after TRASH_RETENTION_SECONDS. */
+  deletedAt: integer('deleted_at'),
 });
 
 export const memoRelations = sqliteTable(

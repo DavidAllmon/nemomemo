@@ -100,6 +100,7 @@ export function attachmentRoutes(
             WHERE attachment.creator_id = ?
               AND (memo.forget_at IS NULL OR memo.forget_at > ?)
               AND (memo.surface_at IS NULL OR memo.surface_at <= ?)
+              AND memo.deleted_at IS NULL
               AND EXISTS (SELECT 1 FROM json_each(memo.payload, '$.tags') WHERE json_each.value = ?)
             ORDER BY attachment.created_ts DESC, attachment.id DESC`,
         )

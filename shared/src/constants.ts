@@ -46,3 +46,6 @@ export const MAX_PAGE_SIZE = 200;
 export const USERNAME_REGEX = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,30}[a-zA-Z0-9])?$/;
 
 export const APP_NAME = 'NemoMemo';
+
+/** How long a deleted memo waits in the trash before the scheduler purges it. */
+export const TRASH_RETENTION_SECONDS = 7 * 86_400;

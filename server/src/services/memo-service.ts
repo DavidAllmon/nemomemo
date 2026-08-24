@@ -197,6 +197,7 @@ export function buildMemoDtos(db: Db, rows: MemoRow[], viewer: UserRow | null): 
       remindAt: row.remindAt,
       remindEvery: row.remindEvery,
       surfaceAt: row.surfaceAt,
+      deletedAt: row.deletedAt,
       parentUid,
       referencing,
       referencedBy,
@@ -268,6 +269,10 @@ export function buildMemoListWhere(
   // (even the owner's — that's the point) until its day arrives.
   where.push('(memo.surface_at IS NULL OR memo.surface_at <= ?)');
   params.push(now);
+
+  // Trash: a deleted memo is out of every list and aggregation, its creator's
+  // included. /memos/trash queries deleted_at directly instead.
+  where.push('memo.deleted_at IS NULL');
 
   if (!opts.includeComments) {
     where.push(
@@ -440,6 +445,7 @@ export function rawToMemoRow(raw: Record<string, unknown>): MemoRow {
     remindAt: (raw.remind_at as number | null) ?? null,
     remindEvery: (raw.remind_every as MemoRow['remindEvery']) ?? null,
     surfaceAt: (raw.surface_at as number | null) ?? null,
+    deletedAt: (raw.deleted_at as number | null) ?? null,
   };
 }
 

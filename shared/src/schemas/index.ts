@@ -226,6 +226,8 @@ export interface MemoDto {
   remindAt: number | null;
   remindEvery: RemindRepeat | null;
   surfaceAt: number | null;
+  /** Set while the memo is in the trash; null otherwise. */
+  deletedAt: number | null;
   parentUid: string | null;
   referencing: RelatedMemoStubDto[];
   referencedBy: RelatedMemoStubDto[];

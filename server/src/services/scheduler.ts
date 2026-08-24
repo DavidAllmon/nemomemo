@@ -41,7 +41,9 @@ export function runSchedulerTick(db: Db, deps: SchedulerDeps, now = nowSeconds()
   // 1) Bottles wash ashore: clear surface_at and announce the arrival.
   const surfaceBottles = sqlite.transaction(() => {
     const due = sqlite
-      .prepare('SELECT id, creator_id FROM memo WHERE surface_at IS NOT NULL AND surface_at <= ?')
+      .prepare(
+        'SELECT id, creator_id FROM memo WHERE surface_at IS NOT NULL AND surface_at <= ? AND deleted_at IS NULL',
+      )
       .all(now) as { id: number; creator_id: number }[];
     const clear = sqlite.prepare('UPDATE memo SET surface_at = NULL WHERE id = ?');
     const notify = sqlite.prepare(
@@ -73,7 +75,8 @@ export function runSchedulerTick(db: Db, deps: SchedulerDeps, now = nowSeconds()
                 user.username, user.email
          FROM memo JOIN user ON user.id = memo.creator_id
          WHERE memo.remind_at IS NOT NULL AND memo.remind_at <= ?
-           AND (memo.forget_at IS NULL OR memo.forget_at > ?)`,
+           AND (memo.forget_at IS NULL OR memo.forget_at > ?)
+           AND memo.deleted_at IS NULL`,
       )
       .all(now, now) as DueReminder[];
     const reschedule = sqlite.prepare('UPDATE memo SET remind_at = ? WHERE id = ?');
@@ -109,7 +112,7 @@ export function runSchedulerTick(db: Db, deps: SchedulerDeps, now = nowSeconds()
       .prepare(
         `SELECT id, creator_id FROM memo
          WHERE forget_at IS NOT NULL AND forget_at > ? AND forget_at <= ?
-           AND row_status = 'NORMAL'
+           AND row_status = 'NORMAL' AND deleted_at IS NULL
            AND NOT EXISTS (
              SELECT 1 FROM inbox WHERE inbox.type = 'DORY_WARNING' AND inbox.memo_id = memo.id
            )`,
