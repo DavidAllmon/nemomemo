@@ -127,6 +127,57 @@ describe('trash — a deleted memo is gone from every read path', () => {
     expect(memo.referencing).toHaveLength(0);
   });
 
+  it('locks its attachments out of the raw file server', async () => {
+    const { app, db } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const form = new FormData();
+    form.append('file', new File(['fake-image-bytes'], 'reef.png', { type: 'image/png' }));
+    const upload = await app.request('/api/v1/attachments', { method: 'POST', headers: { cookie }, body: form });
+    const { attachment } = (await upload.json()) as { attachment: { uid: string; filename: string } };
+    const memo = await createMemo(app, cookie, { content: 'has a picture', attachmentUids: [attachment.uid] });
+
+    const url = `/file/attachments/${attachment.uid}/${attachment.filename}`;
+    expect((await app.request(url, { headers: { cookie } })).status).toBe(200);
+    trash(db, memo.uid);
+    // An attachment can never out-scope its memo — not even for its owner.
+    expect((await app.request(url, { headers: { cookie } })).status).toBe(404);
+  });
+
+  it('leaves the attachment gallery', async () => {
+    const { app, db } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const form = new FormData();
+    form.append('file', new File(['fake-image-bytes'], 'reef.png', { type: 'image/png' }));
+    const upload = await app.request('/api/v1/attachments', { method: 'POST', headers: { cookie }, body: form });
+    const { attachment } = (await upload.json()) as { attachment: { uid: string } };
+    const memo = await createMemo(app, cookie, { content: 'gallery #trips', attachmentUids: [attachment.uid] });
+
+    const gallery = async () => {
+      const response = await jsonRequest(app, 'GET', '/api/v1/attachments?tag=trips', undefined, cookie);
+      return ((await response.json()) as { attachments: { uid: string }[] }).attachments;
+    };
+    expect(await gallery()).toHaveLength(1);
+    trash(db, memo.uid);
+    expect(await gallery()).toHaveLength(0);
+  });
+
+  it('stays out of the markdown export', async () => {
+    const { app, db, config } = makeTestApp();
+    const cookie = await signup(app, 'marlin');
+    const keeper = await createMemo(app, cookie, { content: 'exported' });
+    const doomed = await createMemo(app, cookie, { content: 'not exported' });
+    trash(db, doomed.uid);
+
+    const { buildMarkdownExport } = await import('../services/export-service.js');
+    const { users } = await import('../db/schema.js');
+    const { eq } = await import('drizzle-orm');
+    const viewer = db.select().from(users).where(eq(users.username, 'marlin')).get()!;
+    const exported = buildMarkdownExport(db, config, viewer);
+    const paths = exported.documents.map((doc) => doc.path).join(' ');
+    expect(paths).toContain(keeper.uid);
+    expect(paths).not.toContain(doomed.uid);
+  });
+
   it('is never fished up by Go fish', async () => {
     const { app, db } = makeTestApp();
     const cookie = await signup(app, 'marlin');
