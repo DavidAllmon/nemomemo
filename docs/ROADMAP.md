@@ -111,11 +111,12 @@ lost unless you asked Dory*. **Complete (2026-08-24, six releases).**
 
 ## Wave 4 — Capture & integrations (top of the funnel)
 
-Personal access tokens unlock everything else here — build them first.
+Personal access tokens unlock everything else here — **shipped v1.30.0**, so the rest
+of this wave can be built on them.
 
 | Item | Why & how | Effort |
 | --- | --- | --- |
-| **Personal access tokens** (prereq) | Bearer auth for scripts, Shortcuts, bots: hashed token table with scopes (create-only vs full), Settings UI. Docs: admin.mdx. | M |
+| **Personal access tokens** (prereq) | ✅ **v1.30.0** — migration 0010 `access_token` (SHA-256 opaque `nm_` tokens); bearer resolution *after* the session cookie; FULL vs CREATE_ONLY enforced by one API-router gate; token management, account changes, and admin are session-only, so a token can never escalate. Settings → Tokens with a one-time reveal. | M |
 | ⭐ NEW **Telegram capture bot** | The cheapest mobile capture channel — no app store, no install. Self-host: `NEMOMEMO_TELEGRAM_BOT_TOKEN` + a long-polling service that maps a chat to a user via a one-time link code, then posts memos through the PAT path (`#tags` work inline). Cloud: one shared bot in `server/src/cloud/` mapping chat → reef+user — ship-dark, extend the isolation suite. Discord second on the same service abstraction. Docs: deploy.mdx. | M |
 | **PWA + mobile share target** | Install on a phone; share a link/photo from any app into a memo. Biggest single capture win. | M |
 | **Webhooks out** | memo.created/updated/deleted (Standard Webhooks signing) → automation, Zapier/n8n. | M |
