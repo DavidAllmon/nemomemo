@@ -1,7 +1,7 @@
 {
   "name": "nemomemo",
   "private": true,
-  "version": "1.30.0",
+  "version": "1.31.0",
   "description": "NemoMemo — a cute, self-hosted memo timeline. Just keep swimming.",
   "license": "Elastic-2.0",
   "scripts": {
