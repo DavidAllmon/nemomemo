@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  ACCESS_TOKEN_SCOPES,
   CONTENT_LENGTH_LIMIT,
   DORY_WINDOWS,
   REMIND_REPEATS,
@@ -8,6 +9,7 @@ import {
   TAG_COLOR_NAMES,
   USERNAME_REGEX,
   VISIBILITIES,
+  type AccessTokenScope,
   type RemindRepeat,
 } from '../constants.js';
 
@@ -128,6 +130,12 @@ export const adminUpdateUserRequestSchema = z.object({
 export const renameTagRequestSchema = z.object({
   from: z.string().min(1).max(128),
   to: z.string().min(1).max(128),
+});
+
+export const createAccessTokenRequestSchema = z.object({
+  name: z.string().trim().min(1).max(64),
+  scope: z.enum(ACCESS_TOKEN_SCOPES).default('FULL'),
+  expiresIn: z.enum(['30d', '90d', '1y', 'never']).default('never'),
 });
 
 export const memoViewSchema = z.object({
@@ -268,6 +276,22 @@ export interface MemoRevisionDto {
 
 export interface MemoHistoryResponse {
   revisions: MemoRevisionDto[];
+}
+
+export interface AccessTokenDto {
+  id: number;
+  name: string;
+  scope: AccessTokenScope;
+  createdTs: number;
+  /** null until something actually uses the token. */
+  lastUsedTs: number | null;
+  expiresTs: number | null;
+}
+
+/** The plaintext token travels exactly once — at creation. */
+export interface CreateAccessTokenResponse {
+  token: AccessTokenDto;
+  plaintext: string;
 }
 
 export interface ShareDto {

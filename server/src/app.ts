@@ -6,7 +6,7 @@ import path from 'node:path';
 import { makeSmtpMailer, type Mailer } from './services/email.js';
 import { OcrQueue, tesseractEngine } from './services/ocr.js';
 import { transcribeEngine } from './services/transcribe.js';
-import { viewerMiddleware, type AppEnv } from './middleware/auth.js';
+import { createOnlyScopeGate, viewerMiddleware, type AppEnv } from './middleware/auth.js';
 import { attachmentRoutes } from './routes/attachments.js';
 import { authRoutes } from './routes/auth.js';
 import { dictationRoutes } from './routes/dictation.js';
@@ -15,6 +15,7 @@ import { inboxRoutes } from './routes/inbox.js';
 import { instanceRoutes } from './routes/instance.js';
 import { memoRoutes } from './routes/memos.js';
 import { shareRoutes } from './routes/shares.js';
+import { tokenRoutes } from './routes/tokens.js';
 import { userRoutes } from './routes/users.js';
 
 /** Baseline security headers, set only where a route hasn't already chosen its own. */
@@ -84,7 +85,9 @@ export function makeApp(db: Db, config: Config, deps: AppDeps = {}): Hono<AppEnv
   app.get('/healthz', (c) => c.json({ ok: true }));
 
   const api = new Hono<AppEnv>();
+  api.use('*', createOnlyScopeGate());
   api.route('/auth', authRoutes(db, config, mailer));
+  api.route('/tokens', tokenRoutes(db));
   api.route('/instance', instanceRoutes(db, config, mailer));
   api.route('/memos', memoRoutes(db, config));
   api.route('/shares', shareRoutes(db));

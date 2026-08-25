@@ -19,7 +19,7 @@ import { sendInviteEmail, sendVerificationEmail } from './auth.js';
 import { emailChangedMessage, passwordChangedMessage, trySend, type Mailer } from '../services/email.js';
 import { randomBytes } from 'node:crypto';
 import { nowSeconds } from '../lib/time.js';
-import { requireAdmin, requireViewer, type AppEnv } from '../middleware/auth.js';
+import { requireAdmin, requireSessionViewer, requireViewer, type AppEnv } from '../middleware/auth.js';
 import { captureRevision } from '../services/revision-service.js';
 import {
   aggregateTagCounts,
@@ -138,7 +138,9 @@ export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
   });
 
   app.patch('/-/account', zValidator('json', updateAccountRequestSchema), async (c) => {
-    const viewer = requireViewer(c);
+    // Session-only: an access token must never be able to change the email or
+    // password of the account behind it — that would turn a leak into a takeover.
+    const viewer = requireSessionViewer(c);
     const body = c.req.valid('json');
     const patch: Record<string, unknown> = { updatedTs: nowSeconds() };
     if (body.nickname != null) patch.nickname = body.nickname;

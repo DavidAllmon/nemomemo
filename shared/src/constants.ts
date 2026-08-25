@@ -54,6 +54,28 @@ export const TRASH_RETENTION_SECONDS = 7 * 86_400;
 export const REVISION_KEEP_COUNT = 20;
 export const REVISION_RETENTION_SECONDS = 90 * 86_400;
 
+/**
+ * Personal access tokens. CREATE_ONLY can post new memos and attachments and
+ * nothing else — the scope to hand a capture script. FULL can do anything a
+ * signed-in member can EXCEPT manage tokens, change the account, or act as
+ * admin; those stay session-only so a leaked token can't take an account over.
+ */
+export const ACCESS_TOKEN_SCOPES = ['CREATE_ONLY', 'FULL'] as const;
+export type AccessTokenScope = (typeof ACCESS_TOKEN_SCOPES)[number];
+
+/** Every token starts with this, so a leaked one is recognizable in logs. */
+export const ACCESS_TOKEN_PREFIX = 'nm_';
+
+export const ACCESS_TOKEN_EXPIRY_PRESETS: Record<string, number | null> = {
+  '30d': 30 * 86_400,
+  '90d': 90 * 86_400,
+  '1y': 365 * 86_400,
+  never: null,
+};
+
+/** How many tokens one member may hold at once. */
+export const ACCESS_TOKEN_LIMIT = 20;
+
 /** The reef palette a member can paint their tags with. */
 export const TAG_COLOR_NAMES = [
   'ocean',

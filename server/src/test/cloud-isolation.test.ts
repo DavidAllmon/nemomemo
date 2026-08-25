@@ -108,6 +108,27 @@ describe('cloud cross-tenant isolation', () => {
     expect(replayed.status).toBe(401);
   });
 
+  it('an access token from one reef is worthless on another', async () => {
+    const coralCookie = await reefSignup(ctx.app, coral, 'nemo');
+    await reefSignup(ctx.app, shell, 'pearl');
+
+    const minted = await reefRequest(ctx.app, 'POST', coral, '/api/v1/tokens', { name: 'cli' }, coralCookie);
+    expect(minted.status).toBe(201);
+    const { plaintext } = (await minted.json()) as { plaintext: string };
+
+    // Works on its own reef…
+    const own = await ctx.app.request(`http://${coral}/api/v1/auth/me`, {
+      headers: { host: coral, authorization: `Bearer ${plaintext}` },
+    });
+    expect(own.status).toBe(200);
+
+    // …and is anonymous on any other, because each reef has its own database.
+    const replayed = await ctx.app.request(`http://${shell}/api/v1/auth/me`, {
+      headers: { host: shell, authorization: `Bearer ${plaintext}` },
+    });
+    expect(replayed.status).toBe(401);
+  });
+
   it('signin fails on a reef where the user does not exist', async () => {
     await reefSignup(ctx.app, coral, 'nemo');
     await reefSignup(ctx.app, shell, 'pearl');

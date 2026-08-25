@@ -29,6 +29,24 @@ export const userSessions = sqliteTable('user_session', {
   lastSeenTs: integer('last_seen_ts').notNull().$defaultFn(now),
 });
 
+/**
+ * Personal access tokens: bearer auth for scripts and bots. Opaque token,
+ * SHA-256 stored (never the plaintext) — the same design as user_session.
+ */
+export const accessTokens = sqliteTable('access_token', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  tokenHash: text('token_hash').notNull().unique(),
+  // Keep in sync with the CHECK constraint in migration 0010.
+  scope: text('scope', { enum: ['CREATE_ONLY', 'FULL'] }).notNull().default('FULL'),
+  createdTs: integer('created_ts').notNull().$defaultFn(now),
+  lastUsedTs: integer('last_used_ts'),
+  expiresTs: integer('expires_ts'),
+});
+
 export const memos = sqliteTable('memo', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   uid: text('uid').notNull().unique(),
@@ -165,6 +183,7 @@ export const authTokens = sqliteTable('auth_token', {
   usedTs: integer('used_ts'),
 });
 
+export type AccessTokenRow = typeof accessTokens.$inferSelect;
 export type UserRow = typeof users.$inferSelect;
 export type MemoRow = typeof memos.$inferSelect;
 export type AttachmentRow = typeof attachments.$inferSelect;
