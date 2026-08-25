@@ -1,7 +1,13 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { Pencil, Settings as SettingsIcon } from 'lucide-react';
+import { Check, Copy, KeyRound, Pencil, Settings as SettingsIcon } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { TAG_COLOR_NAMES, type TagColor, type Visibility } from '@nemomemo/shared';
+import {
+  TAG_COLOR_NAMES,
+  type AccessTokenDto,
+  type AccessTokenScope,
+  type TagColor,
+  type Visibility,
+} from '@nemomemo/shared';
 import { Button } from '@/components/ui/button.js';
 import { Avatar, Input } from '@/components/ui/misc.js';
 import { Dialog, DialogClose, DialogContent } from '@/components/ui/overlays.js';
@@ -14,8 +20,11 @@ import {
   useCloudSnapshots,
   useInstanceProfile,
   useInstanceSettings,
+  useAccessTokens,
+  useCreateAccessToken,
   useMembers,
   useRenameTag,
+  useRevokeAccessToken,
   useTags,
   useUpdateUserSettings,
   useUserSettings,
@@ -23,9 +32,9 @@ import {
   type CloudBillingInfo,
 } from '@/hooks/queries.js';
 import { api, ApiError, apiUpload } from '@/lib/api.js';
-import { cn } from '@/lib/utils.js';
+import { absoluteTime, cn } from '@/lib/utils.js';
 
-type Section = 'account' | 'preferences' | 'tags' | 'members' | 'instance' | 'backups' | 'billing';
+type Section = 'account' | 'preferences' | 'tags' | 'tokens' | 'members' | 'instance' | 'backups' | 'billing';
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -325,6 +334,200 @@ function TagsSection() {
             </DialogClose>
             <Button disabled={renameTag.isPending} onClick={() => merge && doRename(merge.from, merge.to)}>
               Merge them
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </SectionCard>
+  );
+}
+
+const SCOPE_LABELS: Record<AccessTokenScope, { label: string; hint: string }> = {
+  FULL: { label: 'Full access', hint: 'Read and write memos, like a signed-in you' },
+  CREATE_ONLY: { label: 'Create only', hint: 'Can post new memos and nothing else' },
+};
+
+const EXPIRY_LABELS: [string, string][] = [
+  ['30d', '30 days'],
+  ['90d', '90 days'],
+  ['1y', 'A year'],
+  ['never', 'Never'],
+];
+
+function TokensSection() {
+  const { data: tokens } = useAccessTokens();
+  const createToken = useCreateAccessToken();
+  const revokeToken = useRevokeAccessToken();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [scope, setScope] = useState<AccessTokenScope>('FULL');
+  const [expiresIn, setExpiresIn] = useState('never');
+  const [minted, setMinted] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [revoking, setRevoking] = useState<AccessTokenDto | null>(null);
+  const { status, flash } = useStatus();
+
+  const submit = () => {
+    createToken.mutate(
+      { name: name.trim(), scope, expiresIn },
+      {
+        onSuccess: ({ plaintext }) => {
+          setCreateOpen(false);
+          setName('');
+          setScope('FULL');
+          setExpiresIn('never');
+          setMinted(plaintext);
+        },
+        onError: (error) => flash(error instanceof ApiError ? error.message : 'Could not mint that token'),
+      },
+    );
+  };
+
+  return (
+    <SectionCard title="Access tokens">
+      <p className="mb-3 text-xs text-muted-foreground">
+        Let a script, a phone shortcut, or a bot write into your reef without handing over your
+        password. Tokens can&apos;t change your account or make more tokens — that stays with you,
+        signed in.
+      </p>
+
+      <div className="flex flex-col gap-2">
+        {(tokens ?? []).length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No tokens yet — mint one to let a script drop memos into your reef.
+          </p>
+        ) : (
+          tokens!.map((token) => (
+            <div key={token.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-border px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{token.name}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {SCOPE_LABELS[token.scope].label} · created {absoluteTime(token.createdTs)} ·{' '}
+                  {token.lastUsedTs ? `last used ${absoluteTime(token.lastUsedTs)}` : 'never used'}
+                  {token.expiresTs ? ` · expires ${absoluteTime(token.expiresTs)}` : ''}
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setRevoking(token)}>
+                Revoke
+              </Button>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="mt-3 flex items-center gap-2">
+        <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <KeyRound className="size-4" /> Mint a token
+        </Button>
+        {status ? <span className="text-xs font-semibold text-destructive">{status}</span> : null}
+      </div>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent
+          title="Mint an access token"
+          description="Name it after whatever will use it, so you know what you're revoking later."
+        >
+          <div className="flex flex-col gap-3">
+            <Input
+              autoFocus
+              placeholder="My phone shortcut"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+            <div className="flex flex-col gap-1" role="radiogroup" aria-label="Scope">
+              {(Object.keys(SCOPE_LABELS) as AccessTokenScope[]).map((option) => (
+                <button
+                  key={option}
+                  role="radio"
+                  aria-checked={scope === option}
+                  onClick={() => setScope(option)}
+                  className={cn(
+                    'rounded-xl border px-3 py-2 text-left text-sm',
+                    scope === option ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent',
+                  )}
+                >
+                  <span className="font-semibold">{SCOPE_LABELS[option].label}</span>
+                  <span className="block text-xs text-muted-foreground">{SCOPE_LABELS[option].hint}</span>
+                </button>
+              ))}
+            </div>
+            <label className="text-xs font-semibold text-muted-foreground">
+              Expires
+              <select
+                value={expiresIn}
+                onChange={(event) => setExpiresIn(event.target.value)}
+                className="mt-1 h-9 w-full rounded-xl border border-input bg-card px-2 text-sm"
+              >
+                {EXPIRY_LABELS.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="mt-3 flex justify-end gap-2">
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button disabled={!name.trim() || createToken.isPending} onClick={submit}>
+              Mint it
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={minted != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMinted(null);
+            setCopied(false);
+          }
+        }}
+      >
+        <DialogContent
+          title="Here's your token"
+          description="Copy it now — this is the only time it's shown. If it swims away, mint a new one."
+        >
+          <code className="block break-all rounded-xl border border-border bg-muted px-3 py-2 font-mono text-xs">
+            {minted}
+          </code>
+          <div className="mt-3 flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                void navigator.clipboard.writeText(minted ?? '');
+                setCopied(true);
+              }}
+            >
+              {copied ? <Check className="size-4 text-ocean" /> : <Copy className="size-4" />}
+              {copied ? 'Copied' : 'Copy'}
+            </Button>
+            <DialogClose asChild>
+              <Button>Done</Button>
+            </DialogClose>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={revoking != null} onOpenChange={(open) => (open ? null : setRevoking(null))}>
+        <DialogContent
+          title={revoking ? `Revoke "${revoking.name}"?` : ''}
+          description="Anything still using this token stops working immediately. This can't be undone."
+        >
+          <div className="flex justify-end gap-2">
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (revoking) revokeToken.mutate(revoking.id);
+                setRevoking(null);
+              }}
+            >
+              Revoke it
             </Button>
           </div>
         </DialogContent>
@@ -792,6 +995,7 @@ export function SettingsPage() {
     { id: 'account', label: 'Account' },
     { id: 'preferences', label: 'Preferences' },
     { id: 'tags', label: 'Tags' },
+    { id: 'tokens', label: 'Tokens' },
     { id: 'members', label: 'Members', adminOnly: true },
     { id: 'instance', label: 'Reef', adminOnly: true },
     { id: 'backups', label: 'Backups', adminOnly: true },
@@ -822,6 +1026,7 @@ export function SettingsPage() {
       {section === 'account' ? <AccountSection /> : null}
       {section === 'preferences' ? <PreferencesSection /> : null}
       {section === 'tags' ? <TagsSection /> : null}
+      {section === 'tokens' ? <TokensSection /> : null}
       {section === 'members' && isAdmin ? <MembersSection /> : null}
       {section === 'instance' && isAdmin ? <InstanceSection /> : null}
       {section === 'backups' && isAdmin ? <BackupsSection isCloud={Boolean(cloudBilling)} /> : null}

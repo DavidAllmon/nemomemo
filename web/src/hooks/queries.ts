@@ -5,6 +5,8 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import type {
+  AccessTokenDto,
+  AccessTokenScope,
   AttachmentDto,
   InboxDto,
   InstanceGeneralSetting,
@@ -13,6 +15,7 @@ import type {
   MemoDto,
   MemoHistoryResponse,
   MemoListResponse,
+  CreateAccessTokenResponse,
   MemoTemplateDto,
   MemoViewDto,
   ShareDto,
@@ -43,6 +46,7 @@ export const keys = {
   inbox: (status: string) => ['inbox', status] as const,
   attachments: (params: Record<string, string | undefined>) => ['attachments', params] as const,
   members: ['members'] as const,
+  tokens: ['tokens'] as const,
   cloudBilling: ['cloud', 'billing'] as const,
   cloudSnapshots: ['cloud', 'snapshots'] as const,
 };
@@ -308,6 +312,34 @@ export function useEmptyTrash() {
   return useMutation({
     mutationFn: () => api<{ purged: number }>('POST', '/api/v1/memos/trash/empty', {}),
     onSuccess: invalidate,
+  });
+}
+
+// ---------- Access tokens ----------
+
+export function useAccessTokens(enabled = true) {
+  return useQuery({
+    queryKey: keys.tokens,
+    queryFn: async () =>
+      (await api<{ tokens: AccessTokenDto[] }>('GET', '/api/v1/tokens')).tokens,
+    enabled,
+  });
+}
+
+export function useCreateAccessToken() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { name: string; scope: AccessTokenScope; expiresIn: string }) =>
+      api<CreateAccessTokenResponse>('POST', '/api/v1/tokens', input),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.tokens }),
+  });
+}
+
+export function useRevokeAccessToken() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api<{ ok: boolean }>('DELETE', `/api/v1/tokens/${id}`),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.tokens }),
   });
 }
 
