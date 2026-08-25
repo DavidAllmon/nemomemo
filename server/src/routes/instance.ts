@@ -83,6 +83,7 @@ export function instanceRoutes(db: Db, config: Config, mailer: Mailer | null): H
       needsSetup: userCount === 0,
       emailEnabled: mailer != null,
       dictationEnabled: config.dictate != null,
+      telegramEnabled: config.telegram != null,
     };
     return c.json(profile);
   });

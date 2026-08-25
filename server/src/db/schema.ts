@@ -47,6 +47,27 @@ export const accessTokens = sqliteTable('access_token', {
   expiresTs: integer('expires_ts'),
 });
 
+/** A Telegram chat bound to a member: anything sent there becomes a memo. */
+export const telegramChats = sqliteTable('telegram_chat', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  chatId: text('chat_id').notNull().unique(),
+  createdTs: integer('created_ts').notNull().$defaultFn(now),
+  lastMemoTs: integer('last_memo_ts'),
+});
+
+/** One-time codes that bind a chat to a member; deleted on use. */
+export const telegramLinkCodes = sqliteTable('telegram_link_code', {
+  code: text('code').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  createdTs: integer('created_ts').notNull().$defaultFn(now),
+  expiresTs: integer('expires_ts').notNull(),
+});
+
 export const memos = sqliteTable('memo', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   uid: text('uid').notNull().unique(),

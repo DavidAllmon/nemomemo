@@ -34,6 +34,8 @@ export interface Config {
   transcribe: { url: string; key: string | null; model: string } | null;
   /** Live dictation via OpenAI Realtime; null (NEMOMEMO_DICTATE_KEY unset) disables it. */
   dictate: { key: string; model: string } | null;
+  /** Telegram capture bot; null (NEMOMEMO_TELEGRAM_BOT_TOKEN unset) disables it. */
+  telegram: { botToken: string } | null;
 }
 
 function ocrFromEnv(): { langs: string[] } | null {
@@ -60,6 +62,11 @@ function dictateFromEnv(): { key: string; model: string } | null {
   const key = process.env.NEMOMEMO_DICTATE_KEY;
   if (!key) return null;
   return { key, model: process.env.NEMOMEMO_DICTATE_MODEL || 'gpt-live-transcribe' };
+}
+
+function telegramFromEnv(): { botToken: string } | null {
+  const botToken = process.env.NEMOMEMO_TELEGRAM_BOT_TOKEN;
+  return botToken ? { botToken } : null;
 }
 
 function smtpFromEnv(): SmtpConfig | null {
@@ -90,5 +97,6 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
     ocr: 'ocr' in overrides ? (overrides.ocr ?? null) : ocrFromEnv(),
     transcribe: 'transcribe' in overrides ? (overrides.transcribe ?? null) : transcribeFromEnv(),
     dictate: 'dictate' in overrides ? (overrides.dictate ?? null) : dictateFromEnv(),
+    telegram: 'telegram' in overrides ? (overrides.telegram ?? null) : telegramFromEnv(),
   };
 }

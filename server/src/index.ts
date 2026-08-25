@@ -26,6 +26,14 @@ if (process.env.NEMOMEMO_CLOUD === '1') {
     mailer: config.smtp ? makeSmtpMailer(config.smtp) : null,
   });
 
+  // The capture bot lives on this branch only: in cloud mode one process
+  // serves every reef, and several pollers sharing one bot token would fight
+  // over getUpdates.
+  if (config.telegram) {
+    const { startTelegramBot } = await import('./services/telegram.js');
+    startTelegramBot(db, config);
+  }
+
   // In production the built SPA sits next to the server; serve it with an SPA fallback.
   const webDist = config.webDistDir ?? path.resolve('web-dist');
   if (fs.existsSync(webDist)) {

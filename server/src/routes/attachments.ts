@@ -8,16 +8,11 @@ import type { Db } from '../db/index.js';
 import { attachments, memos } from '../db/schema.js';
 import { apiError } from '../lib/errors.js';
 import { requireViewer, type AppEnv } from '../middleware/auth.js';
-import { newUid } from '../services/memo-service.js';
+import { sanitizeFilename, storeAttachment } from '../services/attachment-service.js';
 import type { OcrQueue } from '../services/ocr.js';
 
-const MAX_UPLOAD_BYTES = 32 * 1024 * 1024;
+export { sanitizeFilename };
 
-export function sanitizeFilename(name: string): string {
-  const base = name.split(/[/\\]/).pop() ?? 'file';
-  const cleaned = base.replace(/[\x00-\x1f\x7f]/g, "").replace(/^[.\s]+|[.\s]+$/g, "");
-  return cleaned || 'file';
-}
 
 function toDto(db: Db, row: typeof attachments.$inferSelect): AttachmentDto {
   let memoUid: string | null = null;
@@ -48,36 +43,17 @@ export function attachmentRoutes(
     const body = await c.req.parseBody();
     const file = body.file;
     if (!(file instanceof File)) throw apiError('INVALID_ARGUMENT', 'Expected a `file` upload');
-    if (file.size > MAX_UPLOAD_BYTES) throw apiError('INVALID_ARGUMENT', 'File is too large (max 32 MiB)');
-    if (config.cloudLimits) {
-      const used =
-        db.select({ total: sql<number>`coalesce(sum(size), 0)` }).from(attachments).get()?.total ?? 0;
-      if (used + file.size > config.cloudLimits.maxStorageBytes) {
-        throw apiError('INVALID_ARGUMENT', "This reef's storage is full — tidy up some attachments first");
-      }
-    }
-
-    const uid = newUid();
-    const filename = sanitizeFilename(file.name);
-    const relative = path.join('assets', `${Date.now()}_${uid}_${filename}`);
-    const absolute = path.join(config.uploadsDir, relative);
-    fs.mkdirSync(path.dirname(absolute), { recursive: true });
-    fs.writeFileSync(absolute, Buffer.from(await file.arrayBuffer()));
-
-    const created = db
-      .insert(attachments)
-      .values({
-        uid,
+    const created = storeAttachment(
+      db,
+      config,
+      {
         creatorId: viewer.id,
-        filename,
-        type: file.type || 'application/octet-stream',
-        size: file.size,
-        storagePath: relative,
-      })
-      .returning()
-      .get();
-    if (ocr && created.type.startsWith('image/')) ocr.enqueue(created.id);
-    if (transcribe && created.type.startsWith('audio/')) transcribe.enqueue(created.id);
+        filename: file.name,
+        type: file.type,
+        bytes: Buffer.from(await file.arrayBuffer()),
+      },
+      { ocr, transcribe },
+    );
     return c.json({ attachment: toDto(db, created) }, 201);
   });
 

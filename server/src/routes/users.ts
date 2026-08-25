@@ -12,8 +12,9 @@ import { zValidator } from '@hono/zod-validator';
 import bcrypt from 'bcryptjs';
 import { asc, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
+import type { Config } from '../config.js';
 import type { Db } from '../db/index.js';
-import { memos, users, userSessions } from '../db/schema.js';
+import { memos, telegramChats, users, userSessions } from '../db/schema.js';
 import { apiError } from '../lib/errors.js';
 import { sendInviteEmail, sendVerificationEmail } from './auth.js';
 import { emailChangedMessage, passwordChangedMessage, trySend, type Mailer } from '../services/email.js';
@@ -21,6 +22,7 @@ import { randomBytes } from 'node:crypto';
 import { nowSeconds } from '../lib/time.js';
 import { requireAdmin, requireSessionViewer, requireViewer, type AppEnv } from '../middleware/auth.js';
 import { captureRevision } from '../services/revision-service.js';
+import { mintLinkCode } from '../services/telegram.js';
 import {
   aggregateTagCounts,
   aggregateUserStats,
@@ -37,7 +39,7 @@ import {
   setUserGeneral,
 } from '../services/settings.js';
 
-export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
+export function userRoutes(db: Db, config: Config, mailer: Mailer | null): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
 
   // ---------- Viewer's own resources (the `-` segment, like memos) ----------
@@ -115,6 +117,34 @@ export function userRoutes(db: Db, mailer: Mailer | null): Hono<AppEnv> {
     }
 
     return c.json({ changed });
+  });
+
+  // ---------- Telegram capture ----------
+  // Linking a chat is an account-level act, so it's session-only: an access
+  // token must never be able to point someone's reef at a chat.
+  app.get('/-/telegram', (c) => {
+    const viewer = requireSessionViewer(c);
+    const link = db.select().from(telegramChats).where(eq(telegramChats.userId, viewer.id)).get();
+    return c.json({
+      enabled: config.telegram != null,
+      linked: link != null,
+      linkedTs: link?.createdTs ?? null,
+    });
+  });
+
+  app.post('/-/telegram/link-code', (c) => {
+    const viewer = requireSessionViewer(c);
+    if (!config.telegram) {
+      throw apiError('INVALID_ARGUMENT', "This reef doesn't have a Telegram bot set up");
+    }
+    const { code, expiresTs } = mintLinkCode(db, viewer.id);
+    return c.json({ code, expiresTs }, 201);
+  });
+
+  app.delete('/-/telegram', (c) => {
+    const viewer = requireSessionViewer(c);
+    db.delete(telegramChats).where(eq(telegramChats.userId, viewer.id)).run();
+    return c.json({ ok: true });
   });
 
   app.get('/-/settings', (c) => {

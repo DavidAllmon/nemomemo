@@ -333,6 +333,8 @@ export interface InstanceProfileDto {
   emailEnabled: boolean;
   /** Live dictation (speech-to-text while composing) is configured. */
   dictationEnabled?: boolean;
+  /** A Telegram capture bot is configured on this instance. */
+  telegramEnabled?: boolean;
 }
 
 export type SigninResponse = { user: UserDto };

@@ -91,7 +91,7 @@ export function makeApp(db: Db, config: Config, deps: AppDeps = {}): Hono<AppEnv
   api.route('/instance', instanceRoutes(db, config, mailer));
   api.route('/memos', memoRoutes(db, config));
   api.route('/shares', shareRoutes(db));
-  api.route('/users', userRoutes(db, mailer));
+  api.route('/users', userRoutes(db, config, mailer));
   api.route('/inbox', inboxRoutes(db));
   api.route('/attachments', attachmentRoutes(db, config, ocr, transcribe));
   api.route('/dictation', dictationRoutes(config, deps.dictationFetch));

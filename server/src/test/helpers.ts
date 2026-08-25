@@ -39,6 +39,7 @@ export function makeTestApp(
     ocr: null, // never spin up real tesseract in tests
     transcribe: null, // never hit a real transcription endpoint in tests
     dictate: null, // never mint real OpenAI sessions in tests
+    telegram: null, // the capture bot is opt-in per test
     ...overrides,
   });
   fs.mkdirSync(config.uploadsDir, { recursive: true });
