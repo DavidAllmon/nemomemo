@@ -9,11 +9,35 @@ JSON 404.
 
 ## Authentication
 
-The API uses a **session cookie** obtained from `POST /auth/signin` — for scripts, keep a
-cookie jar (see the [example](#example) below). Sessions last 30 days and slide on use.
-Personal access tokens (`Authorization: Bearer …`) are on the
-[roadmap](https://github.com/DavidAllmon/nemomemo/blob/main/docs/ROADMAP.md) but not
-available yet.
+Two ways in.
+
+**Access tokens** are the one to use for scripts, phone shortcuts, and bots. Mint one in
+**Settings → Tokens** (it's shown once — copy it then), and send it as a bearer header:
+
+```bash
+curl -H "Authorization: Bearer nm_yourtokenhere" \
+  -H "content-type: application/json" \
+  -d '{"content":"posted from a script #cli"}' \
+  https://your-reef.example/api/v1/memos
+```
+
+Tokens come in two scopes:
+
+| Scope | Can do |
+| --- | --- |
+| **Full access** | Everything a signed-in you can do with memos — read, write, edit, delete |
+| **Create only** | `POST /memos` and `POST /attachments`, nothing else — not even reading your reef back |
+
+Give a capture script the **create-only** scope: if the device it lives on is lost, the
+token can add memos but can never read what you've written.
+
+No token can manage tokens, change your account's email or password, or use admin
+endpoints — those need a real signed-in session, so a leaked token can never become a
+lost account. Revoke a token any time in Settings; it stops working immediately.
+
+**Session cookies** are what the web app itself uses, from `POST /auth/signin` — for
+scripts, keep a cookie jar (see the [example](#example) below). Sessions last 30 days and
+slide on use.
 
 ## Auth
 
@@ -23,6 +47,16 @@ available yet.
 | POST | `/auth/signin` | Sets the session cookie |
 | POST | `/auth/signout` | |
 | GET | `/auth/me` | The signed-in viewer |
+
+## Access tokens
+
+Session-only — a token can never manage tokens.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/tokens` | Your tokens; never includes the secret |
+| POST | `/tokens` | `{ name, scope?: "FULL"\|"CREATE_ONLY", expiresIn?: "30d"\|"90d"\|"1y"\|"never" }` — the plaintext comes back exactly once |
+| DELETE | `/tokens/:id` | Revoke; takes effect immediately |
 
 ## Memos
 

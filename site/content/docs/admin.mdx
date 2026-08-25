@@ -34,6 +34,18 @@ a new one here.
 Personal things — theme, default memo visibility, tag renames — live under
 **Preferences** and affect only you. Reef settings affect everyone.
 
+## Access tokens
+
+Every member mints their own in **Settings → Tokens**; there's nothing reef-wide to
+configure and no admin switch to turn them off. A token acts as the member who made it
+and is always *less* powerful than signing in: it can't manage tokens, change an
+account's email or password, or use any admin endpoint — so a leaked token can never
+become a lost account. See the [API reference](/docs/api#authentication) for scopes and
+examples.
+
+Archiving a member immediately stops their tokens working, and deleting the account
+deletes them outright.
+
 ## Housekeeping
 
 - Back up `nemomemo.db` and `uploads/` (see [Deploy](/docs/deploy#backups)).
