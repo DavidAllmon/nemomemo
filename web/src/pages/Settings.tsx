@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, Copy, KeyRound, Pencil, Settings as SettingsIcon } from 'lucide-react';
+import { Check, Copy, KeyRound, Pencil, Send, Settings as SettingsIcon } from 'lucide-react';
 import { useRef, useState } from 'react';
 import {
   TAG_COLOR_NAMES,
@@ -25,6 +25,9 @@ import {
   useMembers,
   useRenameTag,
   useRevokeAccessToken,
+  useTelegramLinkCode,
+  useTelegramStatus,
+  useUnlinkTelegram,
   useTags,
   useUpdateUserSettings,
   useUserSettings,
@@ -536,6 +539,90 @@ function TokensSection() {
   );
 }
 
+function TelegramCard() {
+  const { data: status } = useTelegramStatus();
+  const mintCode = useTelegramLinkCode();
+  const unlink = useUnlinkTelegram();
+  const [code, setCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // The card exists only on reefs whose keeper set a bot token.
+  if (!status?.enabled) return null;
+
+  return (
+    <SectionCard title="Capture from Telegram">
+      {status.linked ? (
+        <>
+          <p className="text-sm">
+            <span className="font-semibold text-ocean">Connected</span>
+            {status.linkedTs ? ` since ${absoluteTime(status.linkedTs)}` : ''} — message the bot and
+            it becomes a memo.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            disabled={unlink.isPending}
+            onClick={() => unlink.mutate()}
+          >
+            Disconnect
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-muted-foreground">
+            Send a thought, a photo, or a voice note to your reef&apos;s Telegram bot and it lands
+            here as a memo — <code className="font-mono">#tags</code> and all.
+          </p>
+          {code ? (
+            <div className="mt-3">
+              <p className="mb-1 text-xs text-muted-foreground">
+                Send this to the bot within 15 minutes:
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 rounded-xl border border-border bg-muted px-3 py-2 font-mono text-sm">
+                  /link {code}
+                </code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(`/link ${code}`);
+                    setCopied(true);
+                  }}
+                >
+                  {copied ? <Check className="size-4 text-ocean" /> : <Copy className="size-4" />}
+                  {copied ? 'Copied' : 'Copy'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              size="sm"
+              className="mt-3"
+              disabled={mintCode.isPending}
+              onClick={() =>
+                mintCode.mutate(undefined, {
+                  onSuccess: ({ code: minted }) => {
+                    setCode(minted);
+                    setCopied(false);
+                  },
+                })
+              }
+            >
+              <Send className="size-4" /> Connect Telegram
+            </Button>
+          )}
+          <p className="mt-3 text-xs text-muted-foreground">
+            Anything you send the bot travels through Telegram&apos;s servers on its way here, so
+            keep the truly private things in the app.
+          </p>
+        </>
+      )}
+    </SectionCard>
+  );
+}
+
 function MembersSection() {
   const { data } = useMembers(true);
   const { data: viewer } = useViewer();
@@ -995,7 +1082,7 @@ export function SettingsPage() {
     { id: 'account', label: 'Account' },
     { id: 'preferences', label: 'Preferences' },
     { id: 'tags', label: 'Tags' },
-    { id: 'tokens', label: 'Tokens' },
+    { id: 'tokens', label: 'Access' },
     { id: 'members', label: 'Members', adminOnly: true },
     { id: 'instance', label: 'Reef', adminOnly: true },
     { id: 'backups', label: 'Backups', adminOnly: true },
@@ -1026,7 +1113,12 @@ export function SettingsPage() {
       {section === 'account' ? <AccountSection /> : null}
       {section === 'preferences' ? <PreferencesSection /> : null}
       {section === 'tags' ? <TagsSection /> : null}
-      {section === 'tokens' ? <TokensSection /> : null}
+      {section === 'tokens' ? (
+        <div className="flex flex-col gap-4">
+          <TokensSection />
+          <TelegramCard />
+        </div>
+      ) : null}
       {section === 'members' && isAdmin ? <MembersSection /> : null}
       {section === 'instance' && isAdmin ? <InstanceSection /> : null}
       {section === 'backups' && isAdmin ? <BackupsSection isCloud={Boolean(cloudBilling)} /> : null}

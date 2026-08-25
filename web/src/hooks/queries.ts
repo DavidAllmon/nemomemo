@@ -47,6 +47,7 @@ export const keys = {
   attachments: (params: Record<string, string | undefined>) => ['attachments', params] as const,
   members: ['members'] as const,
   tokens: ['tokens'] as const,
+  telegram: ['telegram'] as const,
   cloudBilling: ['cloud', 'billing'] as const,
   cloudSnapshots: ['cloud', 'snapshots'] as const,
 };
@@ -312,6 +313,37 @@ export function useEmptyTrash() {
   return useMutation({
     mutationFn: () => api<{ purged: number }>('POST', '/api/v1/memos/trash/empty', {}),
     onSuccess: invalidate,
+  });
+}
+
+// ---------- Telegram capture ----------
+
+export interface TelegramStatus {
+  enabled: boolean;
+  linked: boolean;
+  linkedTs: number | null;
+}
+
+export function useTelegramStatus(enabled = true) {
+  return useQuery({
+    queryKey: keys.telegram,
+    queryFn: () => api<TelegramStatus>('GET', '/api/v1/users/-/telegram'),
+    enabled,
+  });
+}
+
+export function useTelegramLinkCode() {
+  return useMutation({
+    mutationFn: () =>
+      api<{ code: string; expiresTs: number }>('POST', '/api/v1/users/-/telegram/link-code', {}),
+  });
+}
+
+export function useUnlinkTelegram() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<{ ok: boolean }>('DELETE', '/api/v1/users/-/telegram'),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.telegram }),
   });
 }
 

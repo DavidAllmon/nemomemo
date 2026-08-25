@@ -126,6 +126,7 @@ variables is safe — your memos live in the data volume, not the container.
 | `NEMOMEMO_TRANSCRIBE_MODEL` | `whisper-1` | Model name sent to the endpoint |
 | `NEMOMEMO_DICTATE_KEY` | — | OpenAI API key that turns on live dictation in the editor (optional — see below) |
 | `NEMOMEMO_DICTATE_MODEL` | `gpt-live-transcribe` | OpenAI Realtime transcription model for dictation |
+| `NEMOMEMO_TELEGRAM_BOT_TOKEN` | — | Turns on the Telegram capture bot (optional — see below) |
 
 ## Image text search (OCR)
 
@@ -183,6 +184,45 @@ NEMOMEMO_TRANSCRIBE_URL=http://localhost:8080/v1/audio/transcriptions
 
 Leave it unset and voice memos still record and play — they just aren't
 searchable by what was said.
+
+## Capture from Telegram (optional)
+
+Since v1.31, your reef can have a Telegram bot: message it and what you send
+becomes a memo — text, photos, and voice notes, with `#tags` working inline.
+It's the cheapest way to capture from a phone, because there's no app to
+install and you're already signed in.
+
+Make a bot, then point your reef at it:
+
+1. Message [@BotFather](https://t.me/BotFather) on Telegram and send `/newbot`.
+2. Pick a name and a username; BotFather replies with a token that looks like
+   `123456789:AAE…`.
+3. Set it and restart:
+
+```bash
+NEMOMEMO_TELEGRAM_BOT_TOKEN=123456789:AAE...
+```
+
+Each member then connects their own chat: **Settings → Access → Connect
+Telegram** hands them a code, and they send `/link CODE` to the bot. One bot
+serves the whole reef — nobody shares anything with anyone else, and memos land
+in the chatter's own reef with their default visibility. `/unlink` in the chat
+(or **Disconnect** in Settings) ends it immediately.
+
+Photos go through OCR and voice notes through transcription if you've turned
+those on above, so a captured whiteboard is searchable by what's written on it.
+
+<Callout type="warn">
+Messages to a Telegram bot travel through Telegram's servers and are **not**
+end-to-end encrypted — that's how the Bot API works, not something NemoMemo
+chooses. It's fine for "buy milk on the way home"; keep genuinely private
+things in the app itself. Your bot token is a credential too: anyone holding it
+can read messages sent to your bot, so treat it like a password.
+</Callout>
+
+Only single-instance (self-hosted) reefs run the bot: the hosted service shares
+one process across many reefs, and several pollers on one token would fight
+over Telegram's update queue.
 
 ## Email (optional, recommended)
 
